@@ -438,6 +438,5 @@ void Server::send_server_broadcast()
 			}*/
 		}
 		_server_broadcasts.pop_front();  //remove sent message
-
 	}
 }

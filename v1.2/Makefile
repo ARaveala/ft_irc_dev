@@ -8,7 +8,7 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}Client.cpp \
 			${SOURCES}signal_handler.cpp \
 			${SOURCES}IrcMessage.cpp \
-			${SOURCES}IrcDispatcher.cpp \
+			${SOURCES}IrcPreper.cpp \
 			
 INCLUDES = -I ./includes
 CPP = c++

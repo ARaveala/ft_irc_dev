@@ -9,14 +9,25 @@
 
 #include "Client.hpp"
 
+struct WeakPtrCompare {
+    bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
+        auto l = lhs.lock();  // Convert weak_ptr to shared_ptr safely
+        auto r = rhs.lock();  
+
+        if (!l || !r) return false;  // Prevent comparisons if either pointer is expired
+
+        return l->getNickname() < r->getNickname();
+    }
+};
+
 class Channel {
 	private:
 		std::string _name;
 		std::string _topic;
-		std::map<std::string, std::bitset<4>> _ClientModes;  // Nicknames -> Bitset of modes
+		std::map<std::weak_ptr<Client>, std::bitset<4>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
 		// this does need its own map your right, only of the joined clienst focourse
 		// duh
-		//std::map<int, std::shared_ptr<Client>>& _clients;
+		///std::map<int, std::shared_ptr<Client>>& _clients;
 	public:
 		//Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients);
 		Channel(const std::string& channelName);
@@ -24,7 +35,7 @@ class Channel {
 		const std::string& getName() const;
 		const std::string& getTopic() const;
 		void setTopic(const std::string& newTopid);
-		bool addClient(Client* Client);
+		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(Client* Client);
 		bool isClientInChannel(Client* Client) const;
 		const std::set<Client*>& getClient() const;
@@ -40,6 +51,6 @@ class Channel {
 		const int MODE_VOICE = 1;
 		const int MODE_INVITE_ONLY = 2;
 		const int MODE_MODERATED = 3;
-		void changeNickname();
+		// void changeNickname();
 };
 

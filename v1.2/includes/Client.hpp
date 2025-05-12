@@ -3,10 +3,10 @@
 // https://modern.ircdocs.horse/#client-to-server-protocol-structure
 // Names of IRC entities (clients, servers, channels) are casemapped
 #include "IrcMessage.hpp"
-
+//#include <shared_ptr>
 class Server;
 //class IrcMessage;
-
+class Channel;
 class Client {
 	private:
 		int _fd;
@@ -18,7 +18,7 @@ class Client {
 		std::string _ClientName;
 		std::string _fullName;
 		IrcMessage _msg;
-		std::vector<std::string> _joinedchannels; // list of joined channels
+		std::map<std::string, std::weak_ptr<Channel>> _joinedChannels; // list of joined channels
 
 		//std::deque<std::string> _message_que;
 		//std::string _prefixes; // Client permissions 
@@ -60,5 +60,7 @@ class Client {
 			}
 			return false;
 		};
-
+		void handle_message(const std::string message, Server& server);
 };
+
+

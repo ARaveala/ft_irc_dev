@@ -9,6 +9,7 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}signal_handler.cpp \
 			${SOURCES}IrcMessage.cpp \
 			${SOURCES}IrcPreper.cpp \
+			${SOURCES}Channel.cpp \
 			
 INCLUDES = -I ./includes
 CPP = c++

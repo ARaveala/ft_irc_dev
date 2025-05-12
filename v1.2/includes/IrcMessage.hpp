@@ -4,6 +4,9 @@
 #include <memory>
 #include <map>
 #include <deque> 
+#include <set>
+#include <algorithm> // ai For std::transform
+#include <cctype>    
 //#define  RPL_NICK(oclient, uclient, client) (":" + oclient + "!" + uclient + "@localhost NICK " +  client + "\r\n")
 // Forward declaration (optional but can sometimes help compile times)
 // class std::string; // No, string is included above.
@@ -20,8 +23,20 @@ class IrcMessage {
     	std::string _command;
     	std::vector<std::string> _paramsList;
 		std::deque<std::string> _messageQue;
+
+		std::map<std::string, int> _nickname_to_fd;
+		std::map<int, std::string> _fd_to_nickname;
+		std::map<std::string, int> nickname_to_fd;
+		std::map<int, std::string> fd_to_nickname;
+		static const std::set<std::string> _illegal_nicknames;
 		//std::vector<std::string> _joinedchannels; // list of joined channels
 	
+		static std::string to_lowercase(const std::string& s) {
+			std::string lower_s = s;
+			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
+						   [](unsigned char c){ return std::tolower(c); });
+			return lower_s;
+		}
 	public:
     	IrcMessage();
     	~IrcMessage();
@@ -48,8 +63,15 @@ class IrcMessage {
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string getQueueMessage() { return _messageQue.front();};
 		void prep_nickname_msg(std::string& nickname,  std::deque<std::string>& messageQue, std::deque<std::string>& broadcastQueue);
-		
+		void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
+
+		// moving from server to here 
+		bool check_and_set_nickname(std::string nickname, int fd);  // ai
+		std::map<int, std::string>& get_fd_to_nickname();
+		void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
+		std::string get_nickname(int fd) const;  // ai
+		int get_fd(const std::string& nickname) const;
 		//void dispatch_nickname(int client_fd, const std::string& oldnick, std::string newnickname, std::map<int, std::shared_ptr <Client>>& clientsMap);
 	};

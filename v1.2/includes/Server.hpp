@@ -4,13 +4,12 @@
 #include <memory>
 #include "ServerError.hpp"
 #include <set>
-#include <algorithm> // ai For std::transform
-#include <cctype>    // ai For std::tolower, std::islower
+// ai For std::tolower, std::islower
 #include <vector>    // ai Just for the initial list concept, set is better for lookup
 //#include "Client.hpp" // can this be handled withoout including the whole hpp
 #include <sys/epoll.h>
 #include <deque> // server messages
-
+#include "Channel.hpp"
 // connection registration
 // https://modern.ircdocs.horse/#connection-registration
 
@@ -42,23 +41,25 @@ class Server {
 		int _epoll_fd;
 		std::string _password;
 
-		//std::map<std::string, Channel> _channels;
+		std::map<const std::string, std::shared_ptr<Channel>> _channels;
+		
 		std::map<int, std::shared_ptr<Client>> _Clients;
+		
 		std::map<int, int> _timer_map;
 		// start of new section
-		std::map<std::string, int> nickname_to_fd;
-		std::map<int, std::string> fd_to_nickname;
+		////std::map<std::string, int> nickname_to_fd;
+		////std::map<int, std::string> fd_to_nickname;
 		std::map<int, struct epoll_event> _epollEventMap;
-		static const std::set<std::string> _illegal_nicknames;
+		////static const std::set<std::string> _illegal_nicknames;
 		// Helper function to convert a string to lowercase (defined inline in header)
 		std::deque<std::string> _server_broadcasts; // for broadcasting server wide messages
 		
-		static std::string to_lowercase(const std::string& s) {
+		/*static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
 						   [](unsigned char c){ return std::tolower(c); });
 			return lower_s;
-		}
+		}*/
 		// end of new section
 		
 		// loop through both to find when ping pong 
@@ -68,8 +69,9 @@ class Server {
 		// num of channels 
 		// string = name of channel channle = channel object
 		// std::map<std::string, std::shared_ptr<Channel>> chanels
-		std::map<std::string, int> _nickname_to_fd;
-		std::map<int, std::string> _fd_to_nickname;
+		
+		////std::map<std::string, int> _nickname_to_fd;
+		////std::map<int, std::string> _fd_to_nickname;
 		
 
 		// Using std::map for nicknames; use std::unordered_map if preferred
@@ -94,7 +96,7 @@ class Server {
 		void set_event_pollfd(int epollfd);
 		void set_current_client_in_progress(int fd);
 		void set_nickname_in_map(std::string, int); //todo
-		bool check_and_set_nickname(std::string nickname, int fd);  // ai
+		////bool check_and_set_nickname(std::string nickname, int fd);  // ai
 		// get channel
 		
 		// GETTERS
@@ -108,19 +110,20 @@ class Server {
 		//epoll_event& get_epoll_event_struct(int fd);
 		std::map<int, struct epoll_event> get_struct_map() {return _epollEventMap; };
 		std::string get_password() const;
-		std::string get_nickname(int fd) const;  // ai
+		////std::string get_nickname(int fd) const;  // ai
 		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);
+		std::shared_ptr<Channel> get_Channel(std::string channelName);
 		// returns the whole map 
 		std::map<int, std::shared_ptr<Client>>& get_map();
-		std::map<int, std::string>& get_fd_to_nickname();
+		////std::map<int, std::string>& get_fd_to_nickname();
 		// message handling
 		void handle_client_connection_error(ErrorType err_type);
 		void acknowladgeClient();
 		void shutdown();
 		bool checkTimers(int fd);
-		void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
+		////void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
 		// epoll stuff
 		int setup_epoll(int epoll_fd, int fd, uint32_t events);
@@ -130,6 +133,11 @@ class Server {
 		void resetClientTimer(int timer_fd, int timeout_seconds);
 		void send_message(std::shared_ptr<Client> client);
 		void send_server_broadcast();
+
+		// channel related 
+		bool channelExists(const std::string& channelName) const;
+		void createChannel(const std::string& channelName);//, Client& client
+		Channel* getChannel(const std::string& channelName);
 };
 	
 

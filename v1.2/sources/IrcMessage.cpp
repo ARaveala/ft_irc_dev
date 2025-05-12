@@ -17,6 +17,7 @@
 #include "Server.hpp"
 #include "SendException.hpp"
 #include "Client.hpp"
+#include "Channel.hpp"
 //#include "ChannelManager.hpp"
 // --- Constructor ---
 IrcMessage::IrcMessage() {}
@@ -32,6 +33,125 @@ const std::string& IrcMessage::getPrefix() const { return _prefix; }
 const std::string& IrcMessage::getCommand() const { return _command; }
 const std::vector<std::string>& IrcMessage::getParams() const { return _paramsList; }
 const std::string IrcMessage::getParam(unsigned long index) const { return _paramsList[index]; }
+
+// definition of illegal nick_names ai
+std::set<std::string> const IrcMessage::_illegal_nicknames = {
+    "ping", "pong", "server", "root", "nick", "services", "god"
+};
+
+// we should enum values or alike or we can just send the correct error message straight from here ?
+// check_and_set_nickname definition
+bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
+
+    // 1. Check for invalid characters
+	// check nickname exists
+    if (nickname.empty()) {
+         std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
+        return false;
+    }
+	// check nickname is all lowercase
+    for (char c : nickname) {
+         if (!std::islower(static_cast<unsigned char>(c))) {
+             std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Contains non-lowercase chars." << std::endl;
+             return false;
+         }
+    }
+
+    std::string processed_nickname = nickname; // TODO do we need this allocation? no i dont think so 
+
+    // 2. check legality
+    if (_illegal_nicknames.count(processed_nickname) > 0) {
+        std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Illegal name." << std::endl;
+        return false;
+    }
+
+    // check if nickname exists for anyone
+    auto nick_it = _nickname_to_fd.find(processed_nickname);
+	if (nick_it != _nickname_to_fd.end()) {
+        // Nickname exists. Is it the same Client trying to set their current nick?
+        if (nick_it->second == fd) {
+            // FD already head requested nickname.
+            std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
+            return true;
+        } else {
+            // Nickname is taken by some cunt else
+            std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
+            return false;
+        }
+    }
+
+    // Check if the FD has an old nickname with an iterator
+    auto fd_it = _fd_to_nickname.find(fd);
+
+    if (fd_it != _fd_to_nickname.end()){
+        // This FD already has a nickname. We need to remove the old one from both maps.
+		// find out nickname
+        std::string old_nickname = fd_it->second;
+        std::cout << "#### FD " << fd << " had old nickname '" << old_nickname << "', removing entries." << std::endl;
+
+        // Remove the old nickname -> fd entry using the old nickname as key
+        // Use erase(key) which is safe even if the key somehow wasn't found
+        _nickname_to_fd.erase(old_nickname);
+
+        // Remove the old fd -> nickname entry using the iterator we already have
+        _fd_to_nickname.erase(fd_it);
+
+        std::cout << "#### Removed old nickname '" << old_nickname << "' for fd " << fd << "." << std::endl;
+
+    } else {
+        // FD does not currently have a nickname.
+         std::cout << "#### FD " << fd << " does not have an existing nickname." << std::endl;
+    }
+
+    // udpate both maps
+    std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
+    _nickname_to_fd.insert({processed_nickname, fd});
+    _fd_to_nickname.insert({fd, processed_nickname});
+
+    std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
+    return true;
+}
+
+std::string IrcMessage::get_nickname(int fd) const {
+     auto it = _fd_to_nickname.find(fd);
+     if (it != _fd_to_nickname.end()) {
+         return it->second; // Return the nickname
+     }
+     return "";
+}
+std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
+	return _fd_to_nickname;
+}
+int IrcMessage::get_fd(const std::string& nickname) const {
+     std::string processed_nickname = to_lowercase(nickname);
+
+     auto it = _nickname_to_fd.find(processed_nickname);
+     if (it != _nickname_to_fd.end()) {
+         return it->second; // Return the fd
+     }
+     return -1; // nickname not found
+}
+
+void IrcMessage::remove_fd(int fd) {
+    // Call this when a client disconnects to clean up their nickname entry
+    auto fd_it = _fd_to_nickname.find(fd);
+    if (fd_it != _fd_to_nickname.end()) {
+
+        // find the nickname from the fd
+		std::string old_nickname = fd_it->second;
+        
+		std::cout << "#### Removing fd " << fd << " and nickname '" << old_nickname << "' due to disconnect." << std::endl;
+
+        // Remove from nickname_to_fd map using the nickname
+        _nickname_to_fd.erase(old_nickname);
+        // Remove from fd_to_nickname map using the iterator
+        _fd_to_nickname.erase(fd_it);
+
+        std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
+    } else {
+         std::cout << "#### No nickname found for fd " << fd << " upon disconnect." << std::endl;
+    }
+}
 
 // --- Parse Method (Corrected Parameter Handling) ---
 bool IrcMessage::parse(const std::string& rawMessage)
@@ -187,102 +307,4 @@ void IrcMessage::printMessage(const IrcMessage& msg)
         }
     }
     std::cout << "---" << std::endl; // Separator for messages
-}
-#include "IrcResources.hpp"
-/**
- * @brief this functions task is to find what command we have been sent and to deligate the
- * handling of that command to respective functions
- * 
- * @param Client 
- * @param message 
- * @param server 
- */
-// could we do a map of commands to fucntion pointers to handle this withouts ifs ?
-void IrcMessage::handle_message(Client& Client, const std::string message, Server& server)
-{
-	parse(message);
-	/*if (getCommand() == "QUIT")
-	{
-		std::cout<<"QUIT called removing client \n";
-		server.remove_Client(server.get_event_pollfd(), client_fd);
-		return ;
-	}*/
-	if (getCommand() == "NICK"){
-		if(server.check_and_set_nickname(getParam(0), Client.getFd())) {
-			prep_nickname_msg(Client.getNicknameRef(), getQue(), server.getBroadcastQueue());
-		}
-		else
-		{
-			// error codes for handlinh error messages or they should be handled in check and set . 
-			//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
-			std::string test2 = NICK_INUSE(getParam(0));
-			_messageQue.push_back(test2);
-			//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
-		}
-
-        // todo check nick against list
-        // todo map of Clientnames
-        // Client creation - add name to list in server
-        // Client deletion - remove name from list in server
-
-	}
-	if (getCommand() == "PING"){
-		Client.sendPong();
-		std::cout<<"sending pong back "<<std::endl;
-		//Client->set_failed_response_counter(-1);
-		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
-	}
-	if (getCommand() == "PONG"){
-		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
-	}
-
-    if (getCommand() == "JOIN"){
-		// handle join
-		// ischannel
-		// if (!ischannel) , createChannel(), setChannelDefaults() updateChannalconts()?, confirmOperator()
-		// else if (ischannel), isinvite(), hasinvite(), ChannelhasPaswd(), clientHasPasswd()/passwrdMatch(),
-		// hasBan(), joinChannel() updateChannalconts()
-		//		
-		/**
-		 * @brief checks
-		 * look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
-		 * 	if doesnt exist - create it with default settings // what are default settings?
-		 * set max size? // is the is default channel std::int _maxSize also flag -n 
-		 * set current number of clients in side the channel // channel std::int _nClients
-		 * add channel to vector of channels client has joined //  <Client> _joinedchannels
-		 * add current client to channel operator // channel std::string _operator OR
-		 * adjust bitset map
-		 * 
-		 * if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
-		 * if it is invite only, does client have invite isnide channel.
-		 * 
-		 * is it password protected.
-		 * if it is password protected, did user provide password. if not then user can not enter
-		 * if yes, does password match
-		 * 
-		 *  is client banned from channel.
-		 * 
-		 * assuming checks passed, client can now join channel
-		 * add client to list of clients on channel // channel > list of clients
-		 *  if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
-
-		 * 
-		 */
-    /*if (getCommand() == "KICK") {
-        
-    }
-
-    JOIN
-    PART
-    LEAVE
-    TOPIC
-    NAMES
-    LIST
-    INVITE
-    PARAMETER NICKNAME
-
-*/
-	}
-
-	printMessage(*this);
 }

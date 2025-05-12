@@ -68,7 +68,7 @@ int loop(Server &server)
 	server.setup_epoll(epollfd, server.get_signal_fd(), EPOLLIN);
 	struct epoll_event events[config::MAX_CLIENTS];
 	// create instance of channel manager , could this be in server ? 
-	ChannelManager channelManager;
+	//ChannelManager channelManager;
 	while (!should_exit)
 	{
 		// from epoll fd, in events struct this has niche error handling

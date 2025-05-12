@@ -11,6 +11,7 @@
 #include <memory> // shared pointers
 #include "config.h"
 #include "ServerError.hpp"
+#include "Channel.hpp"
 //#include "SendException.hpp"
 #include <algorithm> // find_if
 //#include <optional> // nullopt , signifies absence
@@ -132,9 +133,14 @@ void Server::remove_Client(int epollfd, int client_fd) {
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, client_fd, 0);
 	close(get_Client(client_fd)->get_timer_fd());
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, get_Client(client_fd)->get_timer_fd(), 0);
+	// channel.getClient().erase();
 	_Clients.erase(client_fd);
 	_epollEventMap.erase(client_fd);
-	_fd_to_nickname.erase(client_fd);
+	
+	
+	//////_fd_to_nickname.erase(client_fd);
+	
+	
 	//_nickname_to_fd.erase(client_fd);
 
 	//_epollEventMap.erase(client_fd);
@@ -166,9 +172,9 @@ std::map<int, std::shared_ptr<Client>>& Server::get_map() {
 	return _Clients;
 }
 
-std::map<int, std::string>& Server::get_fd_to_nickname() {
+/*std::map<int, std::string>& Server::get_fd_to_nickname() {
 	return _fd_to_nickname;
-}
+}*/
 
 std::string Server::get_password() const {
 	return _password;
@@ -219,10 +225,12 @@ void Server::shutdown() {
 	_Clients.clear();
 	// delete channels
 	_epollEventMap.clear();
-	_nickname_to_fd.clear();
+	
+	// these need to be called on all instnaces or in teh client destrcutors
+	/*_nickname_to_fd.clear();
 	_fd_to_nickname.clear();
 	nickname_to_fd.clear();
-	fd_to_nickname.clear();
+	fd_to_nickname.clear();*/
 	//_illegal_nicknames.clear();
 
 	_server_broadcasts.clear();
@@ -267,122 +275,6 @@ bool Server::checkTimers(int fd) {
 	return false;
 }
 
-// definition of illegal nick_names ai
-std::set<std::string> const Server::_illegal_nicknames = {
-    "ping", "pong", "server", "root", "nick", "services", "god"
-};
-
-// we should enum values or alike or we can just send the correct error message straight from here ?
-// check_and_set_nickname definition
-bool Server::check_and_set_nickname(std::string nickname, int fd) {
-
-    // 1. Check for invalid characters
-	// check nickname exists
-    if (nickname.empty()) {
-         std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
-        return false;
-    }
-	// check nickname is all lowercase
-    for (char c : nickname) {
-         if (!std::islower(static_cast<unsigned char>(c))) {
-             std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Contains non-lowercase chars." << std::endl;
-             return false;
-         }
-    }
-
-    std::string processed_nickname = nickname; // TODO do we need this allocation? no i dont think so 
-
-    // 2. check legality
-    if (_illegal_nicknames.count(processed_nickname) > 0) {
-        std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Illegal name." << std::endl;
-        return false;
-    }
-
-    // check if nickname exists for anyone
-    auto nick_it = _nickname_to_fd.find(processed_nickname);
-	if (nick_it != _nickname_to_fd.end()) {
-        // Nickname exists. Is it the same Client trying to set their current nick?
-        if (nick_it->second == fd) {
-            // FD already head requested nickname.
-            std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
-            return true;
-        } else {
-            // Nickname is taken by some cunt else
-            std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
-            return false;
-        }
-    }
-
-    // Check if the FD has an old nickname with an iterator
-    auto fd_it = _fd_to_nickname.find(fd);
-
-    if (fd_it != _fd_to_nickname.end()){
-        // This FD already has a nickname. We need to remove the old one from both maps.
-		// find out nickname
-        std::string old_nickname = fd_it->second;
-        std::cout << "#### FD " << fd << " had old nickname '" << old_nickname << "', removing entries." << std::endl;
-
-        // Remove the old nickname -> fd entry using the old nickname as key
-        // Use erase(key) which is safe even if the key somehow wasn't found
-        _nickname_to_fd.erase(old_nickname);
-
-        // Remove the old fd -> nickname entry using the iterator we already have
-        _fd_to_nickname.erase(fd_it);
-
-        std::cout << "#### Removed old nickname '" << old_nickname << "' for fd " << fd << "." << std::endl;
-
-    } else {
-        // FD does not currently have a nickname.
-         std::cout << "#### FD " << fd << " does not have an existing nickname." << std::endl;
-    }
-
-    // udpate both maps
-    std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
-    _nickname_to_fd.insert({processed_nickname, fd});
-    _fd_to_nickname.insert({fd, processed_nickname});
-
-    std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
-    return true;
-}
-
-std::string Server::get_nickname(int fd) const {
-     auto it = _fd_to_nickname.find(fd);
-     if (it != _fd_to_nickname.end()) {
-         return it->second; // Return the nickname
-     }
-     return "";
-}
-
-int Server::get_fd(const std::string& nickname) const {
-     std::string processed_nickname = to_lowercase(nickname);
-
-     auto it = _nickname_to_fd.find(processed_nickname);
-     if (it != _nickname_to_fd.end()) {
-         return it->second; // Return the fd
-     }
-     return -1; // nickname not found
-}
-
-void Server::remove_fd(int fd) {
-    // Call this when a client disconnects to clean up their nickname entry
-    auto fd_it = _fd_to_nickname.find(fd);
-    if (fd_it != _fd_to_nickname.end()) {
-
-        // find the nickname from the fd
-		std::string old_nickname = fd_it->second;
-        
-		std::cout << "#### Removing fd " << fd << " and nickname '" << old_nickname << "' due to disconnect." << std::endl;
-
-        // Remove from nickname_to_fd map using the nickname
-        _nickname_to_fd.erase(old_nickname);
-        // Remove from fd_to_nickname map using the iterator
-        _fd_to_nickname.erase(fd_it);
-
-        std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
-    } else {
-         std::cout << "#### No nickname found for fd " << fd << " upon disconnect." << std::endl;
-    }
-}
 
 void Server::send_message(std::shared_ptr<Client> client)
 {
@@ -449,3 +341,51 @@ void Server::send_server_broadcast()
 		_server_broadcasts.pop_front();  //remove sent message
 	}
 }
+
+//channel realted 
+
+bool Server::channelExists(const std::string& channelName) const {
+    return _channels.count(channelName) > 0;
+}
+//
+void Server::createChannel(const std::string& channelName) {
+    if (_channels.count(channelName) == 0){
+		_channels.emplace(channelName, std::make_shared<Channel>(channelName));
+        std::cout << "Channel '" << channelName << "' created." << std::endl;
+        // fill clientsend buffer 
+		return ;
+    }
+    std::cerr << "Error: Channel '" << channelName << "' already exists" << std::endl;
+}
+
+std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
+	for (std::map<std::string, std::shared_ptr<Channel>>::iterator it = _channels.begin(); it != _channels.end(); it++) {
+		if (it->first == ChannelName)
+			return it->second;
+	}
+	throw ServerException(ErrorType::NO_Client_INMAP, "can not get_Client()");
+}
+/*Channel Server::getChannel(const std::string& channelName){
+    auto it = _channels.find(channelName);
+    if(it != _channels.end()){
+        return it->second;
+    }
+    return nullptr; // Channel not found
+}*/
+
+
+/**
+ * @brief when using weak pointers, when the original object goes, the wek pointer may 
+ * be left dangling, of course its better to remove it methodically, but this function might have value
+ * for valgrind testing if we have an issue
+ * void cleanUpExpiredClients(std::map<std::weak_ptr<Client>, std::bitset<4>>& _ClientModes) {
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
+        if (it->first.expired()) {
+            it = _ClientModes.erase(it);  
+        } else {
+            ++it;
+        }
+    }
+}
+ * 
+ */

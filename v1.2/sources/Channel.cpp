@@ -24,18 +24,29 @@ void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
 
-bool Channel::addClient(Client* Client) {
+bool Channel::addClient(std::shared_ptr <Client> client) {
     // std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
-    auto result = Clients.insert(Client);
-    if (result.second) {
+    if (!client)
+		return false; // no poopoo pointers
+	std::weak_ptr<Client> weakclient = client;
+	_ClientModes.emplace(weakclient, std::bitset<4>());
+    client->getMsg().queueMessage(":Nickname JOIN #channelName\r\n");
+	client->getMsg().queueMessage(":server 332 Nickname #channelName :Welcome to our channel!\r\n");
+	/**
+	 * @brief :server 353 Nickname = #channelName :Alice Bob Charlie
+				:server 366 Nickname #channelName :End of /NAMES list
+
+	 * 
+	 */
+	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
-    }
-    return result.second; // Return true if insertion happened (Client was not already there)
+    }*/
+    return true; // Return true if insertion happened (Client was not already there)
 }
 
-bool Channel::removeClient(Client* Client) {
+/*bool Channel::removeClient(Client* Client) {
     // std::set::erase returns the number of elements removed (0 or 1 for a set)
-    size_t removed_count = Clients.erase(Client);
+    size_t removed_count = _ClientModes.erase(Client->getNickname());
 
     if (removed_count > 0) {
         // Also remove from operators if they were an operator
@@ -109,3 +120,17 @@ void Channel::removeMode(const std::string& mode, Client* Client) {
     }
     // Add actual mode logic here
 }
+
+
+ * @brief void processClients() {
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
+        if (auto clientPtr = it->first.lock()) {
+            //client is still valid, do something
+        } else {
+            it = _ClientModes.erase(it); 
+        }
+    }
+}
+Would this struc
+ * 
+ */

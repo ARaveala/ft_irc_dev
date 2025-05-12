@@ -114,7 +114,9 @@ void Client::receive_message(int fd, Server& server) {
 
 
 void Client::setDefaults(int num){
-	_nickName = "anon"; //+ num;
+	// this needs an alternative to add unique identifiers 
+	// also must add to all relative containers. 
+	_nickName = "anonnick"; //+ num;
 	_ClientName = "Clientanon" + num;
 	_fullName = "fullanon" + num;
 }

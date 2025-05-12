@@ -30,4 +30,8 @@ void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string
 		messageQue.push_back(user_message);
 		broadcastQueue.push_back(serverBroadcast_message);
 
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 966456906fe022c3a12f34a2b0a67c4b7c344e8b

@@ -13,14 +13,14 @@
 class Client; // Forward declaration
 class Server;
 
-class IrcMessage
-{
+class IrcMessage {
 	private:
 		// int current_fd;
     	std::string _prefix;
     	std::string _command;
     	std::vector<std::string> _paramsList;
 		std::deque<std::string> _messageQue;
+	
 	public:
     	IrcMessage();
     	~IrcMessage();
@@ -36,10 +36,10 @@ class IrcMessage
 		const std::string getParam(unsigned long index) const ;
 		void printMessage(const IrcMessage& msg);
 
-
 		
-	// araveala has added this to help give you full control
-	// naming is changable
+		
+		// araveala has added this to help give you full control
+		// naming is changable
 		// these are now required as subject requires all activity including read and write
 		// must go through epoll
 		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
@@ -47,8 +47,8 @@ class IrcMessage
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string getQueueMessage() { return _messageQue.front();};
 		void prep_nickname_msg(std::string& nickname,  std::deque<std::string>& messageQue, std::deque<std::string>& broadcastQueue);
-
+		
 		void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 		//void dispatch_nickname(int client_fd, const std::string& oldnick, std::string newnickname, std::map<int, std::shared_ptr <Client>>& clientsMap);
-};
+	};

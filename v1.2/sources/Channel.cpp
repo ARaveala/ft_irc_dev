@@ -1,25 +1,24 @@
 #include "Channel.hpp"
-#include "User.hpp"
 #include <iostream>
 
-Channel::Channel(const std::string& channelName) : name(channelName), topic("") {
-    std::cout << "Channel '" << name << "' created." << std::endl;
+Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
+    std::cout << "Channel '" << _name << "' created." << std::endl;
 }
 
 Channel::~Channel() {
-    std::cout << "Channel '" << name << "' destroyed." << std::endl;
+    std::cout << "Channel '" << _name << "' destroyed." << std::endl;
 }
 
 const std::string& Channel::getName() const {
-    return name;
+    return _name;
 }
 
 const std::string& Channel::getTopic() const {
-    return topic;
+    return _topic;
 }
 
 void Channel::setTopic(const std::string& newTopic) {
-    topic = newTopic;
+    _topic = newTopic;
 }
 
 bool Channel::addUser(User* user) {
@@ -101,9 +100,9 @@ void Channel::setMode(const std::string& mode, User* user) {
 void Channel::removeMode(const std::string& mode, User* user) {
     // Added null check for user pointer before accessing nickname
     if (user) {
-      std::cout << name << " mode " << mode << " removed by " << user->getNickname() << "." << std::endl;
+      std::cout << _name << " mode " << mode << " removed by " << user->getNickname() << "." << std::endl;
     } else {
-      std::cout << name << " mode " << mode << " removed." << std::endl;
+      std::cout << _name << " mode " << mode << " removed." << std::endl;
     }
     // Add actual mode logic here
 }

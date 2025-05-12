@@ -233,5 +233,42 @@ void IrcMessage::handle_message(Client& Client, const std::string message, Serve
 	if (getCommand() == "PONG"){
 		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
 	}
+
+    if (getCommand() == "JOIN"){
+        checks
+            look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
+                if doesnt exist - create it with default settings // what are default settings?
+                    add current client to channel operator // channel std::string _operator
+                    set max size? // is the is default channel std::int _maxSize
+                    set current number of clients in side the channel // channel std::int _nClients
+
+                                                            
+            if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
+                if it is invite only, does channel have invite.
+                is it password protected.
+                if it is password protected, did user provide password.
+                is client banned from channel.
+        assuming checks passed, client can now join channel
+            add client to list of clients on channel // channel > list of clients
+            if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
+
+
+    /*
+    if (getCommand() == "KICK") {
+        
+    }
+
+    JOIN
+    PART
+    LEAVE
+    TOPIC
+    NAMES
+    LIST
+    INVITE
+    PARAMETER NICKNAME
+
+*/
+
+
 	printMessage(*this);
 }

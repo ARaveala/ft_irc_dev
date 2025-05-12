@@ -6,7 +6,7 @@
 
 // error messages 
 
-# define NICK_INUSE(nick) = (":localhost 433 "  + nick + " " + nick + "\r\n");
+# define NICK_INUSE(nick) (":localhost 433 "  + nick + " " + nick + "\r\n");
 /**
  * @brief designed with expectation of DELETION
  * server messages, debugging and testing alternatives 

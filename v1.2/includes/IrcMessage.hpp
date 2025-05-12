@@ -20,6 +20,7 @@ class IrcMessage {
     	std::string _command;
     	std::vector<std::string> _paramsList;
 		std::deque<std::string> _messageQue;
+		//std::vector<std::string> _joinedchannels; // list of joined channels
 	
 	public:
     	IrcMessage();

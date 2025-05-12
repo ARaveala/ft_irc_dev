@@ -26,7 +26,7 @@
 // /help
 // /raw open `/file of choice
 // open fileofchoice
-
+#include "ChannelManager.hpp"
 void debug_helper_print_events(struct epoll_event* events)
 {
 	std::cout << "EPOLL event for FD " << events->data.fd << ": "
@@ -67,6 +67,8 @@ int loop(Server &server)
 	server.set_signal_fd(signal_mask());
 	server.setup_epoll(epollfd, server.get_signal_fd(), EPOLLIN);
 	struct epoll_event events[config::MAX_CLIENTS];
+	// create instance of channel manager , could this be in server ? 
+	ChannelManager channelManager;
 	while (!should_exit)
 	{
 		// from epoll fd, in events struct this has niche error handling

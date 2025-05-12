@@ -389,7 +389,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 	int fd = client->getFd();
 	while (!client->isMsgEmpty()) {
 		std::string msg = client->getMsg().getQueueMessage();
-		std::cout<<"checking the message from que before send ["<< msg <<"]\n";
+		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
 		ssize_t bytes_sent = send(fd, msg.c_str(), msg.length(), 0); //safesend
 		if (bytes_sent == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -418,6 +418,15 @@ void Server::send_message(std::shared_ptr<Client> client)
 	}
 
 }
+
+/*void send_channel_broadcast(ChannelManager& manager)
+{
+	manager.broadcast();
+// fucntion to loop through joined channels and channels in channel manager
+// find all channles clients has joined and send similar to server message to all clienst in the
+// channel
+}*/
+
 void Server::send_server_broadcast()
 {
 	while(!_server_broadcasts.empty())

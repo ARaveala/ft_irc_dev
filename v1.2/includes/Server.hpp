@@ -31,6 +31,7 @@
  *  
  */
 class Client;
+class Channel;
 class Server {
 	private:
 		int _port;
@@ -41,6 +42,7 @@ class Server {
 		int _epoll_fd;
 		std::string _password;
 
+		//std::map<std::string, Channel> _channels;
 		std::map<int, std::shared_ptr<Client>> _Clients;
 		std::map<int, int> _timer_map;
 		// start of new section
@@ -50,6 +52,7 @@ class Server {
 		static const std::set<std::string> _illegal_nicknames;
 		// Helper function to convert a string to lowercase (defined inline in header)
 		std::deque<std::string> _server_broadcasts; // for broadcasting server wide messages
+		
 		static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),

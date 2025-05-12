@@ -17,6 +17,7 @@
 #include "Server.hpp"
 #include "SendException.hpp"
 #include "Client.hpp"
+//#include "ChannelManager.hpp"
 // --- Constructor ---
 IrcMessage::IrcMessage() {}
 // --- Destructor ---
@@ -187,7 +188,7 @@ void IrcMessage::printMessage(const IrcMessage& msg)
     }
     std::cout << "---" << std::endl; // Separator for messages
 }
-
+#include "IrcResources.hpp"
 /**
  * @brief this functions task is to find what command we have been sent and to deligate the
  * handling of that command to respective functions
@@ -208,12 +209,13 @@ void IrcMessage::handle_message(Client& Client, const std::string message, Serve
 	}*/
 	if (getCommand() == "NICK"){
 		if(server.check_and_set_nickname(getParam(0), Client.getFd())) {
-			prep_nickname_msg(Client.getNicknameRef(), getQue(), server.getBroadcastQueue());;
+			prep_nickname_msg(Client.getNicknameRef(), getQue(), server.getBroadcastQueue());
 		}
 		else
 		{
 			// error codes for handlinh error messages or they should be handled in check and set . 
-			std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
+			//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
+			std::string test2 = NICK_INUSE(getParam(0));
 			_messageQue.push_back(test2);
 			//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
 		}
@@ -235,26 +237,38 @@ void IrcMessage::handle_message(Client& Client, const std::string message, Serve
 	}
 
     if (getCommand() == "JOIN"){
-        checks
-            look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
-                if doesnt exist - create it with default settings // what are default settings?
-                    add current client to channel operator // channel std::string _operator
-                    set max size? // is the is default channel std::int _maxSize
-                    set current number of clients in side the channel // channel std::int _nClients
+		// handle join
+		// ischannel
+		// if (!ischannel) , createChannel(), setChannelDefaults() updateChannalconts()?, confirmOperator()
+		// else if (ischannel), isinvite(), hasinvite(), ChannelhasPaswd(), clientHasPasswd()/passwrdMatch(),
+		// hasBan(), joinChannel() updateChannalconts()
+		//		
+		/**
+		 * @brief checks
+		 * look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
+		 * 	if doesnt exist - create it with default settings // what are default settings?
+		 * set max size? // is the is default channel std::int _maxSize also flag -n 
+		 * set current number of clients in side the channel // channel std::int _nClients
+		 * add channel to vector of channels client has joined //  <Client> _joinedchannels
+		 * add current client to channel operator // channel std::string _operator OR
+		 * adjust bitset map
+		 * 
+		 * if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
+		 * if it is invite only, does client have invite isnide channel.
+		 * 
+		 * is it password protected.
+		 * if it is password protected, did user provide password. if not then user can not enter
+		 * if yes, does password match
+		 * 
+		 *  is client banned from channel.
+		 * 
+		 * assuming checks passed, client can now join channel
+		 * add client to list of clients on channel // channel > list of clients
+		 *  if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
 
-                                                            
-            if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
-                if it is invite only, does channel have invite.
-                is it password protected.
-                if it is password protected, did user provide password.
-                is client banned from channel.
-        assuming checks passed, client can now join channel
-            add client to list of clients on channel // channel > list of clients
-            if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
-
-
-    /*
-    if (getCommand() == "KICK") {
+		 * 
+		 */
+    /*if (getCommand() == "KICK") {
         
     }
 
@@ -268,7 +282,7 @@ void IrcMessage::handle_message(Client& Client, const std::string message, Serve
     PARAMETER NICKNAME
 
 */
-
+	}
 
 	printMessage(*this);
 }

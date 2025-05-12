@@ -18,6 +18,8 @@ class Client {
 		std::string _ClientName;
 		std::string _fullName;
 		IrcMessage _msg;
+		std::vector<std::string> _joinedchannels; // list of joined channels
+
 		//std::deque<std::string> _message_que;
 		//std::string _prefixes; // Client permissions 
 		//int ping_sent; // std::chrono::steady_clock

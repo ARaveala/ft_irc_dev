@@ -54,7 +54,7 @@ enum class ErrorType {
 namespace config {
 	constexpr int MAX_CLIENTS = 10;
 	constexpr int TIMEOUT_CLIENT = 3000; // this should be larger than epoll timeout
-	constexpr int TIMEOUT_EPOLL = 30;
+	constexpr int TIMEOUT_EPOLL = 0;
 	
 	constexpr int BUFFER_SIZE = 1024;
 }

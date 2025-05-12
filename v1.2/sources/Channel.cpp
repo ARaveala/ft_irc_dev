@@ -1,10 +1,13 @@
 #include "Channel.hpp"
 #include <iostream>
 
-Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
+/*Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
     std::cout << "Channel '" << _name << "' created." << std::endl;
-}
+}*/
 
+Channel::Channel(const std::string& channelName)  : _name(channelName){
+	std::cout << "Channel '" << _name << "' created." << std::endl;
+}
 Channel::~Channel() {
     std::cout << "Channel '" << _name << "' destroyed." << std::endl;
 }
@@ -21,86 +24,86 @@ void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
 
-bool Channel::addUser(User* user) {
+bool Channel::addClient(Client* Client) {
     // std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
-    auto result = users.insert(user);
+    auto result = Clients.insert(Client);
     if (result.second) {
-        if (user) std::cout << user->getNickname() << " joined channel " << name << std::endl;
+        if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
     }
-    return result.second; // Return true if insertion happened (user was not already there)
+    return result.second; // Return true if insertion happened (Client was not already there)
 }
 
-bool Channel::removeUser(User* user) {
+bool Channel::removeClient(Client* Client) {
     // std::set::erase returns the number of elements removed (0 or 1 for a set)
-    size_t removed_count = users.erase(user);
+    size_t removed_count = Clients.erase(Client);
 
     if (removed_count > 0) {
         // Also remove from operators if they were an operator
-        operators.erase(user);
-        if (user) std::cout << user->getNickname() << " left channel " << name << std::endl;
+        operators.erase(Client);
+        if (Client) std::cout << Client->getNickname() << " left channel " << _name << std::endl;
     }
 
     return removed_count > 0;
 }
 
-bool Channel::isUserInChannel(User* user) const {
-    return users.count(user) > 0;
+bool Channel::isClientInChannel(Client* client) const {
+    return client.count(client) > 0;
 }
 
-const std::set<User*>& Channel::getUsers() const {
-    return users;
+const std::set<Client*>& Channel::getClients() const {
+    return Clients;
 }
 
-bool Channel::addOperator(User* user) {
-    if (isUserInChannel(user)) {
-        auto result = operators.insert(user);
+bool Channel::addOperator(Client* Client) {
+    if (isClientInChannel(Client)) {
+        auto result = operators.insert(Client);
         if (result.second) {
-            if (user) std::cout << user->getNickname() << " is now an operator in " << name << std::endl;
+            if (Client) std::cout << Client->getNickname() << " is now an operator in " << _name << std::endl;
         }
         return result.second;
     }
-    return false; // User must be in the channel to be an operator
+    return false; // Client must be in the channel to be an operator
 }
 
-bool Channel::removeOperator(User* user) {
-     size_t removed_count = operators.erase(user);
+bool Channel::removeOperator(Client* Client) {
+     size_t removed_count = operators.erase(Client);
      if (removed_count > 0) {
-        if (user) std::cout << user->getNickname() << " is no longer an operator in " << name << std::endl;
+        if (Client) std::cout << Client->getNickname() << " is no longer an operator in " << _name << std::endl;
      }
      return removed_count > 0;
 }
 
-bool Channel::isOperator(User* user) const {
-    return operators.count(user) > 0;
+bool Channel::isOperator(Client* Client) const {
+    return operators.count(Client) > 0;
 }
 
-void Channel::broadcastMessage(const std::string& message, User* sender) const {
-    std::cout << "Channel [" << name << "] Broadcast: " << message << std::endl;
+void Channel::broadcastMessage(const std::string& message, Client* sender) const {
+    std::cout << "Channel [" << _name << "] Broadcast: " << message << std::endl;
     // In a real server:
-    // for (User* user : users) {
-    //     if (user && user != sender) { // Added null check for user pointer
-    //         // Send message to user->socket
-    //         // Example: send(user->socket_fd, message.c_str(), message.length(), 0);
+    // for (Client* Client : Clients) {
+    //     if (Client && Client != sender) { // Added null check for Client pointer
+    //         // Send message to Client->socket
+    //         // Example: send(Client->socket_fd, message.c_str(), message.length(), 0);
     //     }
     // }
 }
 
 // Set mode definition (basic example)
-void Channel::setMode(const std::string& mode, User* user) {
-    // Added null check for user pointer before accessing nickname
-    if (user) {
-      std::cout << name << " mode " << mode << " set by " << user->getNickname() << "." << std::endl;
+void Channel::setMode(const std::string& mode, Client* Client) {
+    // Added null check for Client pointer before accessing nickname
+    if (Client) {
+      std::cout << _name << " mode " << mode << " set by " << Client->getNickname() << "." << std::endl;
     } else {
-       std::cout << name << " mode " << mode << " set." << std::endl;
+       std::cout << _name << " mode " << mode << " set." << std::endl;
     }
     // Add actual mode logic here (e.g., if mode == "+t", set a flag)
 }
 
 // Remove mode definition (basic example)
-void Channel::removeMode(const std::string& mode, User* user) {
-    // Added null check for user pointer before accessing nickname
-    if (user) {
-      std::cout << _name << " mode " << mode << " removed by " << user->getNickname() << "." << std::endl;
+void Channel::removeMode(const std::string& mode, Client* Client) {
+    // Added null check for Client pointer before accessing nickname
+    if (Client) {
+      std::cout << _name << " mode " << mode << " removed by " << Client->getNickname() << "." << std::endl;
     } else {
       std::cout << _name << " mode " << mode << " removed." << std::endl;
     }

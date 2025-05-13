@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
-
+//#include <vector>
+//#include <unordered_set>
 /**
  * both functions must accept char * as main() does not accept std string
  * i have left them open as we could provide some extra checks. 
@@ -57,3 +58,4 @@ std::string validate_password(char* password_char)
 	// length
 	return password;
 }
+

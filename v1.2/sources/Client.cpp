@@ -27,7 +27,9 @@ int Client::getFd(){
 bool Client::get_acknowledged(){
 	return _acknowledged;
 }
-
+bool Client::get_pendingAcknowledged(){
+	return _pendingAcknowledged;
+}
 int Client::get_failed_response_counter(){
 	return _failed_response_counter;
 }
@@ -77,6 +79,9 @@ void Client::set_acknowledged(){
 	_acknowledged = true;
 }
 
+void Client::set_pendingAcknowledged(bool onoff){
+	_pendingAcknowledged = onoff;
+}
 /**
  * @brief Reads using recv() to a char buffer as data recieved from the socket
  * comes in as raw bytes, std		void sendPing();
@@ -117,12 +122,12 @@ void Client::receive_message(int fd, Server& server) {
 }
 
 
-void Client::setDefaults(int num){
+void Client::setDefaults(){
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
-	_nickName = "anon"; //+ num;
-	_ClientName = "Clientanon" + num;
-	_fullName = "fullanon" + num;
+	_nickName = generateUniqueNickname();
+	_ClientName = "Clientanon";
+	_fullName = "fullanon";
 }
 
 void Client::sendPing() {
@@ -157,13 +162,17 @@ bool Client::change_nickname(std::string nickname, int fd){
 void Client::handle_message(const std::string message, Server& server)
 {
 	_msg.parse(message);
-	
-	/*if (getCommand() == "QUIT")
+	//std::string param = getParam(0);
+	if (_msg.getCommand() == "QUIT")
 	{
 		std::cout<<"QUIT called removing client \n";
-		server.remove_Client(server.get_event_pollfd(), client_fd);
+		prepareQuit(server.getChannelsToNotify());
+//Channel.removeClient();
+		server.remove_Client(server.get_event_pollfd(), _fd);
+		
+		
 		return ;
-	}*/
+	}
 	if (_msg.getCommand() == "NICK"){
 		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd())) {
 			_msg.prep_nickname_msg(getNicknameRef(), _msg.getQue(), server.getBroadcastQueue());
@@ -188,15 +197,27 @@ void Client::handle_message(const std::string message, Server& server)
 		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
 	}
 
-    if (_msg.getCommand() == "JOIN"){
+    if (_msg.getCommand() == "JOIN" && !_msg.getParam(0).empty()){
 		if (server.channelExists(_msg.getParam(0)) < 1) // will param 0 be correct 
 		{
+			std::cout<<"creating channel now!-----------";
+			// create a channel object into a server map
 			server.createChannel(_msg.getParam(0));
+			// add client to channel map
 			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-
+			// add channel to clients list
+			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
 			// this is join channel, it sends the confrim message to join
 			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue());
 			// set defaults what are they 
+		}
+		else
+		{
+			std::cout<<"adding client to existing channel!-----------";
+
+			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
+			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
+			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue());
 		}
 
 		// handle join
@@ -248,3 +269,59 @@ void Client::handle_message(const std::string message, Server& server)
 
 	getMsg().printMessage(getMsg());
 }
+
+std::string Client::getChannel(std::string channelName)
+{
+	auto it = _joinedChannels.find(channelName);
+	//if (find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
+	if (it != _joinedChannels.end())
+	{
+		std::cout<<"channel already exists on client list\n";
+		return channelName;
+	}
+	else
+		std::cout<<"channel does not exist\n";
+	return "";
+		//_joinedChannels.push_back(channelName);
+}
+void Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
+    std::string quitMessage = ":" + _nickName + " QUIT :Client disconnected\r\n";
+
+    for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
+        if (auto channelPtr = it->second.lock()) {
+            channelsToNotify.push_back(it->first);
+            channelPtr->removeClient(_nickName);
+            ++it;
+        } else {
+            it = _joinedChannels.erase(it);  //Remove expired weak_ptrs
+        }
+    }
+}
+
+bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channel) {
+
+	if (!channel)
+		return false; // no poopoo pointers could be throw
+	auto it = _joinedChannels.find(channelName);
+	//if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end()) {
+	if (it != _joinedChannels.end()) {
+		std::cout<<"channel already exists on client list\n";
+		return false;
+	} else {
+		std::weak_ptr<Channel> weakchannel = channel;
+		_joinedChannels.emplace(channelName, weakchannel);
+	}
+	return true;
+
+}
+/*void Client::removeChannel(std::string channelName) {
+	if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
+	{
+		_joinedChannels.pop_front();
+		std::cout<<"channel already exists on client list\n";
+	}
+	else
+		std::cout<<"channel does not exist\n";
+		//_joinedChannels.push_back(channelName);
+
+}*/

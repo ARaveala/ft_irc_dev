@@ -47,14 +47,14 @@ void debug_helper_print_events(struct epoll_event* events)
  * @brief This loop functions job is to keep the server running and accepting connections.
  * It will also help manage incoming messages from clients that will be redirected to Client class methods
  * and from there too message handling class/function.
+ * 
+ * all messages are sent when an epollout event is caught 4
  *
  * @param server the instantiated server object that will be used to manage the server and its data
  * @return int
  *
- * @note epoll_pwait() gives us signal handling , potentially we can add signal fds to this epoll() events,
- * we might be able to just catch them here, and avoid possible interuption issues.
+ * @note epoll_pwait() gives us signal handling utalzing a signal fd, signal tests are needed
  *
- * other things to consider setsocket options? would these be helpfull ?
  * how to test if everything is non blocking MAX CLIENTS IS MAX 510 DUE TO USING EPOLL FOR TIMER_FD ALSO,
  * SIGNAL FD AND CLIENT FDS AND SERVER FD
  */
@@ -67,8 +67,6 @@ int loop(Server &server)
 	server.set_signal_fd(signal_mask());
 	server.setup_epoll(epollfd, server.get_signal_fd(), EPOLLIN);
 	struct epoll_event events[config::MAX_CLIENTS];
-	// create instance of channel manager , could this be in server ? 
-	//ChannelManager channelManager;
 	while (!should_exit)
 	{
 		// from epoll fd, in events struct this has niche error handling
@@ -102,13 +100,13 @@ int loop(Server &server)
 						server.handle_client_connection_error(e.getType());
 					}
 				}
-				else {
+				else if (server.get_Client(fd)->get_acknowledged() == true) {
 					bool read_to_buffer = server.checkTimers(fd);
 					if (read_to_buffer == true)
 					{
 						try {
 							//std::cout<<" reciveing message\n";
-							server.get_Client(fd)->receive_message(fd, server); // add msg object here
+							server.get_Client(fd)->receive_message(fd, server);
 							//std::cout<<" message recived\n";
 							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
@@ -126,9 +124,11 @@ int loop(Server &server)
 			if (events[i].events & EPOLLOUT) {
 				int fd = events[i].data.fd;
 				try {
+					//if (_Clients[client_fd]->get_acknowledged())
 					server.send_message(server.get_Client(fd));
 					std::cout<<"client messages should be sent by now !!!!\n";
 					server.send_server_broadcast();
+					server.sendChannelBroadcast();
 				} catch(const ServerException& e) {
 					if (e.getType() == ErrorType::NO_Client_INMAP)
 						continue ;

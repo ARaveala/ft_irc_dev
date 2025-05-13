@@ -53,7 +53,8 @@ class Server {
 		////static const std::set<std::string> _illegal_nicknames;
 		// Helper function to convert a string to lowercase (defined inline in header)
 		std::deque<std::string> _server_broadcasts; // for broadcasting server wide messages
-		
+		std::deque<std::string> _channel_broadcasts;
+		std::deque<std::string> _channelsToNotify;
 		/*static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
@@ -87,6 +88,7 @@ class Server {
 		//void set_password(std::string const password);
 		void create_Client(int epollfd);
 		void remove_Client(int epollfd, int client_fd);
+		void removeClientFromChannels(int fd);
 		// remove channel
 	
 		// SETTERS
@@ -112,6 +114,7 @@ class Server {
 		std::string get_password() const;
 		////std::string get_nickname(int fd) const;  // ai
 		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
+		std::deque<std::string>& getChannelsToNotify() { return _channelsToNotify; }
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);
 		std::shared_ptr<Channel> get_Channel(std::string channelName);
@@ -133,11 +136,12 @@ class Server {
 		void resetClientTimer(int timer_fd, int timeout_seconds);
 		void send_message(std::shared_ptr<Client> client);
 		void send_server_broadcast();
-
+		void sendChannelBroadcast();
 		// channel related 
 		bool channelExists(const std::string& channelName) const;
 		void createChannel(const std::string& channelName);//, Client& client
 		Channel* getChannel(const std::string& channelName);
 };
-	
+
+std::string generateUniqueNickname();
 

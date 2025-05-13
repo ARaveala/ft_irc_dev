@@ -20,6 +20,33 @@ const std::string& Channel::getTopic() const {
     return _topic;
 }
 
+std::vector<int> Channel::getAllfds(){
+	std::vector<int> fds;
+	for (const auto& entry : _ClientModes) {
+		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
+			fds.push_back(entry.second.second);  //Retrieve FD from stored pair (bitset, FD)
+		}
+	}
+	return fds;
+}
+
+std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
+    if (auto clientPtr = weakClient.lock()) {  //  Convert weak_ptr to shared_ptr safely
+        return clientPtr->getNickname();  //  Get the current nickname live
+    }
+    return "";  //eturn empty string if the Client no longe
+}
+
+std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
+    for (const auto& entry : _ClientModes) {
+        if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+            return entry.first;  // return the matching weak_ptr
+        }
+    }
+	// we could substitute with a throw here
+    return {};  // return empty weak_ptr if no match is found
+}
+
 void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
@@ -29,8 +56,8 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
     if (!client)
 		return false; // no poopoo pointers
 	std::weak_ptr<Client> weakclient = client;
-	_ClientModes.emplace(weakclient, std::bitset<4>());
-	_ClientModes[weakclient].set(MODE_OPERATOR);
+	_ClientModes.emplace(weakclient, std::make_pair(std::bitset<4>(), client->getFd()));
+	//_ClientModes[weakclient].first.set(MODE_OPERATOR);
 
 	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
@@ -38,20 +65,26 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
     return true; // Return true if insertion happened (Client was not already there)
 }
 
-/*bool Channel::removeClient(Client* Client) {
+/*
+ *
+ * @param Client
+ * @return true
+ * @return false
+ */
+bool Channel::removeClient(std::string nickname) {
     // std::set::erase returns the number of elements removed (0 or 1 for a set)
-    size_t removed_count = _ClientModes.erase(Client->getNickname());
-
+	//std::weak_ptr<Client> weakClient = getWeakPtrByNickname(nickname);
+	//size_t removed_count = _ClientModes.erase(weakClient);
+	size_t removed_count = _ClientModes.erase(getWeakPtrByNickname(nickname));
     if (removed_count > 0) {
         // Also remove from operators if they were an operator
-        operators.erase(Client);
-        if (Client) std::cout << Client->getNickname() << " left channel " << _name << std::endl;
-    }
-
+        //operators.erase(Client);
+        std::cout << nickname << " left channel " << _name << std::endl;
+	}
     return removed_count > 0;
 }
 
-bool Channel::isClientInChannel(Client* client) const {
+/*bool Channel::isClientInChannel(Client* client) const {
     return client.count(client) > 0;
 }
 
@@ -121,10 +154,10 @@ void Channel::removeMode(const std::string& mode, Client* Client) {
         if (auto clientPtr = it->first.lock()) {
             //client is still valid, do something
         } else {
-            it = _ClientModes.erase(it); 
+            it = _ClientModes.erase(it);
         }
     }
 }
 Would this struc
- * 
+ *
  */

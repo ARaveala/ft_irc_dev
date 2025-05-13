@@ -17,6 +17,19 @@
  * @param messageQue refernce
  * @param broadcastQueue reference
  */
+
+void IrcMessage::prepWelcomeMessage(std::string& nickname, std::deque<std::string>& messageQue) {
+	std::string welcome = ":server 001 " + nickname + " :Welcome to the IRC server\r\n";
+	std::string extra1 = ":server 002 " + nickname + " :Your host is ft_irc, running version 1.0\r\n";
+	std::string extra2 = ":server 003 " + nickname + " :This server was created today\r\n";
+	std::string extra3 = ":server 004 " + nickname + " ft_irc 1.0 o o\r\n";
+	messageQue.push_back(welcome);
+	messageQue.push_back(extra1);
+	messageQue.push_back(extra2);
+	messageQue.push_back(extra3);
+	//IRCMessage::welcome_msg, strlen(IRCMessage::welcome_msg)
+}
+
 void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string>& messageQue, std::deque<std::string>&broadcastQueue)
 {	
 		std::string test = getParam(0);
@@ -41,13 +54,25 @@ void IrcMessage::prep_nickname_inuse(std::string& nickname, std::deque<std::stri
 }
 void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue)
 {
-	std::string whoJoins = ":" + nickname + " JOIN #" + channleName + "\r\n";
-	// this message needs adjustment
-	std::string welcomeToChannel = ":server PRIVMSG #" + channleName + " :Welcome to our channel!\r\n";
+	//std::string whoJoins = ":" + nickname + " JOIN :#" + channleName + "\r\n";
+	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
 
+	// this message needs adjustment
+	//std::string welcomeToChannel = ":ft_irc PRIVMSG #" + channleName + " :Welcome to our channel!\r\n";
+	std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :user1!user1@localhost user2!!user2@localhost user3!!user3@localhost\r\n"; // ✅ Name list
+	std::string test2 = ":ft_irc 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names
+
+	std::string test3 = ":ft_irc 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic
+
+	
 //	std::string welcomeToChannel = ":ft_irc 332 " + nickname + " #" + channleName + " :Welcome to our channel!\r\n";
 	messageQue.push_back(whoJoins);
-	messageQue.push_back(welcomeToChannel);
+	//messageQue.push_back(welcomeToChannel);
+	messageQue.push_back(test1);
+	
+	messageQue.push_back(test2);
+	messageQue.push_back(test3);
+	
 	// list all memebers by nick
 	//messageQue.push_back(welcomeToChannel);
 	/**

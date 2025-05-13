@@ -65,7 +65,8 @@ class IrcMessage {
 		void prep_nickname_msg(std::string& nickname,  std::deque<std::string>& messageQue, std::deque<std::string>& broadcastQueue);
 		void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue);
-		void handle_message(Client& Client, const std::string message, Server& server);
+		void prepWelcomeMessage(std::string& nickname, std::deque<std::string>& messageQue);
+		//void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
 		// moving from server to here 

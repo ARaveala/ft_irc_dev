@@ -16,7 +16,7 @@
 #include <algorithm> // find_if
 //#include <optional> // nullopt , signifies absence
 class ServerException;
-
+#include <unordered_set>
 Server::Server(){
 	std::cout << "#### Server instance created." << std::endl;
 }
@@ -102,19 +102,14 @@ void Server::create_Client(int epollfd) {
 		_Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd);
 		_timer_map[timer_fd] = client_fd;
 		std::cout << "New Client created , fd value is  == " << _Clients[client_fd]->getFd() << std::endl;
-
-// WELCOME MESSAGE
-		set_current_client_in_progress(client_fd);
-
-		if (!_Clients[client_fd]->get_acknowledged()){
-			// send message back so server dosnt think we are dead this has to be handled through epoll too damn it 
-			send(client_fd, IRCMessage::welcome_msg, strlen(IRCMessage::welcome_msg), 0);
-			_Clients[client_fd]->set_acknowledged();
-		}
-
-		set_client_count(1);
 		
-		_Clients[client_fd]->setDefaults(get_client_count());
+		set_current_client_in_progress(client_fd);
+		_Clients[client_fd]->setDefaults();
+		if (!_Clients[client_fd]->get_acknowledged()){
+			_Clients[client_fd]->set_pendingAcknowledged(true);
+			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef(), _Clients[client_fd]->getMsg().getQue());
+		}
+		set_client_count(1);
 	}
 }
 
@@ -133,6 +128,7 @@ void Server::remove_Client(int epollfd, int client_fd) {
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, client_fd, 0);
 	close(get_Client(client_fd)->get_timer_fd());
 	epoll_ctl(epollfd, EPOLL_CTL_DEL, get_Client(client_fd)->get_timer_fd(), 0);
+	
 	// channel.getClient().erase();
 	_Clients.erase(client_fd);
 	_epollEventMap.erase(client_fd);
@@ -279,7 +275,14 @@ bool Server::checkTimers(int fd) {
 void Server::send_message(std::shared_ptr<Client> client)
 {
 	int fd = client->getFd();
+	if (!client->get_acknowledged())
+	{
+		std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+//		std::string msg = client->getMsg().getQueueMessage();
+		client->set_acknowledged();		
+	}	
 	while (!client->isMsgEmpty()) {
+
 		std::string msg = client->getMsg().getQueueMessage();
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
 		ssize_t bytes_sent = send(fd, msg.c_str(), msg.length(), 0); //safesend
@@ -311,13 +314,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 
 }
 
-/*void send_channel_broadcast(ChannelManager& manager)
-{
-	manager.broadcast();
-// fucntion to loop through joined channels and channels in channel manager
-// find all channles clients has joined and send similar to server message to all clienst in the
-// channel
-}*/
+
 
 void Server::send_server_broadcast()
 {
@@ -339,6 +336,43 @@ void Server::send_server_broadcast()
 			}*/
 		}
 		_server_broadcasts.pop_front();  //remove sent message
+	}
+}
+void Server::sendChannelBroadcast()
+{
+	std::cout<<"entering senchannelbroadcast!-----------";
+
+	std::vector<int> finalFds;
+	for (const auto& channelName : _channelsToNotify) {
+		auto channelPtr = get_Channel(channelName);  //shared_ptr<Channel>
+		if (channelPtr) {
+			const auto& fds = channelPtr->getAllfds();  // get fds from this channel
+			finalFds.insert(finalFds.end(), fds.begin(), fds.end());  //append
+		}
+	}
+	// set will manage all duplicates away 
+	std::unordered_set<int> fdSet(finalFds.begin(), finalFds.end());
+	std::vector<int> uniqueFds(fdSet.begin(), fdSet.end());
+	
+	while (!_channel_broadcasts.empty())
+	{
+		std::string msg = _channel_broadcasts.front();
+		std::cout<<"CHANNEL BROADCAST checking the message from que before send ["<< msg <<"] \n";
+		for (auto& fd : uniqueFds ) {
+			std::cout<<"show me the unique fds = "<<fd<<"\n";
+			ssize_t bytes_sent = send(fd, msg.c_str(), msg.length(), 0);
+			if (bytes_sent == -1) {
+				if (errno == EAGAIN || errno == EWOULDBLOCK) {
+					std::cout<<"triggering the conts???????????????????????????????????????????\n";
+					continue;  //No more space, stop writing
+				}
+				else perror("send error");
+			}
+			/*if (bytes_sent > 0) {
+			
+			}*/
+		}
+		_channel_broadcasts.pop_front();  //remove sent message
 	}
 }
 
@@ -365,6 +399,16 @@ std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
 	}
 	throw ServerException(ErrorType::NO_Client_INMAP, "can not get_Client()");
 }
+
+/*void Server::removeClientFromChannels(int fd)
+{
+	while (!_joinedChannels.empty())
+	{
+		std::string = 
+		get_Channel();
+	}
+
+}*/
 /*Channel Server::getChannel(const std::string& channelName){
     auto it = _channels.find(channelName);
     if(it != _channels.end()){
@@ -389,3 +433,12 @@ std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
 }
  * 
  */
+
+# include <cstdlib>
+
+std::string generateUniqueNickname() {
+    std::string newNick;
+    std::vector<std::string> adjectives = {"the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild", "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"};
+        newNick = "anon" + adjectives[ static_cast<size_t>(rand()) % adjectives.size()] + static_cast<char>('a' + rand() % 26);
+    return newNick;
+}

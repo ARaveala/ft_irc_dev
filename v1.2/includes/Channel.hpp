@@ -47,10 +47,14 @@ class Channel {
 		void removeMode(const std::string& mode, Client* Client);
 // these could go into config.h as namespace?? these are just index values
 // with fancy name
-		const int MODE_OPERATOR = 0;
-		const int MODE_VOICE = 1;
-		const int MODE_INVITE_ONLY = 2;
-		const int MODE_MODERATED = 3;
+		const std::size_t MODE_OPERATOR = 0;
+		const std::size_t MODE_VOICE = 1;
+		const std::size_t MODE_INVITE_ONLY = 2;
+		const std::size_t MODE_MODERATED = 3;
 		// void changeNickname();
+		//clean up for terminal proplems
+		void clearAllChannel() {
+			_ClientModes.clear();
+		};
 };
 

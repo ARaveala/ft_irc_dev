@@ -30,14 +30,8 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
 		return false; // no poopoo pointers
 	std::weak_ptr<Client> weakclient = client;
 	_ClientModes.emplace(weakclient, std::bitset<4>());
-    client->getMsg().queueMessage(":Nickname JOIN #channelName\r\n");
-	client->getMsg().queueMessage(":server 332 Nickname #channelName :Welcome to our channel!\r\n");
-	/**
-	 * @brief :server 353 Nickname = #channelName :Alice Bob Charlie
-				:server 366 Nickname #channelName :End of /NAMES list
+	_ClientModes[weakclient].set(MODE_OPERATOR);
 
-	 * 
-	 */
 	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
     }*/

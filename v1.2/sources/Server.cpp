@@ -209,6 +209,10 @@ void Server::shutdown() {
 	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
 		close(it->first);
 	}
+	for (std::map<const std::string, std::shared_ptr<Channel>>::iterator it = _channels.begin(); it != _channels.end(); it++){
+		it->second->clearAllChannel();
+		//close(it->first);
+	}
 	for (std::map<int, int>::iterator timerit = _timer_map.begin(); timerit != _timer_map.end(); timerit++)
 	{
 		close(timerit->first);
@@ -220,18 +224,14 @@ void Server::shutdown() {
 	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
 		it->second.reset();
 		it->second->getMsg().clearQue();
+		it->second->getMsg().clearAllMsg();
 	}
+
 	_timer_map.clear();
 	_Clients.clear();
 	// delete channels
 	_epollEventMap.clear();
 	
-	// these need to be called on all instnaces or in teh client destrcutors
-	/*_nickname_to_fd.clear();
-	_fd_to_nickname.clear();
-	nickname_to_fd.clear();
-	fd_to_nickname.clear();*/
-	//_illegal_nicknames.clear();
 
 	_server_broadcasts.clear();
 	//_illegal_nicknames.clear();
@@ -240,7 +240,7 @@ void Server::shutdown() {
 }
 
 Server::~Server(){
-	shutdown();
+	//shutdown();
 }
 
 /**

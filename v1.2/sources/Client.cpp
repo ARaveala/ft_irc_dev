@@ -107,7 +107,7 @@ void Client::receive_message(int fd, Server& server) {
 			if (_read_buff.find("\r\n") != std::string::npos) {
 				server.resetClientTimer(_timer_fd, config::TIMEOUT_CLIENT);
 				set_failed_response_counter(-1);
-				handle_message(*this, _read_buff, server);	
+				handle_message(_read_buff, server);	
 				_read_buff.clear();
 				return ; // this might be a bad idea
 			} else
@@ -154,26 +154,22 @@ bool Client::change_nickname(std::string nickname, int fd){
  * @param server 
  */
 // could we do a map of commands to fucntion pointers to handle this withouts ifs ?
-void Client::handle_message( const std::string message, Server& server)
+void Client::handle_message(const std::string message, Server& server)
 {
-	getMsg().parse(message);
+	_msg.parse(message);
+	
 	/*if (getCommand() == "QUIT")
 	{
 		std::cout<<"QUIT called removing client \n";
 		server.remove_Client(server.get_event_pollfd(), client_fd);
 		return ;
 	}*/
-	if (getMsg().getCommand() == "NICK"){
-		if(getMsg().check_and_set_nickname(getMsg().getParam(0), getFd())) {
-			getMsg().prep_nickname_msg(getNicknameRef(), getMsg().getQue(), server.getBroadcastQueue());
+	if (_msg.getCommand() == "NICK"){
+		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd())) {
+			_msg.prep_nickname_msg(getNicknameRef(), _msg.getQue(), server.getBroadcastQueue());
 		}
-		else
-		{
-			// error codes for handlinh error messages or they should be handled in check and set . 
-			//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
-			//std::string test2 = NICK_INUSE(getParam(0));
-			//_messageQue.push_back(test2);
-			//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
+		else {
+			_msg.prep_nickname_inuse(_nickName,  _msg.getQue());
 		}
 
         // todo check nick against list
@@ -182,24 +178,25 @@ void Client::handle_message( const std::string message, Server& server)
         // Client deletion - remove name from list in server
 
 	}
-	if (getMsg().getCommand() == "PING"){
+	if (_msg.getCommand() == "PING"){
 		sendPong();
 		std::cout<<"sending pong back "<<std::endl;
 		//Client->set_failed_response_counter(-1);
 		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
 	}
-	if (getMsg().getCommand() == "PONG"){
+	if (_msg.getCommand() == "PONG"){
 		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
 	}
 
-    if (getMsg().getCommand() == "JOIN"){
-		if (server.channelExists(getMsg().getParam(0)) < 1) // will param 0 be correct 
+    if (_msg.getCommand() == "JOIN"){
+		if (server.channelExists(_msg.getParam(0)) < 1) // will param 0 be correct 
 		{
-			server.createChannel(getMsg().getParam(0));
-			
-			//server.get_Channel(getMsg().getParam(0))->addClient();
+			server.createChannel(_msg.getParam(0));
+			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
+
+			// this is join channel, it sends the confrim message to join
+			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue());
 			// set defaults what are they 
-			//getChannel(getParam(0)).;
 		}
 
 		// handle join

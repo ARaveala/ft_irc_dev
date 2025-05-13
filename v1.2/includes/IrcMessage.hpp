@@ -64,6 +64,7 @@ class IrcMessage {
 		std::string getQueueMessage() { return _messageQue.front();};
 		void prep_nickname_msg(std::string& nickname,  std::deque<std::string>& messageQue, std::deque<std::string>& broadcastQueue);
 		void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
+		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue);
 		void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
@@ -74,4 +75,18 @@ class IrcMessage {
 		std::string get_nickname(int fd) const;  // ai
 		int get_fd(const std::string& nickname) const;
 		//void dispatch_nickname(int client_fd, const std::string& oldnick, std::string newnickname, std::map<int, std::shared_ptr <Client>>& clientsMap);
-	};
+
+		// cleanup functions
+		void clearAllMsg() {
+			_nickname_to_fd.clear();
+			_fd_to_nickname.clear();
+			nickname_to_fd.clear();
+			fd_to_nickname.clear();
+			//_illegal_nicknames.clear()
+		};
+
+
+
+
+
+};

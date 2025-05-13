@@ -33,9 +33,27 @@ void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string
 }
 void IrcMessage::prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue)
 {
-			// error codes for handlinh error messages or they should be handled in check and set . 
-			//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
-			std::string test2 = NICK_INUSE(nickname);
-			messageQue.push_back(test2);
-			//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
+	// error codes for handlinh error messages or they should be handled in check and set . 
+	//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
+	std::string test2 = NICK_INUSE(nickname);
+	messageQue.push_back(test2);
+	//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
+}
+void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue)
+{
+	std::string whoJoins = ":" + nickname + " JOIN #" + channleName + "\r\n";
+	// this message needs adjustment
+	std::string welcomeToChannel = ":server PRIVMSG #" + channleName + " :Welcome to our channel!\r\n";
+
+//	std::string welcomeToChannel = ":ft_irc 332 " + nickname + " #" + channleName + " :Welcome to our channel!\r\n";
+	messageQue.push_back(whoJoins);
+	messageQue.push_back(welcomeToChannel);
+	// list all memebers by nick
+	//messageQue.push_back(welcomeToChannel);
+	/**
+	 * @brief :server 353 Nickname = #channelName :Alice Bob Charlie
+				:server 366 Nickname #channelName :End of /NAMES list
+
+	 * 
+	 */
 }

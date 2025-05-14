@@ -138,10 +138,10 @@ void Client::sendPong() {
 }
 
 
-bool Client::change_nickname(std::string nickname, int fd){
+bool Client::change_nickname(std::string nickname){
 	_nickName.clear();
 	_nickName = nickname;
-	std::cout<<"hey look its a fd = "<< fd << std::endl;
+	//std::cout<<"hey look its a fd = "<< fd << std::endl;
 	//this->set_nickname(nickname);
 
 //	else (0);
@@ -175,17 +175,9 @@ void Client::handle_message(const std::string message, Server& server)
 	}
 	if (_msg.getCommand() == "NICK"){
 		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd())) {
-			_msg.prep_nickname_msg(getNicknameRef(), _msg.getQue(), server.getBroadcastQueue());
+			change_nickname(_msg.getParam(0));
 		}
-		else {
-			_msg.prep_nickname_inuse(_nickName,  _msg.getQue());
-		}
-
-        // todo check nick against list
-        // todo map of Clientnames
-        // Client creation - add name to list in server
-        // Client deletion - remove name from list in server
-
+		_msg.callDefinedMsg(_msg.getActiveMsgType());
 	}
 	if (_msg.getCommand() == "PING"){
 		sendPong();
@@ -224,7 +216,7 @@ void Client::handle_message(const std::string message, Server& server)
 			std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
 			if (ClientList.empty())
 				std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(), ClientList);
+			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(),ClientList);
 		}
 
 		// handle join
@@ -273,6 +265,20 @@ void Client::handle_message(const std::string message, Server& server)
 
 */
 	}
+
+	/*if (_msg.getCommand() == "PRIVMSG") 
+	{
+		if (!_msg.getParam(0).empty())
+		{
+			// check is it a channel name , starts with #, collect to serverchannelbroadcast
+			// is it just a nickname , collect to messageQue, send to only that fd of
+		}
+		if (!_msg.getParam(0).empty())
+		{
+			// handle error or does irssi handle
+		}
+		
+	}*/	
 
 	getMsg().printMessage(getMsg());
 }

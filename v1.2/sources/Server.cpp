@@ -82,6 +82,7 @@ int Server::get_current_client_in_progress() const{
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
+
 void Server::create_Client(int epollfd) {
  	// Handle new incoming connection
 	int client_fd = accept(getFd(), nullptr, nullptr);
@@ -105,6 +106,8 @@ void Server::create_Client(int epollfd) {
 		
 		set_current_client_in_progress(client_fd);
 		_Clients[client_fd]->setDefaults();
+		_fd_to_nickname.insert({_Clients[client_fd]->getFd(), _Clients[client_fd]->getNickname()});
+		_nickname_to_fd.insert({_Clients[client_fd]->getNickname(), _Clients[client_fd]->getFd()});
 		if (!_Clients[client_fd]->get_acknowledged()){
 			//_Clients[client_fd]->set_pendingAcknowledged(true);
 			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef(), _Clients[client_fd]->getMsg().getQue());

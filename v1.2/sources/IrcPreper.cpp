@@ -1,5 +1,5 @@
 #include "Client.hpp"
-#include "IrcResources.hpp"
+//#include "IrcResources.hpp"
 #include <memory>
 #include "IrcMessage.hpp"
 
@@ -30,57 +30,49 @@ void IrcMessage::prepWelcomeMessage(std::string& nickname, std::deque<std::strin
 	//IRCMessage::welcome_msg, strlen(IRCMessage::welcome_msg)
 }
 
-void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string>& messageQue, std::deque<std::string>&broadcastQueue)
-{	
-		std::string test = getParam(0);
+/*void IrcMessage::getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue) {
+	std::string theMessage = CALL_MSG_DYNAMIC(activeMsg, _params...);
+	messageQue.push_back(theMessage);
+}*/
 
+//, std::deque<std::string>& messageQue
+void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string>&broadcastQueue)
+{	
+		//(void)messageQue;
+		//std::string test = getParam(0);
+		MsgType activeMsg = getActiveMsgType();	
+		callDefinedMsg(activeMsg);
 		std::string oldnick = nickname;
 		nickname = getParam(0);
-		std::string cli = "client"; // username?
-		std::string user_message = RPL_NICK_CHANGE(oldnick, cli, nickname);
+		//std::string cli = "client"; // username?
+		//std::string user_message = RPL_NICK_CHANGE(oldnick, cli, nickname);
 		std::string serverBroadcast_message= SERVER_MSG_NICK_CHANGE(oldnick, nickname);
 
-		messageQue.push_back(user_message);
+		//getDefinedNickMsg();
+		//messageQue.push_back(user_message);
 		broadcastQueue.push_back(serverBroadcast_message);
 
 }
-void IrcMessage::prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue)
+/*void IrcMessage::prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue)
 {
+	MsgType activeMsg = getActiveMsgType();
+	callDefinedMsg(activeMsg);
 	// error codes for handlinh error messages or they should be handled in check and set . 
 	//std::string test2 = ":localhost 433 "  + getParam(0) + " " + getParam(0) + "\r\n";
-	std::string test2 = NICK_INUSE(nickname);
-	messageQue.push_back(test2);
+	//std::string test2 = NICKNAME_IN_USE(nickname);
+	//messageQue.push_back(test2);
 	//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
-}
+}*/
 //#include <bitset>
 void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList)
 {
-	//std::string whoJoins = ":" + nickname + " JOIN :#" + channleName + "\r\n";
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
-
-	// this message needs adjustment
-	//std::string welcomeToChannel = ":ft_irc PRIVMSG #" + channleName + " :Welcome to our channel!\r\n";
-	//std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :user1!user1@localhost user2!!user2@localhost user3!!user3@localhost\r\n"; // ✅ Name list
 	std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :" + clientList + "\r\n";
 	std::string test2 = ":ft_irc 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names
-
 	std::string test3 = ":ft_irc 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic
-
-	
-//	std::string welcomeToChannel = ":ft_irc 332 " + nickname + " #" + channleName + " :Welcome to our channel!\r\n";
 	messageQue.push_back(whoJoins);
 	//messageQue.push_back(welcomeToChannel);
 	messageQue.push_back(test1);
-	
 	messageQue.push_back(test2);
 	messageQue.push_back(test3);
-	
-	// list all memebers by nick
-	//messageQue.push_back(welcomeToChannel);
-	/**
-	 * @brief :server 353 Nickname = #channelName :Alice Bob Charlie
-				:server 366 Nickname #channelName :End of /NAMES list
-
-	 * 
-	 */
 }

@@ -1,20 +1,66 @@
 #pragma once
 #include <string>
+//#include <bitset>
 
+enum class MsgType {
+    NONE = 0,
+	RPL_NICK_CHANGE,
+	NICKNAME_IN_USE,
+};
+//std::bitset<8> errorState;
+// one call to call them all
+
+//#define EXPAND_MACRO(x) x  // ✅ Expands the macro name
+//#define CALL_MSG_DYNAMIC(MsgType, ...) EXPAND_MACRO(MsgType##)(__VA_ARGS__)
+//#define CALL_MSG(msg, ...) MsgType(__VA_ARGS__);
+#define RPL_NICK_CHANGE(oldnick, username, nick) (":" + oldnick + "!" + username + "@localhost NICK " +  nick + "\r\n")
+#define NICKNAME_IN_USE(nick) (":localhost 433 "  + nick + " " + nick + "\r\n")
+
+#define RESOLVE_MESSAGE(msgType, params) \
+    ((msgType) == MsgType::RPL_NICK_CHANGE ? RPL_NICK_CHANGE(params[0], params[1], params[2]) : \
+    (msgType) == MsgType::NICKNAME_IN_USE ? NICKNAME_IN_USE(params[0]) : \
+    throw std::runtime_error("Unknown message type"))
 // required replies
-# define RPL_NICK_CHANGE(oldnick, username, nick) (":" + oldnick + "!" + username + "@localhost NICK " +  nick + "\r\n");
+
+//EMPTY_NICKNAME,
+// INVALID_NICKNAME,
+//    CHANNEL_NOT_FOUND,
+//PERMISSION_DENIED,
+// MESSAGE_TOO_LONG,
 
 // error messages 
 
-# define NICK_INUSE(nick) (":localhost 433 "  + nick + " " + nick + "\r\n");
+
+
+
 /**
  * @brief designed with expectation of DELETION
  * server messages, debugging and testing alternatives 
  * 
  */
-# define SERVER_MSG_NICK_CHANGE(oldnick, nick) ":server NOTICE * :User " + oldnick + " changed nickname to " + nick + "\r\n";
+#define SERVER_MSG_NICK_CHANGE(oldnick, nick) (":server NOTICE * :User " + oldnick + " changed nickname to " + nick + "\r\n")
 
 
+/*template <MsgType T>
+struct MsgMacro;
+
+template <>
+struct MsgMacro<MsgType::RPL_NICK_CHANGE> {
+    static constexpr auto value = [](const std::vector<std::string>& params) {
+		return RPL_NICK_CHANGE(params[0], );
+	}
+};
+
+template <>
+struct MsgMacro<MsgType::NICKNAME_IN_USE> {
+    static constexpr auto value = NICKNAME_IN_USE;
+};
+
+// ✅ Function to call the correct macro dynamically
+template <MsgType T, typename... Args>
+std::string callMessage(Args&&... args) {
+    return MsgMacro<T>::value(std::forward<Args>(args)...);
+}*/
 
 /*
 // this approach takes less overhead than macros, macros are also 

@@ -20,7 +20,7 @@ const std::string& Channel::getTopic() const {
     return _topic;
 }
 
-std::vector<int> Channel::getAllfds(){
+std::vector<int> Channel::getAllfds() {
 	std::vector<int> fds;
 	for (const auto& entry : _ClientModes) {
 		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
@@ -36,7 +36,6 @@ const std::string Channel::getAllNicknames() {
 	for (const auto& entry : _ClientModes) {
 		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
 			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@localhost ";
-			//fds.push_back(entry.second.second);  //Retrieve FD from stored pair (bitset, FD)
 		}
 	}
 	return list;

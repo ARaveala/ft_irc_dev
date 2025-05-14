@@ -54,7 +54,7 @@ class Client {
 		void sendPing();
 		void sendPong();
 
-		bool change_nickname(std::string nickname, int fd);
+		bool change_nickname(std::string nickname);
 
 		std::string getReadBuff();
 		void setReadBuff(const std::string& buffer);

@@ -4,12 +4,12 @@
 #include <cstddef>
 #include <stdexcept>
 #include <algorithm> // Required for std::find
-#include "epoll_utils.hpp"
+//#include "epoll_utils.hpp"
 
 #include "IrcResources.hpp"
 #include <unistd.h>
 #include <string.h>
-//#include <>
+
 // my added libs
 //#include "config.h"
 #include <sys/socket.h>
@@ -38,7 +38,26 @@ const std::string IrcMessage::getParam(unsigned long index) const { return _para
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
     "ping", "pong", "server", "root", "nick", "services", "god"
 };
+void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
+    _msgState.reset();  // empty all errors before setting a new one
+    _msgState.set(static_cast<size_t>(msg));  //activate only one error
 
+	_activeMsg = msg;
+	_params = sendParams;
+}
+MsgType IrcMessage::getActiveMsgType() const {
+    for (size_t i = 0; i < _msgState.size(); ++i) {
+        if (_msgState.test(i)) {
+            return static_cast<MsgType>(i);  // ✅ Extracts the active message type
+        }
+    }
+    return MsgType::NONE;  // ✅ Default case if no message is active
+}
+void IrcMessage::callDefinedMsg(MsgType msgType)//, const std::vector<std::string>& params)
+{
+	std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
+	_messageQue.push_back(TheMessage);
+}
 // we should enum values or alike or we can just send the correct error message straight from here ?
 // check_and_set_nickname definition
 bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {
@@ -74,6 +93,7 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
             std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
             return true;
         } else {
+			setType(MsgType::NICKNAME_IN_USE, {nickname});
             // Nickname is taken by some cunt else
             std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
             return false;
@@ -82,11 +102,11 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 
     // Check if the FD has an old nickname with an iterator
     auto fd_it = fd_to_nick.find(fd);
-
+	std::string old_nickname;
     if (fd_it != fd_to_nick.end()){
         // This FD already has a nickname. We need to remove the old one from both maps.
 		// find out nickname
-        std::string old_nickname = fd_it->second;
+        old_nickname = fd_it->second;
         std::cout << "#### FD " << fd << " had old nickname '" << old_nickname << "', removing entries." << std::endl;
 
         // Remove the old nickname -> fd entry using the old nickname as key
@@ -107,9 +127,11 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
     std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
 	nick_to_fd.insert({processed_nickname, fd});
     fd_to_nick.insert({fd, processed_nickname});
-
+	setType(MsgType::RPL_NICK_CHANGE, {old_nickname, "kitty", nickname});
+	std::cout << "#### old_nickname '" << old_nickname << "' set successfully for fd " << fd << "." << std::endl;
     std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
-    return true;
+	std::cout << "#### param 1 '" << _params[0] << "' num 2 " << _params[1] << " number 3" << _params[2]<<std::endl;
+	return true;
 }
 
 std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {

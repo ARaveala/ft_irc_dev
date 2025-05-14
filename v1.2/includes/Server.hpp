@@ -42,10 +42,9 @@ class Server {
 		std::string _password;
 
 		std::map<const std::string, std::shared_ptr<Channel>> _channels;
-		
 		std::map<int, std::shared_ptr<Client>> _Clients;
-		
 		std::map<int, int> _timer_map;
+
 		// start of new section
 		////std::map<std::string, int> nickname_to_fd;
 		////std::map<int, std::string> fd_to_nickname;
@@ -71,8 +70,8 @@ class Server {
 		// string = name of channel channle = channel object
 		// std::map<std::string, std::shared_ptr<Channel>> chanels
 		
-		////std::map<std::string, int> _nickname_to_fd;
-		////std::map<int, std::string> _fd_to_nickname;
+		std::map<std::string, int> _nickname_to_fd;
+		std::map<int, std::string> _fd_to_nickname;
 		
 
 		// Using std::map for nicknames; use std::unordered_map if preferred
@@ -118,6 +117,8 @@ class Server {
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);
 		std::shared_ptr<Channel> get_Channel(std::string channelName);
+		std::map<int, std::string>& get_fd_to_nickname();
+		std::map<std::string, int>& get_nickname_to_fd();
 		// returns the whole map 
 		std::map<int, std::shared_ptr<Client>>& get_map();
 		////std::map<int, std::string>& get_fd_to_nickname();

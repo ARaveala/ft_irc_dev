@@ -174,7 +174,7 @@ void Client::handle_message(const std::string message, Server& server)
 		return ;
 	}
 	if (_msg.getCommand() == "NICK"){
-		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd())) {
+		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd())) {
 			_msg.prep_nickname_msg(getNicknameRef(), _msg.getQue(), server.getBroadcastQueue());
 		}
 		else {

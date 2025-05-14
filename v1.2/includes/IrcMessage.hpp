@@ -70,10 +70,10 @@ class IrcMessage {
 		void clearQue() {_messageQue.clear();};
 
 		// moving from server to here 
-		bool check_and_set_nickname(std::string nickname, int fd);  // ai
+		bool check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);  // ai
 		std::map<int, std::string>& get_fd_to_nickname();
-		void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
-		std::string get_nickname(int fd) const;  // ai
+		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick); // ai // we have remove client function , this could be called in there, to remove all new maps
+		std::string get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const;  // ai
 		int get_fd(const std::string& nickname) const;
 		//void dispatch_nickname(int client_fd, const std::string& oldnick, std::string newnickname, std::map<int, std::shared_ptr <Client>>& clientsMap);
 

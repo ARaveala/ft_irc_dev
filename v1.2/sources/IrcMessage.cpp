@@ -41,7 +41,7 @@ std::set<std::string> const IrcMessage::_illegal_nicknames = {
 
 // we should enum values or alike or we can just send the correct error message straight from here ?
 // check_and_set_nickname definition
-bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
+bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {
 
     // 1. Check for invalid characters
 	// check nickname exists
@@ -66,8 +66,8 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
     }
 
     // check if nickname exists for anyone
-    auto nick_it = _nickname_to_fd.find(processed_nickname);
-	if (nick_it != _nickname_to_fd.end()) {
+    auto nick_it = nick_to_fd.find(processed_nickname);
+	if (nick_it != nick_to_fd.end()) {
         // Nickname exists. Is it the same Client trying to set their current nick?
         if (nick_it->second == fd) {
             // FD already head requested nickname.
@@ -81,9 +81,9 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
     }
 
     // Check if the FD has an old nickname with an iterator
-    auto fd_it = _fd_to_nickname.find(fd);
+    auto fd_it = fd_to_nick.find(fd);
 
-    if (fd_it != _fd_to_nickname.end()){
+    if (fd_it != fd_to_nick.end()){
         // This FD already has a nickname. We need to remove the old one from both maps.
 		// find out nickname
         std::string old_nickname = fd_it->second;
@@ -91,10 +91,10 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
 
         // Remove the old nickname -> fd entry using the old nickname as key
         // Use erase(key) which is safe even if the key somehow wasn't found
-        _nickname_to_fd.erase(old_nickname);
+        nick_to_fd.erase(old_nickname);
 
         // Remove the old fd -> nickname entry using the iterator we already have
-        _fd_to_nickname.erase(fd_it);
+        fd_to_nick.erase(fd_it);
 
         std::cout << "#### Removed old nickname '" << old_nickname << "' for fd " << fd << "." << std::endl;
 
@@ -105,23 +105,23 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd) {
 
     // udpate both maps
     std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
-    _nickname_to_fd.insert({processed_nickname, fd});
-    _fd_to_nickname.insert({fd, processed_nickname});
+	nick_to_fd.insert({processed_nickname, fd});
+    fd_to_nick.insert({fd, processed_nickname});
 
     std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
     return true;
 }
 
-std::string IrcMessage::get_nickname(int fd) const {
-     auto it = _fd_to_nickname.find(fd);
-     if (it != _fd_to_nickname.end()) {
+std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {
+     auto it = fd_to_nick.find(fd);
+     if (it != fd_to_nick.end()) {
          return it->second; // Return the nickname
      }
      return "";
 }
-std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
+/*std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
 	return _fd_to_nickname;
-}
+}*/
 int IrcMessage::get_fd(const std::string& nickname) const {
      std::string processed_nickname = to_lowercase(nickname);
 
@@ -132,10 +132,10 @@ int IrcMessage::get_fd(const std::string& nickname) const {
      return -1; // nickname not found
 }
 
-void IrcMessage::remove_fd(int fd) {
+void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
     // Call this when a client disconnects to clean up their nickname entry
-    auto fd_it = _fd_to_nickname.find(fd);
-    if (fd_it != _fd_to_nickname.end()) {
+    auto fd_it = fd_to_nick.find(fd);
+    if (fd_it != fd_to_nick.end()) {
 
         // find the nickname from the fd
 		std::string old_nickname = fd_it->second;
@@ -145,7 +145,7 @@ void IrcMessage::remove_fd(int fd) {
         // Remove from nickname_to_fd map using the nickname
         _nickname_to_fd.erase(old_nickname);
         // Remove from fd_to_nickname map using the iterator
-        _fd_to_nickname.erase(fd_it);
+		fd_to_nick.erase(fd_it);
 
         std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
     } else {

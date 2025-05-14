@@ -106,10 +106,10 @@ void Server::create_Client(int epollfd) {
 		set_current_client_in_progress(client_fd);
 		_Clients[client_fd]->setDefaults();
 		if (!_Clients[client_fd]->get_acknowledged()){
-			_Clients[client_fd]->set_pendingAcknowledged(true);
+			//_Clients[client_fd]->set_pendingAcknowledged(true);
 			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef(), _Clients[client_fd]->getMsg().getQue());
+			set_client_count(1);		
 		}
-		set_client_count(1);
 	}
 }
 
@@ -168,9 +168,13 @@ std::map<int, std::shared_ptr<Client>>& Server::get_map() {
 	return _Clients;
 }
 
-/*std::map<int, std::string>& Server::get_fd_to_nickname() {
+std::map<int, std::string>& Server::get_fd_to_nickname() {
 	return _fd_to_nickname;
-}*/
+}
+
+std::map<std::string, int>& Server::get_nickname_to_fd() {
+	return _nickname_to_fd;
+}
 
 std::string Server::get_password() const {
 	return _password;
@@ -340,6 +344,10 @@ void Server::send_server_broadcast()
 }
 void Server::sendChannelBroadcast()
 {
+	if (_channel_broadcasts.empty())
+	{
+		return ;
+	}
 	std::cout<<"entering senchannelbroadcast!-----------";
 
 	std::vector<int> finalFds;
@@ -347,7 +355,7 @@ void Server::sendChannelBroadcast()
 		auto channelPtr = get_Channel(channelName);  //shared_ptr<Channel>
 		if (channelPtr) {
 			const auto& fds = channelPtr->getAllfds();  // get fds from this channel
-			finalFds.insert(finalFds.end(), fds.begin(), fds.end());  //append
+			finalFds.insert(finalFds.end(), fds.begin(), fds.end());  //append to finalfs end from fds start and end
 		}
 	}
 	// set will manage all duplicates away 

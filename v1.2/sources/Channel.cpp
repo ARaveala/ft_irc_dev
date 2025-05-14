@@ -30,6 +30,18 @@ std::vector<int> Channel::getAllfds(){
 	return fds;
 }
 
+// rename to refer t getting a user list for channel
+const std::string Channel::getAllNicknames() {
+	std::string list;
+	for (const auto& entry : _ClientModes) {
+		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
+			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@localhost ";
+			//fds.push_back(entry.second.second);  //Retrieve FD from stored pair (bitset, FD)
+		}
+	}
+	return list;
+}
+
 std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
     if (auto clientPtr = weakClient.lock()) {  //  Convert weak_ptr to shared_ptr safely
         return clientPtr->getNickname();  //  Get the current nickname live
@@ -52,13 +64,23 @@ void Channel::setTopic(const std::string& newTopic) {
 }
 
 bool Channel::addClient(std::shared_ptr <Client> client) {
-    // std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
-    if (!client)
+    //std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
+	
+	if (!client)
 		return false; // no poopoo pointers
 	std::weak_ptr<Client> weakclient = client;
-	_ClientModes.emplace(weakclient, std::make_pair(std::bitset<4>(), client->getFd()));
+	//_ClientModes.emplace(weakclient, std::make_pair(std::bitset<4>(), client->getFd()));
 	//_ClientModes[weakclient].first.set(MODE_OPERATOR);
 
+	if (_ClientModes.find(weakclient) == _ClientModes.end()) {
+		_ClientModes.insert({weakclient, std::make_pair(std::bitset<4>(), client->getFd())});  // ✅ Insert new client
+	} else {
+		std::cout << "Client already exists in channel!" << std::endl;
+	}
+	for (auto it = _ClientModes.begin(); it != _ClientModes.end(); it++)
+	{
+		std::cout<<"show me the fds in the clientmodes map = "<<it->second.second<<"\n";
+	}
 	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
     }*/

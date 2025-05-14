@@ -52,14 +52,16 @@ void IrcMessage::prep_nickname_inuse(std::string& nickname, std::deque<std::stri
 	messageQue.push_back(test2);
 	//send(Client.getFd(), test2.c_str(), test2.length(), 0); // todo what is correct format to send error code
 }
-void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue)
+//#include <bitset>
+void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList)
 {
 	//std::string whoJoins = ":" + nickname + " JOIN :#" + channleName + "\r\n";
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
 
 	// this message needs adjustment
 	//std::string welcomeToChannel = ":ft_irc PRIVMSG #" + channleName + " :Welcome to our channel!\r\n";
-	std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :user1!user1@localhost user2!!user2@localhost user3!!user3@localhost\r\n"; // ✅ Name list
+	//std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :user1!user1@localhost user2!!user2@localhost user3!!user3@localhost\r\n"; // ✅ Name list
+	std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :" + clientList + "\r\n";
 	std::string test2 = ":ft_irc 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names
 
 	std::string test3 = ":ft_irc 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic

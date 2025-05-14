@@ -208,7 +208,11 @@ void Client::handle_message(const std::string message, Server& server)
 			// add channel to clients list
 			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
 			// this is join channel, it sends the confrim message to join
-			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue());
+			// get list of users in channel 
+			std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
+			if (ClientList.empty())
+				std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
+			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(), ClientList);
 			// set defaults what are they 
 		}
 		else
@@ -216,8 +220,11 @@ void Client::handle_message(const std::string message, Server& server)
 			std::cout<<"adding client to existing channel!-----------";
 
 			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
-			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue());
+			//addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
+			std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
+			if (ClientList.empty())
+				std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
+			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(), ClientList);
 		}
 
 		// handle join

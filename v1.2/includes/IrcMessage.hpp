@@ -15,7 +15,7 @@ class Server;
 class IrcMessage {
 	private:
 		// int current_fd;
-		std::bitset<3> _msgState;  //tracks active error
+		std::bitset<7> _msgState;  //tracks active error
 	    std::vector<std::string> _params;
 		MsgType _activeMsg = MsgType::NONE;
 
@@ -61,10 +61,10 @@ class IrcMessage {
 		void removeQueueMessage() { _messageQue.pop_front();};
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string getQueueMessage() { return _messageQue.front();};
-		void prep_nickname_msg(std::string& nickname, std::deque<std::string>& broadcastQueue);
+		void prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		void prepWelcomeMessage(std::string& nickname, std::deque<std::string>& messageQue);
+		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
 		//void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
@@ -73,18 +73,18 @@ class IrcMessage {
 
 
 		// moving from server to here 
-		bool check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);  // ai
+		bool check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);//, std::string& nickref);  // ai
 		std::map<int, std::string>& get_fd_to_nickname();
 		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick); // ai // we have remove client function , this could be called in there, to remove all new maps
 		std::string get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const;  // ai
 		int get_fd(const std::string& nickname) const;
 		//void dispatch_nickname(int client_fd, const std::string& oldnick, std::string newnickname, std::map<int, std::shared_ptr <Client>>& clientsMap);
 
-
+		// message types and params
 		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
+		void setWelcomeType(std::vector<std::string> sendParams);
 	
-	
-	    void callDefinedMsg(MsgType msgType);
+	    void callDefinedMsg();//(MsgType msgType);
 	
 		//void getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue);
 		// cleanup functions

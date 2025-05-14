@@ -39,27 +39,45 @@ std::set<std::string> const IrcMessage::_illegal_nicknames = {
     "ping", "pong", "server", "root", "nick", "services", "god"
 };
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
-    _msgState.reset();  // empty all errors before setting a new one
-    _msgState.set(static_cast<size_t>(msg));  //activate only one error
+    _msgState.reset();  // empty all messages before setting a new one
+    _msgState.set(static_cast<size_t>(msg));  //activate only one msg
 
 	_activeMsg = msg;
+	_params.clear();
 	_params = sendParams;
 }
-MsgType IrcMessage::getActiveMsgType() const {
+
+void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
+    _msgState.reset();  // empty all messages before setting a new one
+    _msgState.set(static_cast<size_t>(MsgType::WELCOME));  //activate only one msg
+	_msgState.set(static_cast<size_t>(MsgType::HOST_INFO));
+	_msgState.set(static_cast<size_t>(MsgType::SERVER_CREATION));
+	_msgState.set(static_cast<size_t>(MsgType::SERVER_INFO));
+	_params.clear();
+	_params = sendParams;
+}
+
+/*MsgType IrcMessage::getActiveMsgType() const {
     for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {
-            return static_cast<MsgType>(i);  // ✅ Extracts the active message type
+            return static_cast<MsgType>(i);
         }
     }
-    return MsgType::NONE;  // ✅ Default case if no message is active
-}
-void IrcMessage::callDefinedMsg(MsgType msgType)//, const std::vector<std::string>& params)
+    return MsgType::NONE;
+}*/
+
+void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
 {
-	std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
-	_messageQue.push_back(TheMessage);
+	for (size_t i = 0; i < _msgState.size(); ++i) {
+        if (_msgState.test(i)) {
+			MsgType msgType = static_cast<MsgType>(i);
+			std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
+			_messageQue.push_back(TheMessage);
+        }
+    }
 }
 // we should enum values or alike or we can just send the correct error message straight from here ?
-// check_and_set_nickname definition
+// check_and_set_nickname definition, std::string& nickref
 bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {
 
     // 1. Check for invalid characters
@@ -131,6 +149,7 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 	std::cout << "#### old_nickname '" << old_nickname << "' set successfully for fd " << fd << "." << std::endl;
     std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
 	std::cout << "#### param 1 '" << _params[0] << "' num 2 " << _params[1] << " number 3" << _params[2]<<std::endl;
+	//nickref = _params[0];
 	return true;
 }
 

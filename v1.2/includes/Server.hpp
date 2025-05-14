@@ -39,6 +39,7 @@ class Server {
 		int _current_client_in_progress;
 		int _signal_fd;
 		int _epoll_fd;
+		int _private_fd = 0;
 		std::string _password;
 
 		std::map<const std::string, std::shared_ptr<Channel>> _channels;
@@ -96,6 +97,7 @@ class Server {
 		void set_client_count(int val);
 		void set_event_pollfd(int epollfd);
 		void set_current_client_in_progress(int fd);
+		void set_private_fd(int fd) {_private_fd = fd;};
 		void set_nickname_in_map(std::string, int); //todo
 		////bool check_and_set_nickname(std::string nickname, int fd);  // ai
 		// get channel
@@ -113,6 +115,7 @@ class Server {
 		std::string get_password() const;
 		////std::string get_nickname(int fd) const;  // ai
 		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
+		std::deque<std::string>& getChannelBroadcastQue() { return _channel_broadcasts; }
 		std::deque<std::string>& getChannelsToNotify() { return _channelsToNotify; }
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);

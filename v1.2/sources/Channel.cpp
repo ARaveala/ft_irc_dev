@@ -5,7 +5,7 @@
     std::cout << "Channel '" << _name << "' created." << std::endl;
 }*/
 
-Channel::Channel(const std::string& channelName)  : _name(channelName){
+Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
 }
 Channel::~Channel() {

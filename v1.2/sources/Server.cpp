@@ -110,7 +110,7 @@ void Server::create_Client(int epollfd) {
 		_nickname_to_fd.insert({_Clients[client_fd]->getNickname(), _Clients[client_fd]->getFd()});
 		if (!_Clients[client_fd]->get_acknowledged()){
 			//_Clients[client_fd]->set_pendingAcknowledged(true);
-			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef(), _Clients[client_fd]->getMsg().getQue());
+			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef());//, _Clients[client_fd]->getMsg().getQue());
 			set_client_count(1);		
 		}
 	}
@@ -281,10 +281,16 @@ bool Server::checkTimers(int fd) {
 
 void Server::send_message(std::shared_ptr<Client> client)
 {
-	int fd = client->getFd();
+	//if (!_channel_broadcasts.empty())
+	//	return;
+	int fd;
+	if (_private_fd == 0)
+		fd = client->getFd();
+	else
+		fd = _private_fd;
 	if (!client->get_acknowledged())
 	{
-		std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+		//std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
 //		std::string msg = client->getMsg().getQueueMessage();
 		client->set_acknowledged();		
 	}	

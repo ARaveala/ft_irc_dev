@@ -167,17 +167,17 @@ void Client::handle_message(const std::string message, Server& server)
 	{
 		std::cout<<"QUIT called removing client \n";
 		prepareQuit(server.getChannelsToNotify());
-//Channel.removeClient();
 		server.remove_Client(server.get_event_pollfd(), _fd);
-		
-		
 		return ;
 	}
-	if (_msg.getCommand() == "NICK"){
+	if (_msg.getCommand() == "NICK") {
+		//_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd() getNickRef();
+		//_msg.prep_nickname(getNicknameRef(), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd()); // 
 		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd())) {
 			change_nickname(_msg.getParam(0));
 		}
-		_msg.callDefinedMsg(_msg.getActiveMsgType());
+		_msg.callDefinedMsg();//(_msg.getActiveMsgType());
+		// return ; 
 	}
 	if (_msg.getCommand() == "PING"){
 		sendPong();
@@ -195,29 +195,19 @@ void Client::handle_message(const std::string message, Server& server)
 			std::cout<<"creating channel now!-----------";
 			// create a channel object into a server map
 			server.createChannel(_msg.getParam(0));
+			// add channel to server list
+			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
 			// add client to channel map
 			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-			// add channel to clients list
-			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
 			// this is join channel, it sends the confrim message to join
 			// get list of users in channel 
-			std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
-			if (ClientList.empty())
-				std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(), ClientList);
 			// set defaults what are they 
 		}
-		else
-		{
-			std::cout<<"adding client to existing channel!-----------";
-
-			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-			//addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
-			std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
-			if (ClientList.empty())
-				std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-			_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(),ClientList);
-		}
+		server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
+		std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
+		if (ClientList.empty())
+			std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
+		_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(),ClientList);
 
 		// handle join
 		// ischannel
@@ -266,19 +256,33 @@ void Client::handle_message(const std::string message, Server& server)
 */
 	}
 
-	/*if (_msg.getCommand() == "PRIVMSG") 
+	if (_msg.getCommand() == "PRIVMSG") 
 	{
 		if (!_msg.getParam(0).empty())
 		{
-			// check is it a channel name , starts with #, collect to serverchannelbroadcast
-			// is it just a nickname , collect to messageQue, send to only that fd of
+			if (_msg.getParam(0)[0] == '#')
+			{
+				std::cout<<"stepping into priv message handling \n";
+				server.getChannelsToNotify().push_back(_msg.getParam(0));
+				server.getChannelBroadcastQue().push_back(":" + _nickName + " PRIVMSG " + _msg.getParam(0) + " " + _msg.getParam(1) + "\r\n");
+				// check is it a channel name , starts with #, collect to serverchannelbroadcast
+				// is it just a nickname , collect to messageQue, send to only that fd of
+	
+			}
+			else
+			{
+				int fd = server.get_nickname_to_fd().find(_msg.getParam(0))->second;
+				server.set_private_fd(fd);
+				_msg.queueMessage( ":" + _nickName + " PRIVMSG "  + _msg.getParam(0)  + " " + _msg.getParam(1) + "\r\n");
+
+			}
 		}
 		if (!_msg.getParam(0).empty())
 		{
 			// handle error or does irssi handle
 		}
 		
-	}*/	
+	}	
 
 	getMsg().printMessage(getMsg());
 }

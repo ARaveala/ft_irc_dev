@@ -4,22 +4,49 @@
 
 enum class MsgType {
     NONE = 0,
+	WELCOME,
+	HOST_INFO,
+	SERVER_CREATION,
+	SERVER_INFO,
 	RPL_NICK_CHANGE,
 	NICKNAME_IN_USE,
 };
-//std::bitset<8> errorState;
-// one call to call them all
 
-//#define EXPAND_MACRO(x) x  // ✅ Expands the macro name
-//#define CALL_MSG_DYNAMIC(MsgType, ...) EXPAND_MACRO(MsgType##)(__VA_ARGS__)
-//#define CALL_MSG(msg, ...) MsgType(__VA_ARGS__);
+
 #define RPL_NICK_CHANGE(oldnick, username, nick) (":" + oldnick + "!" + username + "@localhost NICK " +  nick + "\r\n")
 #define NICKNAME_IN_USE(nick) (":localhost 433 "  + nick + " " + nick + "\r\n")
 
+// welcome package
+#define WELCOME(nickname) (":server 001 " + nickname + " :Welcome to the IRC server\r\n")
+#define HOST_INFO(nickname) (":server 002 " + nickname + " :Your host is ft_irc, running version 1.0\r\n")
+#define SERVER_CREATION(nickname) (":server 003 " + nickname + " :This server was created today\r\n")
+#define SERVER_INFO(nickname) (":server 004 " + nickname + " ft_irc 1.0 o o\r\n")
+
+//channel #join
+#define JOIN_CHANNEL(nickname, channelName) (":" + nickname + " JOIN " + channelName + "\r\n")
+#define NAMES_LIST(nickname, channelName, clientList) (":ft_irc 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n")
+#define END_NAMES_LIST(nickname, channelName) (":ft_irc 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n")
+#define CHANNEL_TOPIC(nickname, channelName) (":ft_irc 332 " + nickname + " " + channelName + " : topic is " + topic + "!\r\n")
+
+/*#define RESOLVE_WELCOME_MESSAGE(msgType, params) \
+    ((msgType == MsgType::WELCOME) ? (":server 001 " + params[0] + " :Welcome to the IRC server\r\n") : \
+    (msgType == MsgType::HOST_INFO) ? (":server 002 " + params[0] + " :Your host is ft_irc, running version 1.0\r\n") : \
+    (msgType == MsgType::SERVER_CREATION) ? (":server 003 " + params[0] + " :This server was created today\r\n") : \
+    (msgType == MsgType::SERVER_INFO) ? (":server 004 " + params[0] + " ft_irc 1.0 o o\r\n") : \
+    throw std::runtime_error("Unknown welcome message type"))*/
+
 #define RESOLVE_MESSAGE(msgType, params) \
-    ((msgType) == MsgType::RPL_NICK_CHANGE ? RPL_NICK_CHANGE(params[0], params[1], params[2]) : \
-    (msgType) == MsgType::NICKNAME_IN_USE ? NICKNAME_IN_USE(params[0]) : \
-    throw std::runtime_error("Unknown message type"))
+    ((msgType == MsgType::WELCOME) ? WELCOME(params[0]) : \
+    (msgType == MsgType::HOST_INFO) ? HOST_INFO(params[0]) : \
+    (msgType == MsgType::SERVER_CREATION) ? SERVER_CREATION(params[0]) : \
+    (msgType == MsgType::SERVER_INFO) ? SERVER_INFO(params[0]) : \
+    (msgType == MsgType::RPL_NICK_CHANGE && params.size() >= 3) ? RPL_NICK_CHANGE(params[0], params[1], params[2]) : \
+    (msgType == MsgType::NICKNAME_IN_USE) ? NICKNAME_IN_USE(params[0]) : \
+    "ERROR: Unknown message type or incorrect parameters")
+
+
+
+
 // required replies
 
 //EMPTY_NICKNAME,

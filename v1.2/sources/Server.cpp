@@ -126,11 +126,11 @@ void Server::create_Client(int epollfd) {
  * @note we are calling get client multple times here , we could try to work past that 
  * by just sending in the client once as a param
  */
-void Server::remove_Client(int epollfd, int client_fd) {
+void Server::remove_Client(int client_fd) {
 	close(client_fd);
-	epoll_ctl(epollfd, EPOLL_CTL_DEL, client_fd, 0);
+	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, 0);
 	close(get_Client(client_fd)->get_timer_fd());
-	epoll_ctl(epollfd, EPOLL_CTL_DEL, get_Client(client_fd)->get_timer_fd(), 0);
+	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, get_Client(client_fd)->get_timer_fd(), 0);
 	
 	// channel.getClient().erase();
 	_Clients.erase(client_fd);
@@ -267,7 +267,7 @@ bool Server::checkTimers(int fd) {
 	} // did not find client on the list eek
     if (clientit->second->get_failed_response_counter() == 3) {
 		std::cout<<"timer sup removing client \n";
-		remove_Client(_epoll_fd, client_fd);
+		remove_Client(client_fd);
         _timer_map.erase(fd);
         return false;
     }
@@ -403,7 +403,7 @@ void Server::createChannel(const std::string& channelName) {
     if (_channels.count(channelName) == 0){
 		_channels.emplace(channelName, std::make_shared<Channel>(channelName));
         std::cout << "Channel '" << channelName << "' created." << std::endl;
-        // fill clientsend buffer 
+		// fill clientsend buffer 
 		return ;
     }
     std::cerr << "Error: Channel '" << channelName << "' already exists" << std::endl;

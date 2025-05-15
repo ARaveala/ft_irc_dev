@@ -10,6 +10,7 @@ enum class MsgType {
 	SERVER_INFO,
 	RPL_NICK_CHANGE,
 	NICKNAME_IN_USE,
+	CLIENT_QUIT
 };
 
 
@@ -28,6 +29,7 @@ enum class MsgType {
 #define END_NAMES_LIST(nickname, channelName) (":ft_irc 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n")
 #define CHANNEL_TOPIC(nickname, channelName) (":ft_irc 332 " + nickname + " " + channelName + " : topic is " + topic + "!\r\n")
 
+#define CLIENT_QUIT(nickname) (":" + nickname + " QUIT :Client disconnected\r\n")
 /*#define RESOLVE_WELCOME_MESSAGE(msgType, params) \
     ((msgType == MsgType::WELCOME) ? (":server 001 " + params[0] + " :Welcome to the IRC server\r\n") : \
     (msgType == MsgType::HOST_INFO) ? (":server 002 " + params[0] + " :Your host is ft_irc, running version 1.0\r\n") : \

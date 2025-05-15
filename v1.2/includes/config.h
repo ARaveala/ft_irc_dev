@@ -2,6 +2,10 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <functional> // for short cuts
+#include <deque> // for short cuts
+
+
 /**
  * @brief 
  * this is a header file that contains global variables and constants
@@ -46,6 +50,20 @@ enum class ErrorType {
 
 };
 
+namespace Modes {
+	enum ClientMode {
+   		OPERATOR,     	// 0
+		CLIENT_NONE			// 1
+	};
+	enum ChannelMode {
+    	USER_LIMIT,   	// 0
+    	INVITE_ONLY,    // 1 
+    	PASSWORD, 		// 2
+    	TOPIC,   		// 3
+		NONE			// 4
+	};
+}
+
 /**
  * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 
  * we can set it low to showcase how we error handle in the case of a client disconnect
@@ -55,8 +73,9 @@ namespace config {
 	constexpr int MAX_CLIENTS = 10;
 	constexpr int TIMEOUT_CLIENT = 3000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = 0;
-	
 	constexpr int BUFFER_SIZE = 1024;
+	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CHANNEL_NUM_MODES = 5;
 }
 
 namespace errVal {
@@ -104,7 +123,14 @@ namespace IRCMessage {
 	//inline constexpr const char* nick_msg = "@ft_irc new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
-
+/**
+ * @brief creating short cuts so that we dont have to use large lines in parameters 
+ * (making it pretty i hope)
+ * 
+ */
+namespace FuncType {
+	using DequeRef1 = std::function<void(std::deque<std::string>&)>;
+}
 /*
 This is like global variables but its encapsulated in the Config, so its much harder to 
 mix variables of the same name. This is however using namespace , 2 questions: 

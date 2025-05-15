@@ -79,9 +79,9 @@ void Client::set_acknowledged(){
 	_acknowledged = true;
 }
 
-void Client::set_pendingAcknowledged(bool onoff){
+/*void Client::set_pendingAcknowledged(bool onoff){
 	_pendingAcknowledged = onoff;
-}
+}*/
 /**
  * @brief Reads using recv() to a char buffer as data recieved from the socket
  * comes in as raw bytes, std		void sendPing();
@@ -96,7 +96,8 @@ void Client::receive_message(int fd, Server& server) {
 	while (true)
 	{
 		memset(buffer, 0, sizeof(buffer));
-		bytes_read = recv(fd, buffer, sizeof(buffer) , MSG_DONTWAIT); // last flag makes recv non blocking 
+		bytes_read = recv(fd, buffer, config::BUFFER_SIZE , MSG_DONTWAIT); // last flag makes recv non blocking 	
+		std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
 		if (bytes_read < 0) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				return ;
@@ -108,7 +109,15 @@ void Client::receive_message(int fd, Server& server) {
 			throw ServerException(ErrorType::CLIENT_DISCONNECTED, "debug :: recive_message");
 		}
 		else if (bytes_read > 0) {
+			
+			//std::cout << "Debug - Current bytes read: [" << bytes_read << "]" << std::endl;
+
+			//std::cout << "Debug - Current Read Buffer: [" << _read_buff << "]" << std::endl;
+			//_read_buff += std::string(buffer, bytes_read);
+
 			setReadBuff(buffer);
+			//std::cout << "Debug - Read Buffer: [" << _read_buff << "]" << std::endl;
+
 			if (_read_buff.find("\r\n") != std::string::npos) {
 				server.resetClientTimer(_timer_fd, config::TIMEOUT_CLIENT);
 				set_failed_response_counter(-1);
@@ -148,7 +157,7 @@ bool Client::change_nickname(std::string nickname){
 	return true;
 }
 
-
+#include <cctype>
 #include "IrcResources.hpp"
 /**
  * @brief this functions task is to find what command we have been sent and to deligate the
@@ -165,17 +174,18 @@ void Client::handle_message(const std::string message, Server& server)
 	//std::string param = getParam(0);
 	if (_msg.getCommand() == "QUIT")
 	{
-		std::cout<<"QUIT called removing client \n";
-		prepareQuit(server.getChannelsToNotify());
-		server.remove_Client(server.get_event_pollfd(), _fd);
+		_msg.setType(MsgType::CLIENT_QUIT, {_nickName});
+		_msg.callDefinedMsg(); // there needs to be a calldefinedMsgforbroadcats
+		// this is one fucntion call and can be mapped later 
+		_msg.readyQuit(
+			server.getChannelsToNotify(),
+			[&](std::deque<std::string>& channels) { prepareQuit(channels); },  
+			_fd,
+			[&](int fd) { server.remove_Client(fd); });
 		return ;
 	}
 	if (_msg.getCommand() == "NICK") {
-		//_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd() getNickRef();
-		//_msg.prep_nickname(getNicknameRef(), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd()); // 
-		if(_msg.check_and_set_nickname(_msg.getParam(0), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd())) {
-			change_nickname(_msg.getParam(0));
-		}
+		_msg.prep_nickname(getNicknameRef(), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd()); // 
 		_msg.callDefinedMsg();//(_msg.getActiveMsgType());
 		// return ; 
 	}
@@ -195,16 +205,17 @@ void Client::handle_message(const std::string message, Server& server)
 			std::cout<<"creating channel now!-----------";
 			// create a channel object into a server map
 			server.createChannel(_msg.getParam(0));
-			// add channel to server list
+			// add channel to client list
 			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
-			// add client to channel map
-			server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-			// this is join channel, it sends the confrim message to join
-			// get list of users in channel 
+			_channelCreator = true;
 			// set defaults what are they 
 		}
-		server.get_Channel(_msg.getParam(0))->addClient(server.get_Client(_fd));
-		std::string ClientList = server.get_Channel(_msg.getParam(0))->getAllNicknames();
+		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
+		/*if (!currentChannel->canClientJoin())
+			// set msg
+			//return*/
+		currentChannel->addClient(server.get_Client(_fd));
+		std::string ClientList = currentChannel->getAllNicknames();
 		if (ClientList.empty())
 			std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
 		_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(),ClientList);
@@ -244,7 +255,6 @@ void Client::handle_message(const std::string message, Server& server)
         
     }
 
-    JOIN
     PART
     LEAVE
     TOPIC
@@ -255,7 +265,40 @@ void Client::handle_message(const std::string message, Server& server)
 
 */
 	}
+	/**
+	 * @brief 
+	 * 
+	 * sudo tcpdump -A -i any port <port number>, this will show what irssi sends before being reecived on
+	 * server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
+	 * irssi is sending the flags and users combined together into 1 string, where does flags end and user start? 
+	 * 
+	 * so no option but to not allow that format !
+	 * 
+	 */
+	if (_msg.getCommand() == "MODE")
+	{
+		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
+		std::string mode = _msg.getParam(1);
+		if ((mode[0] == '-' || mode[0] == '+') && isalpha(mode[1])) // regex for specifci letters only ? 
+		{
+			size_t i = 0;
+			while (i < mode.length())
+			{
+				//asuming regex confimed everything 
+				std::string newmode = std::string(1, mode[0]) + mode[i + 1]; //mode[0] + mode[i + 1 ];
+				// if mode == o take a parameter , otherwise its a channel mode 
+				currentChannel->setMode(newmode, _msg.getParam(1 + i));
+				i++;
+			}
+			// do messages need to be built here 
 
+		}
+		// · i: Set/remove Invite-only channel
+        //· t: Set/remove the restrictions of the TOPIC command to channel operators
+        //· k: Set/remove the channel key (password)
+		//· o: Give/take channel operator privilege
+		//· l: Set/remove the user limit to channel
+	}
 	if (_msg.getCommand() == "PRIVMSG") 
 	{
 		if (!_msg.getParam(0).empty())
@@ -272,6 +315,11 @@ void Client::handle_message(const std::string message, Server& server)
 			else
 			{
 				int fd = server.get_nickname_to_fd().find(_msg.getParam(0))->second;
+				if (fd < 0)
+				{
+					std::cout<<"no user here by that name \n";
+					return ;
+				}
 				server.set_private_fd(fd);
 				_msg.queueMessage( ":" + _nickName + " PRIVMSG "  + _msg.getParam(0)  + " " + _msg.getParam(1) + "\r\n");
 
@@ -302,8 +350,8 @@ std::string Client::getChannel(std::string channelName)
 		//_joinedChannels.push_back(channelName);
 }
 void Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
-    std::string quitMessage = ":" + _nickName + " QUIT :Client disconnected\r\n";
-
+    std::string quitMessage = CLIENT_QUIT(_nickName);
+	
     for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
         if (auto channelPtr = it->second.lock()) {
             channelsToNotify.push_back(it->first);

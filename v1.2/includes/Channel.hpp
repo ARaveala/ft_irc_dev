@@ -6,7 +6,7 @@
 #include <iostream>
 #include <bitset>
 #include <map>
-
+#include "config.h"
 #include "Client.hpp"
 
 /**
@@ -52,7 +52,9 @@ class Channel {
 	private:
 		std::string _name;
 		std::string _topic;
-		std::map<std::weak_ptr<Client>, std::pair<std::bitset<4>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+		int _clientCount = 0;
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<2>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+		std::bitset<5> _ChannelModes;
 		// this does need its own map your right, only of the joined clienst focourse
 		// duh
 		///std::map<int, std::shared_ptr<Client>>& _clients;
@@ -65,14 +67,20 @@ class Channel {
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
+		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
+		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
-
+		
+		void setMode(std::string mode, std::string nickname); // const 
+		Modes::ClientMode charToClientMode(const char& modeChar);
+		Modes::ChannelMode charToChannelMode(const char& modeChar); 
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
 		bool isClientInChannel(Client* Client) const;
-		const std::set<Client*>& getClient() const;
-		bool addOperator(Client* Client);
+		//const std::set<Client*>& getClient() const;
+		//bool addOperator(Client* Client);
 		bool removeOperator(Client* Client);
 		bool isOperator(Client* Client) const;
 		void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
@@ -80,14 +88,16 @@ class Channel {
 		void removeMode(const std::string& mode, Client* Client);
 // these could go into config.h as namespace?? these are just index values
 // with fancy name
-		const std::size_t MODE_OPERATOR = 0;
-		const std::size_t MODE_VOICE = 1;
+		/*const std::size_t MODE_OPERATOR = 0;
+		const std::size_t MODE_USER_LIMIT= 1;
 		const std::size_t MODE_INVITE_ONLY = 2;
-		const std::size_t MODE_MODERATED = 3;
+		const std::size_t MODE_PASSWORD = 3;
+		const std::size_t MODE_TOPIC = 4;*/
 		// void changeNickname();
 		//clean up for terminal proplems
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};
+
 };
 

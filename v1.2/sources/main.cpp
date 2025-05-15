@@ -111,7 +111,7 @@ int loop(Server &server)
 							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
 							if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
-								server.remove_Client(epollfd, fd);
+								server.remove_Client(fd);
 								std::cout<<server.get_client_count()<<"debuggin :: this is the new client count <<<<\n"; // debugging
 							}
 							if (e.getType() == ErrorType::NO_Client_INMAP)

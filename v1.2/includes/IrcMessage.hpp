@@ -9,13 +9,14 @@
 #include <cctype>    
 #include "IrcResources.hpp"
 #include <bitset>
+#include <functional>
 class Client; // Forward declaration
 class Server;
 
 class IrcMessage {
 	private:
 		// int current_fd;
-		std::bitset<7> _msgState;  //tracks active error
+		std::bitset<8> _msgState;  //tracks active error
 	    std::vector<std::string> _params;
 		MsgType _activeMsg = MsgType::NONE;
 
@@ -65,6 +66,8 @@ class IrcMessage {
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList);
 		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
+		// apprenbtly this is normal, can look at mariadb databse code, huge signitures but small code bodies. no need to pass entire object 
+		void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
 		//void handle_message(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
@@ -82,6 +85,7 @@ class IrcMessage {
 
 		// message types and params
 		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
+		
 		void setWelcomeType(std::vector<std::string> sendParams);
 	
 	    void callDefinedMsg();//(MsgType msgType);

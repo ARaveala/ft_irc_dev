@@ -12,11 +12,13 @@ class Client {
 		int _fd;
 		int _timer_fd;
 		int _failed_response_counter = 0;
+		bool _channelCreator = false;
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _nickName;
 		std::string _ClientName;
 		std::string _fullName;
+		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
 		//std::deque<std::string> _welcome;
 		std::map<std::string, std::weak_ptr<Channel>> _joinedChannels; // list of joined channels
@@ -39,9 +41,14 @@ class Client {
 		void set_failed_response_counter(int count);
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();
-		void set_pendingAcknowledged(bool onoff);
+		//void set_pendingAcknowledged(bool onoff);
 		void set_acknowledged();
+		void setChannelCreator(bool onoff) { _channelCreator = onoff;};
+		
 		int get_timer_fd();
+		
+		bool getChannelCreator() {return _channelCreator;};
+
 		std::string getNickname();
 		std::string& getNicknameRef();
 		std::string getClientName();
@@ -68,6 +75,9 @@ class Client {
 		};
 		void prepareQuit(std::deque<std::string>& channelsToNotify);
 		void handle_message(const std::string message, Server& server);
+		// loops through to find which command fucntion to execute
+		void executeCommand(const std::string& command);
+		void setCommandMap(Server &server); // come back to this 
 };
 
 

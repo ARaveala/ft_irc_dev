@@ -13,7 +13,7 @@ CPPFILES =	${SOURCES}main.cpp \
 			
 INCLUDES = -I ./includes
 CPP = c++
-CPPFLAGS = -Werror -Wextra -Wall -Wsign-conversion -std=c++20 -MMD -MP $(INCLUDES)
+CPPFLAGS = -Werror -Wextra -Wall -std=c++20 -MMD -MP $(INCLUDES) #-Wsign-conversion 
 BUILDDIR = buildofiles/
 OFILES = $(addprefix $(BUILDDIR), $(notdir $(CPPFILES:.cpp=.o)))
 DEPFILES = $(OFILES:.o=.d)

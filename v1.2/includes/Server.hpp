@@ -87,7 +87,7 @@ class Server {
 		//void set_port(int const port);
 		//void set_password(std::string const password);
 		void create_Client(int epollfd);
-		void remove_Client(int epollfd, int client_fd);
+		void remove_Client(int client_fd);
 		void removeClientFromChannels(int fd);
 		// remove channel
 	

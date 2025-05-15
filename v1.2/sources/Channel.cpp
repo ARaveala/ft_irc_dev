@@ -1,6 +1,6 @@
 #include "Channel.hpp"
 #include <iostream>
-
+#include <bitset>
 /*Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
     std::cout << "Channel '" << _name << "' created." << std::endl;
 }*/
@@ -48,6 +48,7 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
     return "";  //eturn empty string if the Client no longe
 }
 
+//make this fucntion clean up any wekptr that no longer refrences
 std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
     for (const auto& entry : _ClientModes) {
         if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
@@ -57,14 +58,66 @@ std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname)
 	// we could substitute with a throw here
     return {};  // return empty weak_ptr if no match is found
 }
+std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string nickname)
+{
+	for (auto& entry : _ClientModes) {
+		std::cout<<"whats thje name we looking at now = ["<<entry.first.lock()->getNickname()<<"]\n";
+        if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+            return entry.second.first;  // return the matching weak_ptr
+        }
+    }
+	// we could substitute with our own  throw here
+	throw std::runtime_error("Client not found get client modes!");
+	//return ;  // return empty weak_ptr if no match is found
+}
+
 
 void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
 
+Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
+	switch (modeChar) {
+		case 'o': return Modes::OPERATOR;
+		//case 'i': return Modes::INVITE_ONLY;
+		default : return Modes::CLIENT_NONE;
+	}
+
+}
+Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
+	switch (modeChar) {
+		case 'i': return Modes::INVITE_ONLY;
+		case 'k': return Modes::PASSWORD;
+		case 'l': return Modes::USER_LIMIT;
+		case 't': return Modes::TOPIC;
+		default : return Modes::NONE;
+	}
+
+}
+//16:31 -!- mode/#bbq [-oo pleb1 pleb2] by anonikins
+
+void Channel::setMode(std::string mode, std::string nickname) {
+	
+	char operation = mode[0];
+	char modechar = mode[1];
+	bool onoff = false;
+	if (operation == '+')
+		onoff = true;
+	Modes::ClientMode modeType = charToClientMode(mode[1]);
+	if (modeType != Modes::CLIENT_NONE) {
+		// this fucntion throws if client not found, should it, we must then "catch me outside"
+		getClientModes(nickname).set(modeType, onoff);
+		return ;
+	}
+	Modes::ChannelMode cmodeType = charToChannelMode(modechar);
+	if (cmodeType != Modes::NONE) {
+		_ChannelModes.set(modeType, onoff);
+	}
+
+}
+
 bool Channel::addClient(std::shared_ptr <Client> client) {
     //std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
-	
 	if (!client)
 		return false; // no poopoo pointers
 	std::weak_ptr<Client> weakclient = client;
@@ -72,7 +125,14 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
 	//_ClientModes[weakclient].first.set(MODE_OPERATOR);
 
 	if (_ClientModes.find(weakclient) == _ClientModes.end()) {
-		_ClientModes.insert({weakclient, std::make_pair(std::bitset<4>(), client->getFd())});  // ✅ Insert new client
+		_ClientModes.insert({weakclient, std::make_pair(std::bitset<2>(), client->getFd())});  //Insert new client
+		if (client->getChannelCreator() == true)
+		{
+			setMode("+o", client->getNickname());			
+			client->setChannelCreator(false);
+		}
+		
+		_clientCount += 1;
 	} else {
 		std::cout << "Client already exists in channel!" << std::endl;
 	}
@@ -80,6 +140,7 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
 	{
 		std::cout<<"show me the fds in the clientmodes map = "<<it->second.second<<"\n";
 	}
+
 	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
     }*/
@@ -100,6 +161,7 @@ bool Channel::removeClient(std::string nickname) {
     if (removed_count > 0) {
         // Also remove from operators if they were an operator
         //operators.erase(Client);
+		
         std::cout << nickname << " left channel " << _name << std::endl;
 	}
     return removed_count > 0;

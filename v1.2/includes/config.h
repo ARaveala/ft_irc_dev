@@ -53,7 +53,8 @@ enum class ErrorType {
 namespace Modes {
 	enum ClientMode {
    		OPERATOR,     	// 0
-		CLIENT_NONE			// 1
+		FOUNDER,		// 1
+		CLIENT_NONE		// 2
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0
@@ -74,8 +75,9 @@ namespace config {
 	constexpr int TIMEOUT_CLIENT = 3000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = 0;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CLIENT_NUM_MODES = 3;
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
+	constexpr std::size_t MSG_TYPE_NUM = 9;
 }
 
 namespace errVal {
@@ -130,6 +132,7 @@ namespace IRCMessage {
  */
 namespace FuncType {
 	using DequeRef1 = std::function<void(std::deque<std::string>&)>;
+	//using setMsgRef = std::function<void(MsgType, std::vector<std::string>&)>;
 }
 /*
 This is like global variables but its encapsulated in the Config, so its much harder to 

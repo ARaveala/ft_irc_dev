@@ -1,6 +1,7 @@
 #include "Channel.hpp"
 #include <iostream>
 #include <bitset>
+#include "IrcResources.hpp"
 /*Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
     std::cout << "Channel '" << _name << "' created." << std::endl;
 }*/
@@ -60,9 +61,11 @@ std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname)
 }
 std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string nickname)
 {
+	std::cout << "Total Clients: " << _ClientModes.size() << std::endl;
 	for (auto& entry : _ClientModes) {
 		std::cout<<"whats thje name we looking at now = ["<<entry.first.lock()->getNickname()<<"]\n";
-        if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+
             return entry.second.first;  // return the matching weak_ptr
         }
     }
@@ -71,7 +74,20 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 	//return ;  // return empty weak_ptr if no match is found
 }
 
+/*std::bitset<config::CHANNEL_NUM_MODES>& Channel::getChannelModes()
+{
+	//std::cout << "Total Clients: " << _ClientModes.size() << std::endl;
+	for (auto& entry : _ClientModes) {
+		std::cout<<"whats thje name we looking at now = ["<<entry.first.lock()->getNickname()<<"]\n";
+		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
 
+            return entry.second.first;  // return the matching weak_ptr
+        }
+    }
+	// we could substitute with our own  throw here
+	throw std::runtime_error("Client not found get client modes!");
+	//return ;  // return empty weak_ptr if no match is found
+}*/
 void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
@@ -79,6 +95,7 @@ void Channel::setTopic(const std::string& newTopic) {
 Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
 	switch (modeChar) {
 		case 'o': return Modes::OPERATOR;
+		case 'q': return Modes::FOUNDER;
 		//case 'i': return Modes::INVITE_ONLY;
 		default : return Modes::CLIENT_NONE;
 	}
@@ -94,28 +111,128 @@ Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
 	}
 
 }
+bool Channel::setModeBool(char onoff) {
+	return onoff == '+'; 
+}
 //16:31 -!- mode/#bbq [-oo pleb1 pleb2] by anonikins
-
-void Channel::setMode(std::string mode, std::string nickname) {
-	
-	char operation = mode[0];
+/*void Channel::setChannelMode(std::string mode)
+{
+//	char operation = mode[0];
 	char modechar = mode[1];
-	bool onoff = false;
-	if (operation == '+')
-		onoff = true;
-	Modes::ClientMode modeType = charToClientMode(mode[1]);
-	if (modeType != Modes::CLIENT_NONE) {
-		// this fucntion throws if client not found, should it, we must then "catch me outside"
-		getClientModes(nickname).set(modeType, onoff);
-		return ;
-	}
-	Modes::ChannelMode cmodeType = charToChannelMode(modechar);
-	if (cmodeType != Modes::NONE) {
+	bool onoff = setModeBool(mode[0]);
+	//if (operation == '+')
+	//	onoff = true;
+
+	Modes::ChannelMode modeType = charToChannelMode(modechar);
+	if (modeType != Modes::NONE) {
 		_ChannelModes.set(modeType, onoff);
 	}
 
+}*/
+int Channel::setChannelMode(std::string mode, std::string nickname, std::string currentClientName, std::string channelname, const std::string pass, std::map<std::string, int>& listOfClients,  std::function<void(MsgType, std::vector<std::string>&)> setMsgType) {
+	if (currentClientName != "" && getClientModes(currentClientName).test(Modes::OPERATOR) == false)
+	{
+		//_msg.queueMessage(":localhost 482 " + _nickName + " " + _msg.getParam(0) + " :"+ _nickName +", You're not channel operator\r\n");
+		//break;// :Permission denied—operator privileges required
+		std::vector<std::string> params = {nickname, channelname};
+		setMsgType(MsgType::NOT_OPERATOR, params);
+		// build message here ? 
+		return 2;
+	}
+	char modechar = mode[1];
+	bool onoff = setModeBool(mode[0]);
+	Modes::ChannelMode cmodeType = charToChannelMode(modechar);
+	if (cmodeType != Modes::NONE) {
+	if (cmodeType != Modes::PASSWORD)
+		{
+			if (pass.empty())
+				return 0;
+			// do we want a character limit here? we could just have it at 8 for simplicities sake
+			this->_password = pass;
+			  //  -!- mode/#bbq [+k hell] by user channel broadcast
+		}
+		if (cmodeType != Modes::INVITE_ONLY)
+		{
+			if (nickname == "")
+				return 0;
+			
+			auto it = listOfClients.find(nickname);
+			if (it != listOfClients.end())
+			{
+				// setmsg send invite to nickname 
+			}
+
+		}
+		_ChannelModes.set(cmodeType, onoff);
+	}
+	return 0;
 }
 
+int Channel::setClientMode(std::string mode, std::string nickname, std::string currentClientName) {
+
+	//this could be its own fucntion 
+	if (currentClientName != "" && getClientModes(currentClientName).test(Modes::OPERATOR) == false)
+	{
+		// build message here ? 
+		return 2;
+	}
+	char modechar = mode[1];
+	bool onoff = setModeBool(mode[0]);
+	Modes::ClientMode modeType = charToClientMode(modechar);
+	if (modeType != Modes::CLIENT_NONE) {
+		// this fucntion throws if client not found, should it, we must then "catch me outside" and continue
+		// if we want a founders can not be de-opped because i somehow managed to get results suggesting this could not be done
+		//if (modeType == Modes::OPERATOR && getClientModes(nickname).test(Modes::FOUNDER))
+		//	return 0;
+		getClientModes(nickname).set(modeType, onoff);
+		return 1;
+	}
+	return 0;
+	
+
+}
+bool Channel::canClientJoin(const std::string& nickname, const std::string& password )
+{
+	std::cout<<"handling can client join to client named = "<<nickname<<"\n";
+	if(_ChannelModes.test(Modes::INVITE_ONLY))
+	{
+		auto it = std::find(_invites.begin(), _invites.end(), nickname);//_invites.find(nickname);
+		if (it != _invites.end())
+		{
+			// remove name from invite list 
+			return true;
+		}
+		// setmsg invite only
+		
+		return false;
+	}
+	// will handle rest , but in this file they go 
+	if (_ChannelModes.test(Modes::PASSWORD))
+	{
+		if (password == "")
+		{
+			// set msg no password provided 
+			return false;
+		}
+		if (password != _password)
+		{
+			//set msg password mismatch 
+			return false;
+		}
+	}
+
+	/*if (_clientCount >= _ClientLimit)
+	{
+		// setmsg client limit reached
+		return false;
+	}*/
+	/*if (nickname found in ban list )
+	{
+		//setmsg banned
+		return false;
+	}*/
+	return true;
+}
 bool Channel::addClient(std::shared_ptr <Client> client) {
     //std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
 	if (!client)
@@ -125,10 +242,11 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
 	//_ClientModes[weakclient].first.set(MODE_OPERATOR);
 
 	if (_ClientModes.find(weakclient) == _ClientModes.end()) {
-		_ClientModes.insert({weakclient, std::make_pair(std::bitset<2>(), client->getFd())});  //Insert new client
+		_ClientModes.insert({weakclient, std::make_pair(std::bitset<config::CLIENT_NUM_MODES>(), client->getFd())});  //Insert new client
 		if (client->getChannelCreator() == true)
 		{
-			setMode("+o", client->getNickname());			
+			setClientMode("+o", client->getNickname(), "");
+			setClientMode("+q", client->getNickname(), "");
 			client->setChannelCreator(false);
 		}
 		

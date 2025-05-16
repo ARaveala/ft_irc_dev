@@ -290,7 +290,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 		fd = _private_fd;
 	if (!client->get_acknowledged())
 	{
-		//std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+		std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
 //		std::string msg = client->getMsg().getQueueMessage();
 		client->set_acknowledged();		
 	}	
@@ -309,9 +309,10 @@ void Server::send_message(std::shared_ptr<Client> client)
 		}
 		if (bytes_sent > 0) {
 			usleep(5000); //wait incase we are going too fast and so sends dont complete
-			client->getMsg().removeQueueMessage(); 
-
+			
 		}
+		client->getMsg().removeQueueMessage(); 
+
 		/*if (bytes_sent == 0)
 		{
 			
@@ -350,6 +351,7 @@ void Server::send_server_broadcast()
 		}
 		_server_broadcasts.pop_front();  //remove sent message
 	}
+	_server_broadcasts.clear();
 }
 void Server::sendChannelBroadcast()
 {

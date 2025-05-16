@@ -10,15 +10,16 @@
 #include "IrcResources.hpp"
 #include <bitset>
 #include <functional>
+#include "config.h"
 class Client; // Forward declaration
 class Server;
 
 class IrcMessage {
 	private:
 		// int current_fd;
-		std::bitset<8> _msgState;  //tracks active error
+		std::bitset<config::MSG_TYPE_NUM> _msgState;  //tracks active error
 	    std::vector<std::string> _params;
-		MsgType _activeMsg = MsgType::NONE;
+		//MsgType _activeMsg = MsgType::NONE;
 
     	std::string _prefix;
     	std::string _command;
@@ -55,6 +56,7 @@ class IrcMessage {
 		
 		
 		// araveala has added this to help give you full control
+		int countOccurrences(const std::string& text, const std::string& pattern);
 		// naming is changable
 		// these are now required as subject requires all activity including read and write
 		// must go through epoll

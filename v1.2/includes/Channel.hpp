@@ -52,9 +52,12 @@ class Channel {
 	private:
 		std::string _name;
 		std::string _topic;
+		int _ClientLimit = 0;
 		int _clientCount = 0;
-		std::map<std::weak_ptr<Client>, std::pair<std::bitset<2>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
-		std::bitset<5> _ChannelModes;
+		std::string _password;
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+		std::bitset<config::CHANNEL_NUM_MODES> _ChannelModes;
+		std::deque<std::string> _invites;
 		// this does need its own map your right, only of the joined clienst focourse
 		// duh
 		///std::map<int, std::shared_ptr<Client>>& _clients;
@@ -71,10 +74,16 @@ class Channel {
 		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
-		
-		void setMode(std::string mode, std::string nickname); // const 
+		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
+		int setClientMode(std::string mode, std::string nickname, std::string currentClientName); // const 
+		int setChannelMode(std::string mode, std::string nickname, std::string currentClientName, std::string channelname, const std::string pass, std::map<std::string, int>& listOfClients,  std::function<void(MsgType, std::vector<std::string>&)> setMsgType);
 		Modes::ClientMode charToClientMode(const char& modeChar);
 		Modes::ChannelMode charToChannelMode(const char& modeChar); 
+		//void setChannelMode(std::string mode);
+		bool setModeBool(char onoff);
+		bool canClientJoin(const std::string& nickname, const std::string& password );
+
+
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);

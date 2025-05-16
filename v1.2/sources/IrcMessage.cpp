@@ -18,6 +18,7 @@
 #include "SendException.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
+#include <regex>
 //#include "ChannelManager.hpp"
 // --- Constructor ---
 IrcMessage::IrcMessage() {}
@@ -32,7 +33,12 @@ void IrcMessage::setCommand(const std::string& command) { _command = command; }
 const std::string& IrcMessage::getPrefix() const { return _prefix; }
 const std::string& IrcMessage::getCommand() const { return _command; }
 const std::vector<std::string>& IrcMessage::getParams() const { return _paramsList; }
-const std::string IrcMessage::getParam(unsigned long index) const { return _paramsList[index]; }
+const std::string IrcMessage::getParam(unsigned long index) const { 
+	// needs to check index is not out of bounds
+	//if (_paramsList.size() > index)
+	//	return "";
+	return _paramsList[index];
+ }
 
 // definition of illegal nick_names ai
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
@@ -42,14 +48,13 @@ void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(msg));  //activate only one msg
 
-	_activeMsg = msg;
 	_params.clear();
 	_params = sendParams;
 }
 
 void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
-    _msgState.set(static_cast<size_t>(MsgType::WELCOME));  //activate only one msg
+    _msgState.set(static_cast<size_t>(MsgType::WELCOME));
 	_msgState.set(static_cast<size_t>(MsgType::HOST_INFO));
 	_msgState.set(static_cast<size_t>(MsgType::SERVER_CREATION));
 	_msgState.set(static_cast<size_t>(MsgType::SERVER_INFO));
@@ -57,6 +62,13 @@ void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
 	_params = sendParams;
 }
 
+int IrcMessage::countOccurrences(const std::string& text, const std::string& pattern) {
+    std::regex regexPattern(pattern);  // Create regex from pattern
+    auto begin = std::sregex_iterator(text.begin(), text.end(), regexPattern);
+    auto end = std::sregex_iterator();
+
+    return std::distance(begin, end);  // Count matches
+}
 /*MsgType IrcMessage::getActiveMsgType() const {
     for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {
@@ -82,8 +94,10 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 
     // 1. Check for invalid characters
 	// check nickname exists
-    if (nickname.empty()) {
-         std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
+	std::cout << "#### Nickname '" << nickname << "' raaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" << fd << ": Empty." << std::endl;
+
+	if (nickname.empty()) {
+		std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
         return false;
     }
 	// check nickname is all lowercase

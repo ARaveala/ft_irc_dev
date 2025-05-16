@@ -10,6 +10,7 @@ enum class MsgType {
 	SERVER_INFO,
 	RPL_NICK_CHANGE,
 	NICKNAME_IN_USE,
+	NOT_OPERATOR,
 	CLIENT_QUIT
 };
 
@@ -28,6 +29,9 @@ enum class MsgType {
 #define NAMES_LIST(nickname, channelName, clientList) (":ft_irc 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n")
 #define END_NAMES_LIST(nickname, channelName) (":ft_irc 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n")
 #define CHANNEL_TOPIC(nickname, channelName) (":ft_irc 332 " + nickname + " " + channelName + " : topic is " + topic + "!\r\n")
+
+//mode releated
+#define NOT_OPERATOR(nickname, channelName) (":localhost 482 " + nickname + " " + channelName + " :"+ nickname +", You're not channel operator\r\n")
 
 #define CLIENT_QUIT(nickname) (":" + nickname + " QUIT :Client disconnected\r\n")
 /*#define RESOLVE_WELCOME_MESSAGE(msgType, params) \

@@ -9,7 +9,7 @@
 #include "SendException.hpp"
 #include "epoll_utils.hpp" // reset client timer
 #include "IrcMessage.hpp"
-
+#include <string>
 Client::Client(){}
 
 Client::Client(int fd, int timer_fd) : _fd(fd), _timer_fd(timer_fd){}
@@ -158,6 +158,7 @@ bool Client::change_nickname(std::string nickname){
 }
 
 #include <cctype>
+#include <regex>
 #include "IrcResources.hpp"
 /**
  * @brief this functions task is to find what command we have been sent and to deligate the
@@ -211,9 +212,13 @@ void Client::handle_message(const std::string message, Server& server)
 			// set defaults what are they 
 		}
 		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
-		/*if (!currentChannel->canClientJoin())
+		std::string pass = "";
+		if (_msg.getParams().size() == 2) // biger than 2 ?
+			pass = _msg.getParam(1); 
+		if (!currentChannel->canClientJoin(_nickName, pass))
+			return ;
 			// set msg
-			//return*/
+			//return
 		currentChannel->addClient(server.get_Client(_fd));
 		std::string ClientList = currentChannel->getAllNicknames();
 		if (ClientList.empty())
@@ -279,17 +284,130 @@ void Client::handle_message(const std::string message, Server& server)
 	{
 		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
 		std::string mode = _msg.getParam(1);
-		if ((mode[0] == '-' || mode[0] == '+') && isalpha(mode[1])) // regex for specifci letters only ? 
+		//std::string test = "+abc";
+		std::string name;
+		size_t ClientModeCount = 0;
+		std::string validClientPattern = R"([+-][o]+)"; // once this is done it should be easy to add more
+		
+		size_t paramSize = _msg.getParams().size();
+		std::cout<<"TELL ME THE SIZE OF PARAMSLIST BEFORE DOING ANYTHING TO IT = "<<paramSize<<"\n";
+
+		if ((ClientModeCount = _msg.countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags
 		{
-			size_t i = 0;
+			std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<paramSize - 2<<"\n";
+			std::cout<<"TELL ME THE CLIENTMODECOUNT = "<<ClientModeCount<<"\n";
+			std::cout<<" WE do not have an equal number of client modes to params \n";
+			//return;
+		}
+		std::string validPattern = R"([+-][ioklt]+)";
+		if ((mode[0] == '-' || mode[0] == '+') && std::regex_match(mode, std::regex(validPattern)))//isalpha(mode[1])) // regex for specifci letters only ? 
+		{
+			// parsing to check that flags are valid +o +oop 
+			size_t i = 1;
+			size_t ret = 0;
+			size_t ret2 = 0;
+			//size_t clientsHandled = 0;
+			size_t total = 2;
+			std::string names;
+			std::string pass = "";
 			while (i < mode.length())
-			{
+			{	
 				//asuming regex confimed everything 
-				std::string newmode = std::string(1, mode[0]) + mode[i + 1]; //mode[0] + mode[i + 1 ];
-				// if mode == o take a parameter , otherwise its a channel mode 
-				currentChannel->setMode(newmode, _msg.getParam(1 + i));
+				std::string newmode = std::string(1, mode[0]) + mode[i]; //mode[0] + mode[i + 1 ];
+				//std::cout<<"getting mode "<<newmode<<"\n";
+				//std::cout<<"getting total now "<<total<<"\n";
+				//std::cout<<"getting Clientmodecount "<<ClientModeCount<<"\n";
+//wrong total too big
+				//if (ClientModeCount == 0)
+				//{
+					//std::cout<<"empty name being added \n";
+				//	name = "";
+				//}
+				// check to see if we are dealing with a client mode or not 
+				if (ClientModeCount > 0 && std::regex_match(newmode, std::regex(validClientPattern)))
+				{
+					name = _msg.getParam(total);
+					if (name == "")
+						std::cout<<"getParam went out of bounds here !!!!!!! fix it \n";
+					try
+					{
+						ret = currentChannel->setClientMode(newmode, name, _nickName);
+						
+					}
+					catch(const std::exception& e)
+					{
+						std::cerr << e.what() << '\n';
+					}					
+					if (ret == 2)
+					{
+						//setMsgtype
+						_msg.queueMessage(":localhost 482 " + _nickName + " " + _msg.getParam(0) + " :"+ _nickName +", You're not channel operator\r\n");
+						break;// :Permission denied—operator privileges required
+					}
+					total += ret;
+					if (ret == 1) // client mode done
+					{
+						names += name + " ";
+						ClientModeCount =- 1;
+						//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
+					}
+					//std::cout<<"this name now being added = "<<name<<"\n";
+
+				}
+				//if (_msg.getParams().size())
+				else
+				{
+					// if mode == o take a parameter , otherwise its a channel mode
+					try
+					{
+						// this could be even further out perhaps? 
+						//ret = currentChannel->setClientMode(newmode, name, _nickName);
+						pass = _msg.getParam(total);
+						if (pass == "")
+							std::cout<<"getParam went out of bounds here !!!!!!! fix it although in this instance we handle it inside setchannelmode \n";
+						//onst std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
+						ret2 = currentChannel->setChannelMode(newmode, name, _nickName, _msg.getParam(0), pass, server.get_nickname_to_fd(), [&](MsgType msg, std::vector<std::string>& params) {
+																															_msg.setType(msg, params);
+																															});
+						//std::cout<<"ret is now = "<<ret <<"\n";
+						if (ret2 == 2)
+						{
+							//setMsgtype
+							_msg.queueMessage(":localhost 482 " + _nickName + " " + _msg.getParam(0) + " :"+ _nickName +", You're not channel operator\r\n");
+							break;// :Permission denied—operator privileges required
+						}
+						//total += ret;
+						//std::cout<<"total is now = "<<total <<"\n";
+
+						//if (ret == 1) // client mode done
+						//{
+						//	names += name + " ";
+						//	ClientModeCount =- 1;
+							//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
+						//}
+					}
+					catch(const std::exception& e)
+					{
+						//std::cout<<"exception caught brekaing \n";
+
+						std::cerr << e.what() << '\n';
+						break;
+					}
+				}
 				i++;
+			
 			}
+			std::cout<<"list of names = "<<names<<"\n";
+			
+			if (ret != 2 || ret2 != 2)
+			{
+				server.getChannelsToNotify().push_back(_msg.getParam(0));
+				server.getChannelBroadcastQue().push_back(":" + _nickName +"!ident@localhost" +" MODE " + _msg.getParam(0) + " " + _msg.getParam(1) + " " + names + "\r\n");
+			}
+				
+			//server.getChannelBroadcastQue()->
+			//setmsg channel broadcast this client + modes + string of names 
+			// setdefinedmsg
 			// do messages need to be built here 
 
 		}

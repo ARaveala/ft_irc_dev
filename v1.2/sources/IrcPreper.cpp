@@ -24,11 +24,11 @@ void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::st
 	callDefinedMsg();
 }
 // yes the parameters are long but this is the best way i could see how to run this function without passing entire objects 
-void IrcMessage::readyQuit(std::deque<std::string>& channelsToNotify, FuncType::DequeRef1 prepareQuit , int fd, std::function<void(int)> removeClient) {
+/*void IrcMessage::readyQuit(std::deque<std::string>& channelsToNotify, FuncType::DequeRef1 prepareQuit , int fd, std::function<void(int)> removeClient) {
     //setType();
 	prepareQuit(channelsToNotify);
 	removeClient(fd);
-}
+}*/
 
 void IrcMessage::prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
 {
@@ -66,7 +66,7 @@ void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string
 
 }*/
 
-void IrcMessage::prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList)
+void IrcMessage::prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList)
 {
 
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";

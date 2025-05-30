@@ -40,6 +40,7 @@ class Server {
 		int _signal_fd;
 		int _epoll_fd;
 		int _private_fd = 0;
+		
 		std::string _password;
 
 		std::map<const std::string, std::shared_ptr<Channel>> _channels;
@@ -102,6 +103,9 @@ class Server {
 		////bool check_and_set_nickname(std::string nickname, int fd);  // ai
 		// get channel
 		
+		void setEpollout(int fd);
+
+		
 		// GETTERS
 		int getPort() const;
 		int getFd() const;
@@ -110,6 +114,7 @@ class Server {
 		int get_client_count() const;
 		int get_event_pollfd() const;
 		int get_current_client_in_progress() const;
+		
 		//epoll_event& get_epoll_event_struct(int fd);
 		std::map<int, struct epoll_event> get_struct_map() {return _epollEventMap; };
 		std::string get_password() const;
@@ -145,6 +150,8 @@ class Server {
 		bool channelExists(const std::string& channelName) const;
 		void createChannel(const std::string& channelName);//, Client& client
 		Channel* getChannel(const std::string& channelName);
+		void handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password);
+
 };
 
 std::string generateUniqueNickname();

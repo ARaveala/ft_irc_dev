@@ -35,7 +35,7 @@ const std::string& IrcMessage::getCommand() const { return _command; }
 const std::vector<std::string>& IrcMessage::getParams() const { return _paramsList; }
 const std::string IrcMessage::getParam(unsigned long index) const { 
 	// needs to check index is not out of bounds
-	//if (_paramsList.size() > index)
+	//if (_paramsList.size() >= index)
 	//	return "";
 	return _paramsList[index];
  }
@@ -77,7 +77,16 @@ int IrcMessage::countOccurrences(const std::string& text, const std::string& pat
     }
     return MsgType::NONE;
 }*/
-
+void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast)
+{
+	for (size_t i = 0; i < _msgState.size(); ++i) {
+        if (_msgState.test(i)) {
+			MsgType msgType = static_cast<MsgType>(i);
+			std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
+			channelbroadcast.push_back(TheMessage);
+        }
+    }	
+}
 void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
 {
 	for (size_t i = 0; i < _msgState.size(); ++i) {
@@ -94,7 +103,7 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 
     // 1. Check for invalid characters
 	// check nickname exists
-	std::cout << "#### Nickname '" << nickname << "' raaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" << fd << ": Empty." << std::endl;
+	std::cout << "#### Nickname '" << nickname  << fd << ": Empty." << std::endl;
 
 	if (nickname.empty()) {
 		std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;

@@ -131,21 +131,15 @@ void Server::remove_Client(int client_fd) {
 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, 0);
 	close(get_Client(client_fd)->get_timer_fd());
 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, get_Client(client_fd)->get_timer_fd(), 0);
-	
+	_nickname_to_fd.erase(get_Client(client_fd)->getNickname());
+	_fd_to_nickname.erase(client_fd);	
 	// channel.getClient().erase();
 	_Clients.erase(client_fd);
 	_epollEventMap.erase(client_fd);
 	
-	
-	//////_fd_to_nickname.erase(client_fd);
-	
-	
-	//_nickname_to_fd.erase(client_fd);
 
 	//_epollEventMap.erase(client_fd);
 	//std::map<int, struct epoll_event> _epollEventMap;
-	//std::map<std::string, int> _nickname_to_fd;
-	//std::map<int, std::string> _fd_to_nickname;
 	_client_count--;
 	std::cout<<"client has been removed"<<std::endl;
 }
@@ -278,7 +272,26 @@ bool Server::checkTimers(int fd) {
 	return false;
 }
 
-
+/*void Server::setGhostFd()
+{
+	struct epoll_event event;
+	event.events = EPOLLOUT | EPOLLIN  | EPOLLET;
+	event.data.fd = fd;
+	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
+}
+void Server::removeGhostFd()
+{
+	close(fd);
+	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, 0);
+}
+*/
+void Server::setEpollout(int fd)
+{
+	struct epoll_event event;
+	event.events = EPOLLOUT | EPOLLIN  | EPOLLET;
+	event.data.fd = fd;
+	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
+}
 void Server::send_message(std::shared_ptr<Client> client)
 {
 	//if (!_channel_broadcasts.empty())
@@ -294,7 +307,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 //		std::string msg = client->getMsg().getQueueMessage();
 		client->set_acknowledged();		
 	}	
-	while (!client->isMsgEmpty()) {
+	while (!client->isMsgEmpty() && client->getQuit() == false) {
 
 		std::string msg = client->getMsg().getQueueMessage();
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
@@ -308,7 +321,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 			else perror("send error");
 		}
 		if (bytes_sent > 0) {
-			usleep(5000); //wait incase we are going too fast and so sends dont complete
+			usleep(3000); //wait incase we are going too fast and so sends dont complete
 			
 		}
 		client->getMsg().removeQueueMessage(); 
@@ -318,6 +331,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 			
 
 		}*/
+	// is this needed ?? 
 		if (!client->isMsgEmpty()) {
 			struct epoll_event event;
 			event.events = EPOLLIN | EPOLLOUT | EPOLLET;
@@ -355,11 +369,13 @@ void Server::send_server_broadcast()
 }
 void Server::sendChannelBroadcast()
 {
+	std::cout<<"entering senchannelbroadcast!-----------";
 	if (_channel_broadcasts.empty())
 	{
+		std::cout<<"channel broaDCAST DEEMED EMPTY \n";
 		return ;
 	}
-	std::cout<<"entering senchannelbroadcast!-----------";
+	
 
 	std::vector<int> finalFds;
 	for (const auto& channelName : _channelsToNotify) {
@@ -419,6 +435,41 @@ std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
 	throw ServerException(ErrorType::NO_Client_INMAP, "can not get_Client()");
 }
 
+void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password)
+{
+	// check there is a param 0
+	if (channelName == "")
+	{
+		std::cout<<"no channel name provided handle error\n";
+		//return ;
+	}
+	if (channelExists(channelName) < 1) 
+	{
+		std::cout<<"creating channel now!-----------";
+		// create a channel object into a server map
+		createChannel(channelName);
+		// add channel to client list
+		
+		client->setChannelCreator(true);
+		// set defaults what are they 
+	}
+	std::shared_ptr <Channel> currentChannel = get_Channel(channelName);
+	//std::string pass = "";
+
+	//if (client->getMsg().getParams().size() == 2) // biger than 2 ?
+	//pass = client->getMsg().getParam(1); 
+	
+	if (!currentChannel->canClientJoin(client->getNickname(), password))
+		return ;
+		// set msg
+		//return
+	client->addChannel(channelName, get_Channel(channelName));
+	currentChannel->addClient(client);
+	std::string ClientList = currentChannel->getAllNicknames();
+	if (ClientList.empty())
+		std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
+	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
+}
 /*void Server::removeClientFromChannels(int fd)
 {
 	while (!_joinedChannels.empty())

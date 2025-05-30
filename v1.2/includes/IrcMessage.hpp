@@ -66,7 +66,7 @@ class IrcMessage {
 		std::string getQueueMessage() { return _messageQue.front();};
 		void prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
-		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList);
+		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
 		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
 		// apprenbtly this is normal, can look at mariadb databse code, huge signitures but small code bodies. no need to pass entire object 
 		void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
@@ -91,7 +91,7 @@ class IrcMessage {
 		void setWelcomeType(std::vector<std::string> sendParams);
 	
 	    void callDefinedMsg();//(MsgType msgType);
-	
+		void callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast);
 		//void getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue);
 		// cleanup functions
 		void clearAllMsg() {

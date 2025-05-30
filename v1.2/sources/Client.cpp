@@ -9,7 +9,8 @@
 #include "SendException.hpp"
 #include "epoll_utils.hpp" // reset client timer
 #include "IrcMessage.hpp"
-#include <string>
+//#include <string>
+#include "CommandDispatcher.hpp"
 Client::Client(){}
 
 Client::Client(int fd, int timer_fd) : _fd(fd), _timer_fd(timer_fd){}
@@ -50,7 +51,7 @@ int Client::get_timer_fd(){
 	return _timer_fd;
 }
 
-std::string Client::getNickname(){
+std::string Client::getNickname() const{
 	return _nickName;
 }
 
@@ -121,7 +122,8 @@ void Client::receive_message(int fd, Server& server) {
 			if (_read_buff.find("\r\n") != std::string::npos) {
 				server.resetClientTimer(_timer_fd, config::TIMEOUT_CLIENT);
 				set_failed_response_counter(-1);
-				handle_message(_read_buff, server);	
+				//server.handle_message(_read_buff, server);	
+				CommandDispatcher::handle_message(_read_buff, server, _fd);	
 				_read_buff.clear();
 				return ; // this might be a bad idea
 			} else
@@ -130,6 +132,9 @@ void Client::receive_message(int fd, Server& server) {
 	}
 }
 
+/*void Client::setChannelCreator(bool onoff) {
+	
+}*/
 
 void Client::setDefaults(){
 	// this needs an alternative to add unique identifiers 
@@ -157,301 +162,6 @@ bool Client::change_nickname(std::string nickname){
 	return true;
 }
 
-#include <cctype>
-#include <regex>
-#include "IrcResources.hpp"
-/**
- * @brief this functions task is to find what command we have been sent and to deligate the
- * handling of that command to respective functions
- * 
- * @param Client 
- * @param message 
- * @param server 
- */
-// could we do a map of commands to fucntion pointers to handle this withouts ifs ?
-void Client::handle_message(const std::string message, Server& server)
-{
-	_msg.parse(message);
-	//std::string param = getParam(0);
-	if (_msg.getCommand() == "QUIT")
-	{
-		_msg.setType(MsgType::CLIENT_QUIT, {_nickName});
-		_msg.callDefinedMsg(); // there needs to be a calldefinedMsgforbroadcats
-		// this is one fucntion call and can be mapped later 
-		_msg.readyQuit(
-			server.getChannelsToNotify(),
-			[&](std::deque<std::string>& channels) { prepareQuit(channels); },  
-			_fd,
-			[&](int fd) { server.remove_Client(fd); });
-		return ;
-	}
-	if (_msg.getCommand() == "NICK") {
-		_msg.prep_nickname(getNicknameRef(), getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd()); // 
-		_msg.callDefinedMsg();//(_msg.getActiveMsgType());
-		// return ; 
-	}
-	if (_msg.getCommand() == "PING"){
-		sendPong();
-		std::cout<<"sending pong back "<<std::endl;
-		//Client->set_failed_response_counter(-1);
-		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
-	}
-	if (_msg.getCommand() == "PONG"){
-		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
-	}
-
-    if (_msg.getCommand() == "JOIN" && !_msg.getParam(0).empty()){
-		if (server.channelExists(_msg.getParam(0)) < 1) // will param 0 be correct 
-		{
-			std::cout<<"creating channel now!-----------";
-			// create a channel object into a server map
-			server.createChannel(_msg.getParam(0));
-			// add channel to client list
-			addChannel(_msg.getParam(0), server.get_Channel(_msg.getParam(0)));
-			_channelCreator = true;
-			// set defaults what are they 
-		}
-		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
-		std::string pass = "";
-		if (_msg.getParams().size() == 2) // biger than 2 ?
-			pass = _msg.getParam(1); 
-		if (!currentChannel->canClientJoin(_nickName, pass))
-			return ;
-			// set msg
-			//return
-		currentChannel->addClient(server.get_Client(_fd));
-		std::string ClientList = currentChannel->getAllNicknames();
-		if (ClientList.empty())
-			std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-		_msg.prep_join_channel(_msg.getParam(0), _nickName,  _msg.getQue(),ClientList);
-
-		// handle join
-		// ischannel
-		// if (!ischannel) , createChannel(), setChannelDefaults() updateChannalconts()?, confirmOperator()
-		// else if (ischannel), isinvite(), hasinvite(), ChannelhasPaswd(), clientHasPasswd()/passwrdMatch(),
-		// hasBan(), joinChannel() updateChannalconts()
-		//		
-		/**
-		 * @brief checks
-		 * look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
-		 * 	if doesnt exist - create it with default settings // what are default settings?
-		 * set max size? // is the is default channel std::int _maxSize also flag -n 
-		 * set current number of clients in side the channel // channel std::int _nClients
-		 * add channel to vector of channels client has joined //  <Client> _joinedchannels
-		 * add current client to channel operator // channel std::string _operator OR
-		 * adjust bitset map
-		 * 
-		 * if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
-		 * if it is invite only, does client have invite isnide channel.
-		 * 
-		 * is it password protected.
-		 * if it is password protected, did user provide password. if not then user can not enter
-		 * if yes, does password match
-		 * 
-		 *  is client banned from channel.
-		 * 
-		 * assuming checks passed, client can now join channel
-		 * add client to list of clients on channel // channel > list of clients
-		 *  if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
-
-		 * 
-		 */
-    /*if (getCommand() == "KICK") {
-        
-    }
-
-    PART
-    LEAVE
-    TOPIC
-    NAMES
-    LIST
-    INVITE
-    PARAMETER NICKNAME
-
-*/
-	}
-	/**
-	 * @brief 
-	 * 
-	 * sudo tcpdump -A -i any port <port number>, this will show what irssi sends before being reecived on
-	 * server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
-	 * irssi is sending the flags and users combined together into 1 string, where does flags end and user start? 
-	 * 
-	 * so no option but to not allow that format !
-	 * 
-	 */
-	if (_msg.getCommand() == "MODE")
-	{
-		std::shared_ptr <Channel> currentChannel = server.get_Channel(_msg.getParam(0));
-		std::string mode = _msg.getParam(1);
-		//std::string test = "+abc";
-		std::string name;
-		size_t ClientModeCount = 0;
-		std::string validClientPattern = R"([+-][o]+)"; // once this is done it should be easy to add more
-		
-		size_t paramSize = _msg.getParams().size();
-		std::cout<<"TELL ME THE SIZE OF PARAMSLIST BEFORE DOING ANYTHING TO IT = "<<paramSize<<"\n";
-
-		if ((ClientModeCount = _msg.countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags
-		{
-			std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<paramSize - 2<<"\n";
-			std::cout<<"TELL ME THE CLIENTMODECOUNT = "<<ClientModeCount<<"\n";
-			std::cout<<" WE do not have an equal number of client modes to params \n";
-			//return;
-		}
-		std::string validPattern = R"([+-][ioklt]+)";
-		if ((mode[0] == '-' || mode[0] == '+') && std::regex_match(mode, std::regex(validPattern)))//isalpha(mode[1])) // regex for specifci letters only ? 
-		{
-			// parsing to check that flags are valid +o +oop 
-			size_t i = 1;
-			size_t ret = 0;
-			size_t ret2 = 0;
-			//size_t clientsHandled = 0;
-			size_t total = 2;
-			std::string names;
-			std::string pass = "";
-			while (i < mode.length())
-			{	
-				//asuming regex confimed everything 
-				std::string newmode = std::string(1, mode[0]) + mode[i]; //mode[0] + mode[i + 1 ];
-				//std::cout<<"getting mode "<<newmode<<"\n";
-				//std::cout<<"getting total now "<<total<<"\n";
-				//std::cout<<"getting Clientmodecount "<<ClientModeCount<<"\n";
-//wrong total too big
-				//if (ClientModeCount == 0)
-				//{
-					//std::cout<<"empty name being added \n";
-				//	name = "";
-				//}
-				// check to see if we are dealing with a client mode or not 
-				if (ClientModeCount > 0 && std::regex_match(newmode, std::regex(validClientPattern)))
-				{
-					name = _msg.getParam(total);
-					if (name == "")
-						std::cout<<"getParam went out of bounds here !!!!!!! fix it \n";
-					try
-					{
-						ret = currentChannel->setClientMode(newmode, name, _nickName);
-						
-					}
-					catch(const std::exception& e)
-					{
-						std::cerr << e.what() << '\n';
-					}					
-					if (ret == 2)
-					{
-						//setMsgtype
-						_msg.queueMessage(":localhost 482 " + _nickName + " " + _msg.getParam(0) + " :"+ _nickName +", You're not channel operator\r\n");
-						break;// :Permission denied—operator privileges required
-					}
-					total += ret;
-					if (ret == 1) // client mode done
-					{
-						names += name + " ";
-						ClientModeCount =- 1;
-						//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
-					}
-					//std::cout<<"this name now being added = "<<name<<"\n";
-
-				}
-				//if (_msg.getParams().size())
-				else
-				{
-					// if mode == o take a parameter , otherwise its a channel mode
-					try
-					{
-						// this could be even further out perhaps? 
-						//ret = currentChannel->setClientMode(newmode, name, _nickName);
-						pass = _msg.getParam(total);
-						if (pass == "")
-							std::cout<<"getParam went out of bounds here !!!!!!! fix it although in this instance we handle it inside setchannelmode \n";
-						//onst std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
-						ret2 = currentChannel->setChannelMode(newmode, name, _nickName, _msg.getParam(0), pass, server.get_nickname_to_fd(), [&](MsgType msg, std::vector<std::string>& params) {
-																															_msg.setType(msg, params);
-																															});
-						//std::cout<<"ret is now = "<<ret <<"\n";
-						if (ret2 == 2)
-						{
-							//setMsgtype
-							_msg.queueMessage(":localhost 482 " + _nickName + " " + _msg.getParam(0) + " :"+ _nickName +", You're not channel operator\r\n");
-							break;// :Permission denied—operator privileges required
-						}
-						//total += ret;
-						//std::cout<<"total is now = "<<total <<"\n";
-
-						//if (ret == 1) // client mode done
-						//{
-						//	names += name + " ";
-						//	ClientModeCount =- 1;
-							//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
-						//}
-					}
-					catch(const std::exception& e)
-					{
-						//std::cout<<"exception caught brekaing \n";
-
-						std::cerr << e.what() << '\n';
-						break;
-					}
-				}
-				i++;
-			
-			}
-			std::cout<<"list of names = "<<names<<"\n";
-			
-			if (ret != 2 || ret2 != 2)
-			{
-				server.getChannelsToNotify().push_back(_msg.getParam(0));
-				server.getChannelBroadcastQue().push_back(":" + _nickName +"!ident@localhost" +" MODE " + _msg.getParam(0) + " " + _msg.getParam(1) + " " + names + "\r\n");
-			}
-				
-			//server.getChannelBroadcastQue()->
-			//setmsg channel broadcast this client + modes + string of names 
-			// setdefinedmsg
-			// do messages need to be built here 
-
-		}
-		// · i: Set/remove Invite-only channel
-        //· t: Set/remove the restrictions of the TOPIC command to channel operators
-        //· k: Set/remove the channel key (password)
-		//· o: Give/take channel operator privilege
-		//· l: Set/remove the user limit to channel
-	}
-	if (_msg.getCommand() == "PRIVMSG") 
-	{
-		if (!_msg.getParam(0).empty())
-		{
-			if (_msg.getParam(0)[0] == '#')
-			{
-				std::cout<<"stepping into priv message handling \n";
-				server.getChannelsToNotify().push_back(_msg.getParam(0));
-				server.getChannelBroadcastQue().push_back(":" + _nickName + " PRIVMSG " + _msg.getParam(0) + " " + _msg.getParam(1) + "\r\n");
-				// check is it a channel name , starts with #, collect to serverchannelbroadcast
-				// is it just a nickname , collect to messageQue, send to only that fd of
-	
-			}
-			else
-			{
-				int fd = server.get_nickname_to_fd().find(_msg.getParam(0))->second;
-				if (fd < 0)
-				{
-					std::cout<<"no user here by that name \n";
-					return ;
-				}
-				server.set_private_fd(fd);
-				_msg.queueMessage( ":" + _nickName + " PRIVMSG "  + _msg.getParam(0)  + " " + _msg.getParam(1) + "\r\n");
-
-			}
-		}
-		if (!_msg.getParam(0).empty())
-		{
-			// handle error or does irssi handle
-		}
-		
-	}	
-
-	getMsg().printMessage(getMsg());
-}
 
 std::string Client::getChannel(std::string channelName)
 {
@@ -467,18 +177,35 @@ std::string Client::getChannel(std::string channelName)
 	return "";
 		//_joinedChannels.push_back(channelName);
 }
-void Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
-    std::string quitMessage = CLIENT_QUIT(_nickName);
-	
+int Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
+    //std::string quitMessage = CLIENT_QUIT(_nickName);
+	// std::vector<int> fds;
+	std::cout<<"preparing quit \n";
+	int indicator = 0;
     for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
+		std::cout<<"We are loooooping now  \n";
         if (auto channelPtr = it->second.lock()) {
-            channelsToNotify.push_back(it->first);
+			if (indicator == 0)
+			{
+				indicator = 1; // we could count how many channles are counted here ?? 
+					
+			}
+			channelsToNotify.push_back(it->first);
+			
+			// const std::vector<int>& newFds = channelPtr->getAllfds();
+			// fds.insert(fds.end(), newFds.begin(), newFds.end());
+			
+			//fds.push_back() channelPtr->getAllfds();
+
             channelPtr->removeClient(_nickName);
-            ++it;
+
+			++it;
         } else {
             it = _joinedChannels.erase(it);  //Remove expired weak_ptrs
         }
     }
+	std::cout<<"what is indicator here "<<indicator<<"\n";
+	return indicator;
 }
 
 bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channel) {
@@ -491,6 +218,7 @@ bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channe
 		std::cout<<"channel already exists on client list\n";
 		return false;
 	} else {
+		std::cout<<"------------------channel ahas been added to the map of joined channles for client----------------------------------------- \n";
 		std::weak_ptr<Channel> weakchannel = channel;
 		_joinedChannels.emplace(channelName, weakchannel);
 	}

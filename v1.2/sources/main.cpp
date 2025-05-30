@@ -100,7 +100,7 @@ int loop(Server &server)
 						server.handle_client_connection_error(e.getType());
 					}
 				}
-				else if (server.get_Client(fd)->get_acknowledged() == true) {
+				else if (server.get_Client(fd)->get_acknowledged() == true && server.get_Client(fd)->getQuit() == false) {
 					bool read_to_buffer = server.checkTimers(fd);
 					if (read_to_buffer == true)
 					{
@@ -129,6 +129,8 @@ int loop(Server &server)
 					std::cout<<"client messages should be sent by now !!!!\n";
 					server.send_server_broadcast();
 					server.sendChannelBroadcast();
+					if (server.get_Client(fd)->getQuit() == true)
+						server.remove_Client(fd);
 				} catch(const ServerException& e) {
 					if (e.getType() == ErrorType::NO_Client_INMAP)
 						continue ;

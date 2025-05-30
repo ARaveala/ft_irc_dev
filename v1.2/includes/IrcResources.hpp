@@ -48,6 +48,7 @@ enum class MsgType {
     (msgType == MsgType::SERVER_INFO) ? SERVER_INFO(params[0]) : \
     (msgType == MsgType::RPL_NICK_CHANGE && params.size() >= 3) ? RPL_NICK_CHANGE(params[0], params[1], params[2]) : \
     (msgType == MsgType::NICKNAME_IN_USE) ? NICKNAME_IN_USE(params[0]) : \
+	(msgType == MsgType::CLIENT_QUIT) ? CLIENT_QUIT(params[0]): \
     "ERROR: Unknown message type or incorrect parameters")
 
 

@@ -10,6 +10,7 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}IrcMessage.cpp \
 			${SOURCES}IrcPreper.cpp \
 			${SOURCES}Channel.cpp \
+			${SOURCES}CommandDispatcher.cpp
 			
 INCLUDES = -I ./includes
 CPP = c++

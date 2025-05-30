@@ -13,6 +13,7 @@ class Client {
 		int _timer_fd;
 		int _failed_response_counter = 0;
 		bool _channelCreator = false;
+		bool _quit = false;
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _nickName;
@@ -39,6 +40,9 @@ class Client {
 		int get_failed_response_counter();
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
+		void setQuit() {_quit = true;};
+
+		bool getQuit() {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();
 		//void set_pendingAcknowledged(bool onoff);
@@ -49,7 +53,7 @@ class Client {
 		
 		bool getChannelCreator() {return _channelCreator;};
 
-		std::string getNickname();
+		std::string getNickname() const;
 		std::string& getNicknameRef();
 		std::string getClientName();
 		std::string getfullName();
@@ -73,7 +77,7 @@ class Client {
 			}
 			return false;
 		};
-		void prepareQuit(std::deque<std::string>& channelsToNotify);
+		int prepareQuit(std::deque<std::string>& channelsToNotify);
 		void handle_message(const std::string message, Server& server);
 		// loops through to find which command fucntion to execute
 		void executeCommand(const std::string& command);

@@ -71,7 +71,7 @@ int loop(Server &server)
 	{
 		// from epoll fd, in events struct this has niche error handling
 		int nfds = epoll_pwait(epollfd, events, config::MAX_CLIENTS, config::TIMEOUT_EPOLL, &sigmask);
-		if (nfds != 0)
+		if (nfds == 0)
 			std::cout << "epoll_wait returned: " << nfds << " events\n";
 		/*if (errno == EINTR) {
 			std::cerr << "accept() interrupted by signal, retrying..." << std::endl;

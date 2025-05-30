@@ -22,3 +22,7 @@ part
 * when in a channel
 * when in multiple channels
 * try to activate mode when parted
+
+send bible
+
+] /RAWLOG OPEN ~/logz/log.log

@@ -118,7 +118,7 @@ void Client::receive_message(int fd, Server& server) {
 
 			setReadBuff(buffer);
 			//std::cout << "Debug - Read Buffer: [" << _read_buff << "]" << std::endl;
-
+			// add a timer of some kind here to give server time to catch up if big message
 			if (_read_buff.find("\r\n") != std::string::npos) {
 				server.resetClientTimer(_timer_fd, config::TIMEOUT_CLIENT);
 				set_failed_response_counter(-1);

@@ -22,9 +22,12 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 	//std::string param = getParam(0);
 	if (client->getMsg().getCommand() == "QUIT")
 	{
+		// quite will set up messages clean up from channel (should be changed?) and quit bool set to true.
+		// quit is managed in broadcast channel message for now, due to needing the client fd for epollout
+		// allternatives are make a ghost fd, or find next available client fd. 
 		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname()});
-		client->getMsg().callDefinedMsg(); // there needs to be a calldefinedMsgforbroadcats
+		client->getMsg().callDefinedMsg();
 		// this is one fucntion call and can be mapped later 
 		if (client->prepareQuit(server.getChannelsToNotify()) == 1)
 		{
@@ -32,16 +35,10 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 			client->getMsg().callDefinedBroadcastMsg(server.getChannelBroadcastQue());
 		}
 		client->setQuit();
-		//need to find the next client to have epollout as this client will get removed here , or remove client outside of this quit command?
-		
-		//server.remove_Client(client->getFd());
 		
 		//client->getMsg().removeQueueMessage();
 		std::cout<<"client removed at quit command \n";
-		
-		
-		// this boradcast works but is not allowed, must set all epollout 
-		//server.sendChannelBroadcast();
+
 		return ;
 	}
 	if (client->getMsg().getCommand() == "NICK") {
@@ -261,8 +258,20 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 			if (client->getMsg().getParam(0)[0] == '#')
 			{
 				std::cout<<"stepping into priv message handling \n";
-				server.getChannelsToNotify().push_back(client->getMsg().getParam(0));
-				server.getChannelBroadcastQue().push_back(":" + client->getNickname() + " PRIVMSG " + client->getMsg().getParam(0) + " " + client->getMsg().getParam(1) + "\r\n");
+				std::string buildMessage;
+				// right now we loop through all params, do we need to check for symbols ? like# or modes
+				// we need to adjust the space handling in the message class as righ tnow we loose all spaces 
+				for (size_t i = 1; i < client->getMsg().getParams().size(); i++)
+				{
+					buildMessage += client->getMsg().getParam(i) ;
+				}
+				// eed to check does channel exist
+				if (server.channelExists(client->getMsg().getParam(0)) == true)
+				{
+					server.getChannelsToNotify().push_back(client->getMsg().getParam(0));
+					server.getChannelBroadcastQue().push_back(":" + client->getNickname() + " PRIVMSG " + client->getMsg().getParam(0) + " " + buildMessage + "\r\n");
+
+				}
 				// check is it a channel name , starts with #, collect to serverchannelbroadcast
 				// is it just a nickname , collect to messageQue, send to only that fd of
 	
@@ -272,7 +281,9 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 				int fd = server.get_nickname_to_fd().find(client->getMsg().getParam(0))->second;
 				if (fd < 0)
 				{
-					std::cout<<"no user here by that name \n";
+					// no user found by name
+					// no username provided
+					std::cout<<"no user here by that name \n"; 
 					return ;
 				}
 				server.set_private_fd(fd);

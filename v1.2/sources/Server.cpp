@@ -89,11 +89,11 @@ void Server::create_Client(int epollfd) {
  	if (client_fd < 0) {
 		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
 	} else {
-		int flag = 1;
-		int buf_size = 1024;
+		//int flag = 1;
+		//int buf_size = 1024;
 
-		setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-		setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(flag));	
+		//setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
+		//setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(flag));	
 		make_socket_unblocking(client_fd);
 		//setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)); 
 		setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET); // not a fan of epollet

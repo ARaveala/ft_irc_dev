@@ -12,25 +12,28 @@
 int setupServerSocket(Server &server)
 {
 	// Communication between client and server has to be done via TCP/IP (v4 or v6)
-	server.setFd(socket(AF_INET, SOCK_STREAM, 0));
+	server.setFd(socket(AF_INET, SOCK_STREAM, 0)); // set non blocking here ???
 	// 1. ipv4  2.what type of socket (we want stream), 3. for auto type (this case its tcp )
 	if (server.getFd() == errVal::FAILURE)
 	{
 		std::cout<<"something went wrong"<<std::endl;
 		return errVal::FAILURE;
 	}
-
-	// then set up non blocking 
+	// int fd1 = fcntl(server.getFd(), F_GETFL); // get what flags are set now. 
+	// error check  
+	// fcntl(server.getFd(), F_SETFL, fd1 | O_NONBLOCK);
+	// switching both flag values 
 	if (fcntl(server.getFd(), F_SETFL, O_NONBLOCK) == errVal::FAILURE) {
 		std::cerr << "Failed to set socket to non-blocking mode" << std::endl;
 		close(server.getFd());
 		return errVal::FAILURE;
 	}
-
+	// set sockopt for reuse address. 
 	sockaddr_in server_address{};
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = INADDR_ANY; //can this, should this be different?
     server_address.sin_port = htons(server.getPort());
+	
     // 4. Bind and listen	
 	if (bind(server.getFd(), (sockaddr*)&server_address, sizeof(server_address)) == errVal::FAILURE) {
         std::cerr << "Bind failed, perhaps in use?" << std::endl;

@@ -2,6 +2,7 @@
 #include <string>
 //#include <bitset>
 
+
 enum class MsgType {
     NONE = 0,
 	WELCOME,
@@ -13,6 +14,7 @@ enum class MsgType {
 	NOT_OPERATOR,
 	CLIENT_QUIT
 };
+
 
 
 #define RPL_NICK_CHANGE(oldnick, username, nick) (":" + oldnick + "!" + username + "@localhost NICK " +  nick + "\r\n")

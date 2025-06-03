@@ -220,12 +220,13 @@ void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
 // --- Parse Method (Corrected Parameter Handling) ---
 bool IrcMessage::parse(const std::string& rawMessage)
 {
+	//std::cout<<rawMessage>>"  chekcing the raw string before pasring \n";
     // 1. Clear previous state
     _prefix.clear();
     _command.clear();
     _paramsList.clear();
 
-    // 2. Find the CRLF terminator (\r\n)
+   /* // 2. Find the CRLF terminator (\r\n)
     size_t crlf_pos = rawMessage.find("\r\n");
     if (crlf_pos == std::string::npos) {
         // std::cerr << "Error: Message missing CRLF terminator." << std::endl; // Keep for debugging
@@ -233,13 +234,13 @@ bool IrcMessage::parse(const std::string& rawMessage)
     }
 
     // Work with the message content before CRLF
-    std::string message_content = rawMessage.substr(0, crlf_pos);
-    if (message_content.empty()) {
+    std::string message_content = rawMessage.substr(0, crlf_pos);*/
+    if (rawMessage.empty()) {
          // std::cerr << "Error: Empty message content before CRLF." << std::endl;
          return false;
     }
 
-    std::stringstream ss(message_content); // Use stringstream
+    std::stringstream ss(rawMessage); // Use stringstream
 
     std::string first_token;
     ss >> first_token; // Read the first token

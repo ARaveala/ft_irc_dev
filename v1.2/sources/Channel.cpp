@@ -31,7 +31,7 @@ std::vector<int> Channel::getAllfds() {
 	return fds;
 }
 
-// rename to refer t getting a user list for channel
+// rename to refer t getting a user list for channel gets all nickname sinto a lits, rename
 const std::string Channel::getAllNicknames() {
 	std::string list;
 	for (const auto& entry : _ClientModes) {
@@ -265,6 +265,7 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
     return true; // Return true if insertion happened (Client was not already there)
 }
 
+
 /*
  *
  * @param Client
@@ -273,8 +274,6 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
  */
 bool Channel::removeClient(std::string nickname) {
     // std::set::erase returns the number of elements removed (0 or 1 for a set)
-	//std::weak_ptr<Client> weakClient = getWeakPtrByNickname(nickname);
-	//size_t removed_count = _ClientModes.erase(weakClient);
 	size_t removed_count = _ClientModes.erase(getWeakPtrByNickname(nickname));
     if (removed_count > 0) {
         // Also remove from operators if they were an operator

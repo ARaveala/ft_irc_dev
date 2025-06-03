@@ -70,6 +70,7 @@ class Channel {
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
 		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
 		//std::weak_ptr<Client> getElementByFd(const int fd);
@@ -87,7 +88,20 @@ class Channel {
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
-		bool isClientInChannel(Client* Client) const;
+
+		bool isClientInChannel(const std::string& nickname) const {
+			for (const auto& entry : _ClientModes) {
+        		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+            		return true;
+        	}
+			return false;
+    }
+	// we could substitute with a throw here
+    return {};  // return empty weak_ptr if no match is found
+		};
+
+//		bool isClientInChannel(Client* Client) const;
+
 		//const std::set<Client*>& getClient() const;
 		//bool addOperator(Client* Client);
 		bool removeOperator(Client* Client);

@@ -106,7 +106,8 @@ int loop(Server &server)
 					{
 						try {
 							//std::cout<<" reciveing message\n";
-							server.get_Client(fd)->receive_message(fd, server);
+							server.handleReadEvent(fd);
+							//server.get_Client(fd)->receive_message(fd, server);
 							//std::cout<<" message recived\n";
 							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
@@ -124,11 +125,8 @@ int loop(Server &server)
 			if (events[i].events & EPOLLOUT) {
 				int fd = events[i].data.fd;
 				try {
-					//if (_Clients[client_fd]->get_acknowledged())
 					server.send_message(server.get_Client(fd));
 					std::cout<<"client messages should be sent by now !!!!\n";
-					server.send_server_broadcast();
-					server.sendChannelBroadcast();
 					if (server.get_Client(fd)->getQuit() == true)
 						server.remove_Client(fd);
 				} catch(const ServerException& e) {

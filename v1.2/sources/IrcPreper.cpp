@@ -31,13 +31,14 @@ void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::st
 }*/
 
 void IrcMessage::prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
-{
+{	
 	if (check_and_set_nickname(getParam(0), client_fd, fd_to_nick, nick_to_fd))
 	{
 		nickname.clear();
 		nickname = getParam(0);
 	}
 }
+
 /*void IrcMessage::getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue) {
 	std::string theMessage = CALL_MSG_DYNAMIC(activeMsg, _params...);
 	messageQue.push_back(theMessage);
@@ -79,3 +80,5 @@ void IrcMessage::prep_join_channel(std::string channleName, std::string nickname
 	messageQue.push_back(test2);
 	messageQue.push_back(test3);
 }
+
+// the alternative to macros

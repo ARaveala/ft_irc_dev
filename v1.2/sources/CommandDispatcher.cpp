@@ -2,62 +2,68 @@
 #include <iostream>
 #include "Server.hpp"
 #include "Client.hpp"
-
+#include "IrcMessage.hpp"
 #include <cctype>
 #include <regex>
 #include "IrcResources.hpp"
-void CommandDispatcher::handle_message(const std::string message, Server& server, int fd)
+#include "MessageBuilder.hpp"
+
+
+// these where static but apparanetly that is not a good approach 
+CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
+	// what if __server == null?
+}
+CommandDispatcher::~CommandDispatcher() {}
+/*void CommandDispatcher::handleChannelModes(std::shared_ptr<Channel> currentChannel, IrcMessage currentMsg, int fd)
 {
-	std::shared_ptr<Client> client = server.get_Client(fd);
-	if (message.empty()) {
-        std::cerr << "Error: Received an empty message in handle_message()" << std::endl;
-        return;
-    }
+
+}*/
+
+/*void CommandDispatcher::manageQuit(const std::string& quitMessage, std::deque<std::shared_ptr<Channel>> channelsToNotify)
+{
+
+
+
+}*/
+
+void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
+{
 
     if (!client) {
-        std::cerr << "Error: Client pointer is null in handle_message()" << std::endl;
+        std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;
         return;
     }
-	client->getMsg().parse(message);
-	//std::string param = getParam(0);
-	if (client->getMsg().getCommand() == "QUIT")
+	std::string command = client->getMsg().getCommand();
+	if (command == "QUIT")
 	{
-		// quite will set up messages clean up from channel (should be changed?) and quit bool set to true.
-		// quit is managed in broadcast channel message for now, due to needing the client fd for epollout
-		// allternatives are make a ghost fd, or find next available client fd. 
 		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
-		client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname()});
-		client->getMsg().callDefinedMsg();
-		// this is one fucntion call and can be mapped later 
-		if (client->prepareQuit(server.getChannelsToNotify()) == 1)
-		{
-			std::cout<<"preparing the quit message for broadcast\n";
-			client->getMsg().callDefinedBroadcastMsg(server.getChannelBroadcastQue());
-		}
-		client->setQuit();
-		
-		//client->getMsg().removeQueueMessage();
-		std::cout<<"client removed at quit command \n";
-
+		_server->handleQuit(client);
 		return ;
 	}
-	if (client->getMsg().getCommand() == "NICK") {
-		client->getMsg().prep_nickname(client->getNicknameRef(), client->getFd(), server.get_fd_to_nickname(), server.get_nickname_to_fd()); // 
-		client->getMsg().callDefinedMsg();//(client->getMsg().getActiveMsgType());
+	if (command == "NICK") {
+		//client->getMsg().queueMessage(MessageBuilder::buildNickChange(client->getNickname(), "failsafe", params[0]));
+		client->setOldNick(client->getNickname());
+		client->getMsg().prep_nickname(client->getNicknameRef(), client->getFd(), _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
+		_server->handleNickCommand(client);
+		//if (client->isMsgEmpty()) {
+		//	_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		//}
+		//client->getMsg().callDefinedMsg();//(client->getMsg().getActiveMsgType());
 		return ; 
 	}
-	if (client->getMsg().getCommand() == "PING"){
+	if (command == "PING"){
 		client->sendPong();
 		std::cout<<"sending pong back "<<std::endl;
 		//Client->set_failed_response_counter(-1);
 		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
 	}
-	if (client->getMsg().getCommand() == "PONG"){
+	if (command == "PONG"){
 		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
 	}
 
-    if (client->getMsg().getCommand() == "JOIN" && !client->getMsg().getParam(0).empty()){
-		server.handleJoinChannel(client, client->getMsg().getParam(0), client->getMsg().getParam(1));
+    if (command == "JOIN" && !params[0].empty()){
+		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
+		_server->handleJoinChannel(client, params[0], params[1]);
 		
 		// handle join
 		// ischannel
@@ -108,22 +114,55 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 	 * @brief 
 	 * 
 	 * sudo tcpdump -A -i any port <port number>, this will show what irssi sends before being reecived on
-	 * server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
+	 * _server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
 	 * irssi is sending the flags and users combined together into 1 string, where does flags end and user start? 
 	 * 
 	 * so no option but to not allow that format !
 	 * 
 	 */
-	if (client->getMsg().getCommand() == "MODE")
+	if (command == "MODE")
 	{
-		std::shared_ptr <Channel> currentChannel = server.get_Channel(client->getMsg().getParam(0));
-		std::string mode = client->getMsg().getParam(1);
+/*
+		// re write starts
+		// get raw message params 
+		std::vector<std::string> params = client->getMsg().getParams();
+		if (params.empty())
+		{
+			// build RPL_NEEDMOREPARAMS (461) //set msgtype //client, "", "461", "Not enough parameters"
+			return ; // nothing to process
+		}
+		// check that channel exists 
+		// will this check be enough , do we need to check the # at the begining we may need 
+		// to remove it from sent string--------!!!
+		if (_server.channelExists(params[0]) == false) // && params[0][0] == #
+		{
+			// channel does to exists error message 403 RPL_NOSUCHCHANNEL.
+			return;
+		}
+		std::shared_ptr <Channel> currentChannel = _server.get_Channel(client->getMsg().getParam(0));
+		// check client is in channel 
+		if (currentChannel->isClientInChannel(client->getNickname()))
+		{
+			// client is not in channel where request is made. permission denied
+			return ;
+		}
+		// initial checks have been made , we handle channel modes.
+		// fucntion signiture would look like this ....
+
+
+
+
+
+		// re write ends 
+*/
+		std::shared_ptr <Channel> currentChannel = _server->get_Channel(params[0]);
+		std::string mode = params[1];
 		//std::string test = "+abc";
 		std::string name;
 		size_t ClientModeCount = 0;
 		std::string validClientPattern = R"([+-][o]+)"; // once this is done it should be easy to add more
 		
-		size_t paramSize = client->getMsg().getParams().size();
+		size_t paramSize = params.size();
 		std::cout<<"TELL ME THE SIZE OF PARAMSLIST BEFORE DOING ANYTHING TO IT = "<<paramSize<<"\n";
 
 		if ((ClientModeCount = client->getMsg().countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags
@@ -131,10 +170,10 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 			std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<paramSize - 2<<"\n";
 			std::cout<<"TELL ME THE CLIENTMODECOUNT = "<<ClientModeCount<<"\n";
 			std::cout<<" WE do not have an equal number of client modes to params \n";
-			//return;
+			return;
 		}
 		std::string validPattern = R"([+-][ioklt]+)";
-		if ((mode[0] == '-' || mode[0] == '+') && std::regex_match(mode, std::regex(validPattern)))//isalpha(mode[1])) // regex for specifci letters only ? 
+		if ((mode[0] == '-' || mode[0] == '+') && std::regex_match(mode, std::regex(validPattern))) // regex for specifci letters only ? 
 		{
 			// parsing to check that flags are valid +o +oop 
 			size_t i = 1;
@@ -160,7 +199,7 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 				// check to see if we are dealing with a client mode or not 
 				if (ClientModeCount > 0 && std::regex_match(newmode, std::regex(validClientPattern)))
 				{
-					name = client->getMsg().getParam(total);
+					name = params[total];
 					if (name == "")
 						std::cout<<"getParam went out of bounds here !!!!!!! fix it \n";
 					try
@@ -175,7 +214,7 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 					if (ret == 2)
 					{
 						//setMsgtype
-						client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + client->getMsg().getParam(0) + " :"+ client->getNickname() +", You're not channel operator\r\n");
+						client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + params[0] + " :"+ client->getNickname() +", You're not channel operator\r\n");
 						break;// :Permission denied—operator privileges required
 					}
 					total += ret;
@@ -196,29 +235,20 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 					{
 						// this could be even further out perhaps? 
 						//ret = currentChannel->setClientMode(newmode, name, _nickName);
-						pass = client->getMsg().getParam(total);
+						pass = params[total];
 						if (pass == "")
 							std::cout<<"getParam went out of bounds here !!!!!!! fix it although in this instance we handle it inside setchannelmode \n";
 						//onst std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
-						ret2 = currentChannel->setChannelMode(newmode, name, client->getNickname(), client->getMsg().getParam(0), pass, server.get_nickname_to_fd(), [&](MsgType msg, std::vector<std::string>& params) {
+						ret2 = currentChannel->setChannelMode(newmode, name, client->getNickname(), params[0], pass, _server->get_nickname_to_fd(), [&](MsgType msg, std::vector<std::string>& params) {
 																															client->getMsg().setType(msg, params);
 																															});
 						//std::cout<<"ret is now = "<<ret <<"\n";
 						if (ret2 == 2)
 						{
 							//setMsgtype
-							client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + client->getMsg().getParam(0) + " :"+ client->getNickname() +", You're not channel operator\r\n");
+							client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + params[0] + " :"+ client->getNickname() +", You're not channel operator\r\n");
 							break;// :Permission denied—operator privileges required
 						}
-						//total += ret;
-						//std::cout<<"total is now = "<<total <<"\n";
-
-						//if (ret == 1) // client mode done
-						//{
-						//	names += name + " ";
-						//	ClientModeCount =- 1;
-							//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
-						//}
 					}
 					catch(const std::exception& e)
 					{
@@ -235,11 +265,25 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 			
 			if (ret != 2 || ret2 != 2)
 			{
-				server.getChannelsToNotify().push_back(client->getMsg().getParam(0));
-				server.getChannelBroadcastQue().push_back(":" + client->getNickname() +"!ident@localhost" +" MODE " + client->getMsg().getParam(0) + " " + client->getMsg().getParam(1) + " " + names + "\r\n");
+				_server->getChannelsToNotify().push_back(_server->get_Channel(params[0]));
+				 std::deque<std::shared_ptr<Channel>> channels_to_process = _server->getChannelsToNotify();
+			    // 2. Iterate directly over the shared_ptr<Channel> objects in the deque
+			    for (const auto& channel_ptr : channels_to_process) {
+			        // Always check if the shared_ptr is valid (not null)
+			        if (channel_ptr) {
+			            std::cout << "Processing channel: " << channel_ptr->getName() << std::endl;
+			            // Now you can perform operations on 'channel_ptr'
+			            // For example, if this were handleQuit context:
+			            // channel_ptr->removeClient(quitting_client_nickname);
+			             _server->broadcastMessageToChannel(channel_ptr, ":" + client->getNickname() +"!ident@localhost" +" MODE " + params[0] + " " + params[1] + " " + names + "\r\n", client);
+			        } else {
+			            std::cout << "Skipping null channel pointer in deque." << std::endl;
+			    	}
+				}
+			//	_server->getChannelBroadcastQue().push_back(":" + client->getNickname() +"!ident@localhost" +" MODE " + params[0] + " " + params[1] + " " + names + "\r\n");
 			}
 				
-			//server.getChannelBroadcastQue()->
+			//_server.getChannelBroadcastQue()->
 			//setmsg channel broadcast this client + modes + string of names 
 			// setdefinedmsg
 			// do messages need to be built here 
@@ -253,32 +297,30 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 	}
 	if (client->getMsg().getCommand() == "PRIVMSG") 
 	{
-		if (!client->getMsg().getParam(0).empty())
+		if (!params[0].empty())
 		{
-			if (client->getMsg().getParam(0)[0] == '#')
+			if (params[0][0] == '#')
 			{
 				std::cout<<"stepping into priv message handling \n";
 				std::string buildMessage;
 				// right now we loop through all params, do we need to check for symbols ? like# or modes
 				// we need to adjust the space handling in the message class as righ tnow we loose all spaces 
-				for (size_t i = 1; i < client->getMsg().getParams().size(); i++)
+				for (size_t i = 1; i < params.size(); i++)
 				{
-					buildMessage += client->getMsg().getParam(i) ;
+					buildMessage += params[i];
 				}
 				// eed to check does channel exist
-				if (server.channelExists(client->getMsg().getParam(0)) == true)
-				{
-					server.getChannelsToNotify().push_back(client->getMsg().getParam(0));
-					server.getChannelBroadcastQue().push_back(":" + client->getNickname() + " PRIVMSG " + client->getMsg().getParam(0) + " " + buildMessage + "\r\n");
-
+				if (_server->channelExists(params[0]) == true) {
+					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname() + +"!ident@localhost " + " PRIVMSG " + params[0] + " " + buildMessage + "\r\n", client);
 				}
-				// check is it a channel name , starts with #, collect to serverchannelbroadcast
+				// check is it a channel name , starts with #, collect to _serverchannelbroadcast
 				// is it just a nickname , collect to messageQue, send to only that fd of
 	
 			}
 			else
 			{
-				int fd = server.get_nickname_to_fd().find(client->getMsg().getParam(0))->second;
+				int fd = _server->get_nickname_to_fd().find(params[0])->second;
+				// check against end()
 				if (fd < 0)
 				{
 					// no user found by name
@@ -286,12 +328,13 @@ void CommandDispatcher::handle_message(const std::string message, Server& server
 					std::cout<<"no user here by that name \n"; 
 					return ;
 				}
-				server.set_private_fd(fd);
-				client->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + client->getMsg().getParam(0)  + " " + client->getMsg().getParam(1) + "\r\n");
-
+				if (_server->get_Client(fd)->isMsgEmpty()) {
+					_server->updateEpollEvents(fd, EPOLLOUT, true);
+				}
+				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " " + params[1] + "\r\n");
 			}
 		}
-		if (!client->getMsg().getParam(0).empty())
+		if (!params[0].empty())
 		{
 			// handle error or does irssi handle
 		}

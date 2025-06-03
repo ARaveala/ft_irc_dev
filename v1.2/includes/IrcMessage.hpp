@@ -61,6 +61,7 @@ class IrcMessage {
 		// these are now required as subject requires all activity including read and write
 		// must go through epoll
 		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
+		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
 		void removeQueueMessage() { _messageQue.pop_front();};
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string getQueueMessage() { return _messageQue.front();};
@@ -69,8 +70,8 @@ class IrcMessage {
 		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
 		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
 		// apprenbtly this is normal, can look at mariadb databse code, huge signitures but small code bodies. no need to pass entire object 
-		void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
-		//void handle_message(Client& Client, const std::string message, Server& server);
+		//void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
+		//void dispatchCommand(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
 

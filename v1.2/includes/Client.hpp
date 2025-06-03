@@ -16,6 +16,7 @@ class Client {
 		bool _quit = false;
 		std::string _read_buff;
 		std::string _send_buff;
+		std::string _oldNick;
 		std::string _nickName;
 		std::string _ClientName;
 		std::string _fullName;
@@ -24,7 +25,7 @@ class Client {
 		//std::deque<std::string> _welcome;
 		std::map<std::string, std::weak_ptr<Channel>> _joinedChannels; // list of joined channels
 
-		//std::deque<std::string> _message_que;
+		//std::deque<std::string> _messageQue;
 		//std::string _prefixes; // Client permissions 
 		//int ping_sent; // std::chrono::steady_clock
 		// pointer to current channel object ?
@@ -35,20 +36,22 @@ class Client {
 		Client();
 		Client(int fd, int timerfd);
 		~Client();
-		void receive_message(int fd, Server& server);
 		int getFd();
 		int get_failed_response_counter();
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
-
+		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
+		
+		const std::string& getOldNick() {  return _oldNick; };
 		bool getQuit() {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();
+		const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
 		//void set_pendingAcknowledged(bool onoff);
 		void set_acknowledged();
 		void setChannelCreator(bool onoff) { _channelCreator = onoff;};
-		
+		void clearJoinedChannels() {_joinedChannels.clear();};
 		int get_timer_fd();
 		
 		bool getChannelCreator() {return _channelCreator;};
@@ -58,17 +61,14 @@ class Client {
 		std::string getClientName();
 		std::string getfullName();
 		void setDefaults();
-
+		//void addToMessageQue(std::string message) { _msg.queueMessage(message);};
 		bool addChannel(std::string channelName, std::shared_ptr<Channel> channel);
-		void removeChannel(std::string channelName);
+		//void removeChannel(std::string channelName);
 		std::string getChannel(std::string channelName);
 		void sendPing();
 		void sendPong();
 
 		bool change_nickname(std::string nickname);
-
-		std::string getReadBuff();
-		void setReadBuff(const std::string& buffer);
 
 		bool isMsgEmpty() {
 			if (_msg.getQue().empty())
@@ -77,11 +77,16 @@ class Client {
 			}
 			return false;
 		};
-		int prepareQuit(std::deque<std::string>& channelsToNotify);
-		void handle_message(const std::string message, Server& server);
+		int prepareQuit(std::deque<std::shared_ptr<Channel>> channelsToNotify);
+		//void dispatchCommand(const std::string message, Server& server);
 		// loops through to find which command fucntion to execute
 		void executeCommand(const std::string& command);
-		void setCommandMap(Server &server); // come back to this 
+		void setCommandMap(Server &server); // come back to this
+		
+		void appendIncomingData(const char* buffer, size_t bytes_read);
+		bool extractAndParseNextCommand();
+    
+
 };
 
 

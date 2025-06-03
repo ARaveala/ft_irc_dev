@@ -67,13 +67,24 @@ std::string Client::getfullName(){
 	return _fullName;
 }
 
-std::string Client::getReadBuff() {
-	return _read_buff;
-
+const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
+        return _joinedChannels;
 }
 
-void Client::setReadBuff(const std::string& buffer) {
-	_read_buff += buffer;
+void Client::appendIncomingData(const char* buffer, size_t bytes_read) {
+	_read_buff.append(buffer, bytes_read);
+	// std::cout << "Debug - buffer after apening : [" << _read_buff << "]" << std::endl;
+}
+
+bool Client::extractAndParseNextCommand() {
+	size_t crlf_pos = _read_buff.find("\r\n");
+    if (crlf_pos == std::string::npos) {
+        return false; // No complete message yet
+    }
+	std::string full_message = _read_buff.substr(0, crlf_pos);
+    _read_buff.erase(0, crlf_pos + 2); // Consume the message from the buffer
+	_msg.parse(full_message);
+	return true;
 }
 
 void Client::set_acknowledged(){
@@ -90,47 +101,6 @@ void Client::set_acknowledged(){
  * SUCCESS the char buffer converted to std::string
  */
 
-
-void Client::receive_message(int fd, Server& server) {
-	char buffer[config::BUFFER_SIZE];
-	ssize_t bytes_read = 0;
-	while (true)
-	{
-		memset(buffer, 0, sizeof(buffer));
-		bytes_read = recv(fd, buffer, config::BUFFER_SIZE , MSG_DONTWAIT); // last flag makes recv non blocking 	
-		std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
-		if (bytes_read < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				return ;
-			}
-			perror("recv gailed");
-			return ;
-		}
-		if (bytes_read == 0) {
-			throw ServerException(ErrorType::CLIENT_DISCONNECTED, "debug :: recive_message");
-		}
-		else if (bytes_read > 0) {
-			
-			//std::cout << "Debug - Current bytes read: [" << bytes_read << "]" << std::endl;
-
-			//std::cout << "Debug - Current Read Buffer: [" << _read_buff << "]" << std::endl;
-			//_read_buff += std::string(buffer, bytes_read);
-
-			setReadBuff(buffer);
-			//std::cout << "Debug - Read Buffer: [" << _read_buff << "]" << std::endl;
-			// add a timer of some kind here to give server time to catch up if big message
-			if (_read_buff.find("\r\n") != std::string::npos) {
-				server.resetClientTimer(_timer_fd, config::TIMEOUT_CLIENT);
-				set_failed_response_counter(-1);
-				//server.handle_message(_read_buff, server);	
-				CommandDispatcher::handle_message(_read_buff, server, _fd);	
-				_read_buff.clear();
-				return ; // this might be a bad idea
-			} else
-				std::cout<<"something has been read and a null added"<<std::endl;
-		}
-	}
-}
 
 /*void Client::setChannelCreator(bool onoff) {
 	
@@ -177,9 +147,11 @@ std::string Client::getChannel(std::string channelName)
 	return "";
 		//_joinedChannels.push_back(channelName);
 }
-int Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
-    //std::string quitMessage = CLIENT_QUIT(_nickName);
-	// std::vector<int> fds;
+
+/*void Client::removeSelfFromChannel()
+{}*/
+int Client::prepareQuit(std::deque<std::shared_ptr<Channel>> channelsToNotify) {
+
 	std::cout<<"preparing quit \n";
 	int indicator = 0;
     for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
@@ -190,13 +162,9 @@ int Client::prepareQuit(std::deque<std::string>& channelsToNotify) {
 				indicator = 1; // we could count how many channles are counted here ?? 
 					
 			}
-			channelsToNotify.push_back(it->first);
-			
-			// const std::vector<int>& newFds = channelPtr->getAllfds();
-			// fds.insert(fds.end(), newFds.begin(), newFds.end());
-			
-			//fds.push_back() channelPtr->getAllfds();
-
+			channelsToNotify.push_back(channelPtr);
+			//_channelsToNotify.push_back(it->second);
+		
             channelPtr->removeClient(_nickName);
 
 			++it;

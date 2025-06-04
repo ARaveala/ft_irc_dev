@@ -18,7 +18,7 @@ class Client {
 		std::string _send_buff;
 		std::string _oldNick;
 		std::string _nickName;
-		std::string _ClientName;
+		std::string _username;
 		std::string _fullName;
 		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
@@ -58,9 +58,10 @@ class Client {
 
 		std::string getNickname() const;
 		std::string& getNicknameRef();
-		std::string getClientName();
+		std::string getClientUname();
 		std::string getfullName();
 		void setDefaults();
+		void setClientUname(std::string uname) {_username = uname;};
 		//void addToMessageQue(std::string message) { _msg.queueMessage(message);};
 		bool addChannel(std::string channelName, std::shared_ptr<Channel> channel);
 		//void removeChannel(std::string channelName);

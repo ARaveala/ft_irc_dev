@@ -261,7 +261,7 @@ void Server::handleReadEvent(int client_fd) {
         client->set_failed_response_counter(-1);
 
         // --- DELEGATE TO COMMANDDISPATCHER ---
-		client->getMsg().printMessage(client->getMsg());
+		//client->getMsg().printMessage(client->getMsg());
         _commandDispatcher->dispatchCommand(client, client->getMsg().getParams());
     }
 }
@@ -497,15 +497,7 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
 }
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
-	std::cout<<"show old name = "<<client->getOldNick()<<"show new nickname = "<<client->getNickname()<<"\n";
-	std::string msg;
-	if (client->getMsg().isActive(MsgType::NICKNAME_IN_USE))
-	{
-		std::string name = client->getMsg().getMsgParam(0);
-		msg = MessageBuilder::buildNicknameInUse(name);
-	}
-	else
-		msg = MessageBuilder::buildNickChange(client->getOldNick(), "failsafe", client->getNickname());
+	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());
 	broadcastMessageToClients(client, msg, false);
 	if (client->isMsgEmpty() == true)
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
@@ -521,7 +513,7 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
     }
 
     std::cout << "SERVER: Handling QUIT for client " << client->getNickname() << " (FD: " << client->getFd() << ")\n";
-
+	
     // Step 1: Prepare the list of channels the client was in.
     // We get the map of weak_ptrs from the client.
     // Create a temporary vector of channel names to iterate over safely.
@@ -546,13 +538,15 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
             channel_ptr->removeClient(client->getNickname());
 
             // B) Build the PART message for *this specific channel context*.
-            std::string part_message = MessageBuilder::buildClientQuit(
+           	client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
+			std::string part_message =  MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());
+		   /*std::string part_message = MessageBuilder::buildClientQuit(
                 //client.getPrefix(),  consist of  nickname!username@hostname // Use the quitting client's full prefix for the message source
                 client->getNickname() + "!username@localhost",
 				//channel_name,
 				"Client disconnected"
                 //quit_message_reason
-            );
+            );*/
 
             // C) Broadcast this PART message to the *remaining* members of THIS channel.
             //    The broadcastMessageToChannel helper (which internally uses sendMessageToClient)

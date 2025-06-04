@@ -1,9 +1,53 @@
 #include "MessageBuilder.hpp"
+
+#include <tuple>
+#include <functional>
+
+/*template <typename Func>
+std::string callBuilder(Func&& func, const std::vector<std::string>& params) {
+    switch (params.size()) {
+        case 1: return func(params[0]);
+        case 2: return func(params[0], params[1]);
+        case 3: return func(params[0], params[1], params[2]);
+        default: return "Error: Unsupported number of parameters!";
+    }
+}*/
+// Makes a sequence of numbers matching indexes, expands to individual arguments , calls fucn with those argumenst. 
+template <typename Func, size_t... Indices>
+std::string invokeWithVector(Func&& func, const std::vector<std::string>& params, std::index_sequence<Indices...>) {
+    return func(params[Indices]...);  // Expands params dynamically
+}
+// Takes a function, with (ARgs...) = any numbere of arguments , finds the ammount of arguments  and checks the size matches 
+// calls invoke to split em.
+template <typename Ret, typename... Args>
+std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std::string>& params) {
+    if (params.size() < sizeof...(Args)) { 
+        return "Error: Incorrect number of parameters! Expected " + std::to_string(sizeof...(Args)) +
+               ", but received " + std::to_string(params.size()) + ".";
+    }
+
+    return invokeWithVector(func, params, std::make_index_sequence<sizeof...(Args)>{});
+}
+
 namespace MessageBuilder {
 
-    // Helper for common server prefix (you can make this a constant or pass it)
-    const std::string SERVER_PREFIX = ":localhost"; // Or ":ft_irc" as used in some of your macros
+std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
+    switch (type) {
+        case MsgType::NICKNAME_IN_USE:
+            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildNicknameInUse), params);
 
+        case MsgType::RPL_NICK_CHANGE:
+            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
+
+        default:
+            return "Error: Unknown message type";
+    }
+}
+
+    // Helper for common server prefix (you can make this a constant or pass it)
+    const std::string SERVER_PREFIX = ":ft_irc"; // Or ":ft_irc" as used in some of your macros
+	const std::string SERVER_AT = "@ft_irc";
+	const std::string QUIT_MSG = "Client disconnected";
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick) {
         return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n"; // Changed first nick to '*' as per RFC
@@ -70,11 +114,11 @@ namespace MessageBuilder {
     // Note: The RPL_NICK_CHANGE macro is for *broadcasting* a nick change.
     // It takes oldnick as the prefix, and newnick as the argument.
     std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick) {
-        return ":" + oldnick + "!" + username + "@localhost NICK " +  newnick + "\r\n";
+        return ":" + oldnick + "!" + username + "@ft_irc NICK " +  newnick + "\r\n";
     }
-    std::string buildClientQuit(const std::string& nickname_prefix, const std::string& quit_message) {
-        return ":" + nickname_prefix + " QUIT :" + quit_message + "\r\n";
-    }
+    std::string buildClientQuit(const std::string& nickname, const std::string& username) {
+        return ":" + nickname +"!" + username + SERVER_AT + " QUIT :" + QUIT_MSG + "\r\n";
+    } //"nickname!username@localhost"
 
     // Server notices not sure if needed 
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick) {

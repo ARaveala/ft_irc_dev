@@ -59,8 +59,8 @@ std::string& Client::getNicknameRef(){
 	return _nickName;
 }
 
-std::string Client::getClientName(){
-	return _ClientName;
+std::string Client::getClientUname(){
+	return _username;
 }
 
 std::string Client::getfullName(){
@@ -110,7 +110,7 @@ void Client::setDefaults(){
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
 	_nickName = generateUniqueNickname();
-	_ClientName = "Clientanon";
+	_username = "Clientanon";
 	_fullName = "fullanon";
 }
 
@@ -193,14 +193,3 @@ bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channe
 	return true;
 
 }
-/*void Client::removeChannel(std::string channelName) {
-	if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
-	{
-		_joinedChannels.pop_front();
-		std::cout<<"channel already exists on client list\n";
-	}
-	else
-		std::cout<<"channel does not exist\n";
-		//_joinedChannels.push_back(channelName);
-
-}*/

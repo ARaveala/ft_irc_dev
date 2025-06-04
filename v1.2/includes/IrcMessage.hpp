@@ -19,7 +19,7 @@ class IrcMessage {
 		// int current_fd;
 		std::bitset<config::MSG_TYPE_NUM> _msgState;  //tracks active error
 	    std::vector<std::string> _params;
-		//MsgType _activeMsg = MsgType::NONE;
+		MsgType _activeMsg = MsgType::NONE;
 
     	std::string _prefix;
     	std::string _command;
@@ -57,7 +57,9 @@ class IrcMessage {
 		bool isActive(MsgType type) {
 		    return _msgState.test(static_cast<size_t>(type));
 		}
-
+		MsgType getActiveMessageType() const {
+    		return _activeMsg;  // Returns the currently active message type
+		}
 
 		// araveala has added this to help give you full control
 		int countOccurrences(const std::string& text, const std::string& pattern);
@@ -69,7 +71,7 @@ class IrcMessage {
 		void removeQueueMessage() { _messageQue.pop_front();};
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string getQueueMessage() { return _messageQue.front();};
-		void prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
+		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
 		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
@@ -78,7 +80,8 @@ class IrcMessage {
 		//void dispatchCommand(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
-		const std::string getMsgParam(int index) { return _params[index]; };
+		const std::string getMsgParam(int index) const{ return _params[index]; };
+		const std::vector<std::string>& getMsgParams() { return _params; };
 		//MsgType getActiveMsgType() const { return _msgState; };
 
 

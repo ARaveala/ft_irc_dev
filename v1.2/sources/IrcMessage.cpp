@@ -342,28 +342,18 @@ std::string IrcMessage::toRawString() const
     // 2. Add command (command is mandatory according to structure)
     ss << _command;
 
-    // 3. Add parameters
+// 3. Add parameters
     for (size_t i = 0; i < _paramsList.size(); ++i) {
-        // All parameters are space-separated
-        ss << " ";
+        ss << " "; // All parameters are space-separated
 
-        // Check if this is the last parameter AND if it contains a space or is empty
-        bool is_last_param = (i == _paramsList.size() - 1);
-        bool needs_trailing_prefix = false;
-
-        if (is_last_param) {
-            // Check if the last parameter contains a space or is empty
-            if (_paramsList[i].find(' ') != std::string::npos || _paramsList[i].empty()) {
-                 needs_trailing_prefix = true;
-            }
+        // If this is the LAST parameter, it always gets a leading colon.
+        // This is the standard behavior for "trailing" parameters in IRC.
+        if (i == _paramsList.size() - 1) {
+            ss << ":" << _paramsList[i]; // Add the colon and the parameter value
+        } else {
+            // Otherwise, it's a middle parameter, just add its value
+            ss << _paramsList[i];
         }
-
-        if (needs_trailing_prefix) {
-            ss << ":"; // Add the trailing prefix
-        }
-
-        // Add the parameter value
-        ss << _paramsList[i];
     }
 
     // 4. Add the CRLF terminator

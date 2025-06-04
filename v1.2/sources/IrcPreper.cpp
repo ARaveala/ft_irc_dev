@@ -30,12 +30,15 @@ void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::st
 	removeClient(fd);
 }*/
 
-void IrcMessage::prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
+void IrcMessage::prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
 {	
 	if (check_and_set_nickname(getParam(0), client_fd, fd_to_nick, nick_to_fd))
 	{
+		std::string oldnick = nickname;
 		nickname.clear();
 		nickname = getParam(0);
+		setType(MsgType::RPL_NICK_CHANGE, {oldnick, username, nickname});
+		
 	} 
 }
 

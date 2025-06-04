@@ -11,6 +11,9 @@
 
 // these where static but apparanetly that is not a good approach 
 CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
+	if (!_server) {
+        throw std::runtime_error("CommandDispatcher initialized with nullptr Server!");
+    }
 	// what if __server == null?
 }
 CommandDispatcher::~CommandDispatcher() {}
@@ -40,10 +43,17 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleQuit(client);
 		return ;
 	}
+	if (command == "WHOIS")
+	{
+		if (!params[0].empty() && params[0] != client->getClientUname())
+		{
+			client->setClientUname(params[0]);
+		}
+		//return;
+	}
 	if (command == "NICK") {
-		//client->getMsg().queueMessage(MessageBuilder::buildNickChange(client->getNickname(), "failsafe", params[0]));
-		client->setOldNick(client->getNickname());
-		client->getMsg().prep_nickname(client->getNicknameRef(), client->getFd(), _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
+		client->setOldNick(client->getNickname()); // we might not need this anymore 
+		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client->getFd(), _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
 		return ; 
 	}

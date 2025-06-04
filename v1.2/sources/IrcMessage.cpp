@@ -47,7 +47,7 @@ std::set<std::string> const IrcMessage::_illegal_nicknames = {
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(msg));  //activate only one msg
-
+	_activeMsg = msg;
 	_params.clear();
 	_params = sendParams;
 }

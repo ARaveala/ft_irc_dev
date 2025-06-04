@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
-//#include <vector>
-
+#include <vector>
+#include "IrcResources.hpp"
 
 namespace MessageBuilder {
-
+	std::string generateMessage(MsgType type, const std::vector<std::string>& params);
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick);
     std::string buildErrorReply(const std::string& sender_prefix, const std::string& reply_code,
@@ -27,8 +27,8 @@ namespace MessageBuilder {
     std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
 
     // Client related messages
-    std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick);
-    std::string buildClientQuit(const std::string& nickname_prefix, const std::string& quit_message);
+    std::string buildNickChange(const std::string& oldnick, const std::string& username, const std::string& newnick);
+    std::string buildClientQuit(const std::string& nickname, const std::string& username);
 
     // Server notices
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick);

@@ -164,7 +164,7 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
          std::cout << "#### FD " << fd << " does not have an existing nickname." << std::endl;
     }
 
-    // udpate both maps
+    // update both maps
     std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
 	nick_to_fd.insert({processed_nickname, fd});
     fd_to_nick.insert({fd, processed_nickname});
@@ -181,52 +181,56 @@ std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_n
      if (it != fd_to_nick.end()) {
          return it->second; // Return the nickname
      }
-     return "";
+     return ""; //todo this looks odd - it returns nothing, but not eg null?
 }
+
 /*std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
 	return _fd_to_nickname;
 }*/
+
 int IrcMessage::get_fd(const std::string& nickname) const {
      std::string processed_nickname = to_lowercase(nickname);
 
      auto it = _nickname_to_fd.find(processed_nickname);
      if (it != _nickname_to_fd.end()) {
-         return it->second; // Return the fd
+         return it->second;
      }
      return -1; // nickname not found
 }
 
+
+/**
+ * @brief Call this when a client disconnects to clean up their nickname entry.
+ * @param fd file discriptor.
+ * @param fd_to_nick map of fd<-nickname.
+ * @return void
+ */
 void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
-    // Call this when a client disconnects to clean up their nickname entry
-    auto fd_it = fd_to_nick.find(fd);
-    if (fd_it != fd_to_nick.end()) {
-
-        // find the nickname from the fd
-		std::string old_nickname = fd_it->second;
-        
+    auto it = fd_to_nick.find(fd);
+    if (it != fd_to_nick.end()) {
+		std::string old_nickname = it->second;
 		std::cout << "#### Removing fd " << fd << " and nickname '" << old_nickname << "' due to disconnect." << std::endl;
-
-        // Remove from nickname_to_fd map using the nickname
         _nickname_to_fd.erase(old_nickname);
-        // Remove from fd_to_nickname map using the iterator
-		fd_to_nick.erase(fd_it);
-
+		fd_to_nick.erase(it);
         std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
     } else {
          std::cout << "#### No nickname found for fd " << fd << " upon disconnect." << std::endl;
     }
 }
 
+
+//asdf
 // --- Parse Method (Corrected Parameter Handling) ---
 bool IrcMessage::parse(const std::string& rawMessage)
 {
-	//std::cout<<rawMessage>>"  chekcing the raw string before pasring \n";
+	//std::cout<<rawMessage>>"  checking the raw string before parsing \n";
     // 1. Clear previous state
     _prefix.clear();
     _command.clear();
     _paramsList.clear();
 
-   /* // 2. Find the CRLF terminator (\r\n)
+    /*
+    // 2. Find the CRLF terminator (\r\n)
     size_t crlf_pos = rawMessage.find("\r\n");
     if (crlf_pos == std::string::npos) {
         // std::cerr << "Error: Message missing CRLF terminator." << std::endl; // Keep for debugging
@@ -234,7 +238,9 @@ bool IrcMessage::parse(const std::string& rawMessage)
     }
 
     // Work with the message content before CRLF
-    std::string message_content = rawMessage.substr(0, crlf_pos);*/
+    std::string message_content = rawMessage.substr(0, crlf_pos);
+    */
+
     if (rawMessage.empty()) {
          // std::cerr << "Error: Empty message content before CRLF." << std::endl;
          return false;

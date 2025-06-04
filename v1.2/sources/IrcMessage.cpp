@@ -218,107 +218,115 @@ void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
     }
 }
 
-
 //asdf
-// --- Parse Method (Corrected Parameter Handling) ---
 bool IrcMessage::parse(const std::string& rawMessage)
 {
-	//std::cout<<rawMessage>>"  checking the raw string before parsing \n";
     // 1. Clear previous state
     _prefix.clear();
     _command.clear();
     _paramsList.clear();
 
-    /*
-    // 2. Find the CRLF terminator (\r\n)
-    size_t crlf_pos = rawMessage.find("\r\n");
-    if (crlf_pos == std::string::npos) {
-        // std::cerr << "Error: Message missing CRLF terminator." << std::endl; // Keep for debugging
+        std::string message_content = rawMessage;
+
+    // Remove any trailing \r or \n characters
+    // This makes the parsing more robust to different newline styles.
+    while (!message_content.empty() &&
+           (message_content.back() == '\r' || message_content.back() == '\n')) {
+        message_content.pop_back();
+    }
+
+    if (message_content.empty()) {
+        // Only newlines or empty message received
+        // std::cerr << "Debug: Received empty line or only newlines." << std::endl;
         return false;
     }
 
-    // Work with the message content before CRLF
-    std::string message_content = rawMessage.substr(0, crlf_pos);
-    */
+    std::stringstream ss(message_content);
 
-    if (rawMessage.empty()) {
-         // std::cerr << "Error: Empty message content before CRLF." << std::endl;
-         return false;
-    }
-
-    std::stringstream ss(rawMessage); // Use stringstream
-
-    std::string first_token;
-    ss >> first_token; // Read the first token
-
-    if (first_token.empty()) {
-        // Should ideally not happen if message_content is not empty
-        return false;
-    }
+    std::string current_token;
 
     // 3. Check for prefix (starts with ':')
-    if (first_token[0] == ':') {
-        _prefix = first_token.substr(1); // Store prefix (without the leading ':')
+    // Read the first token (will skip leading spaces, which is fine)
+    ss >> current_token;
+
+    if (current_token.empty()) {
+        // This should not happen if message_content is not empty, but good for robustness
+        return false;
+    }
+
+    if (current_token[0] == ':') {
+        _prefix = current_token.substr(1); // Store prefix (without the leading ':')
 
         // Attempt to read the command - must exist after a prefix
-        std::string command_token;
-        if (!(ss >> command_token) || command_token.empty()) {
+        if (!(ss >> _command) || _command.empty()) {
              // std::cerr << "Error: Prefix present but no command found after it." << std::endl;
              _prefix.clear(); // Clear prefix if command is missing
              return false;
         }
-        _command = command_token;
-
     } else {
         // No prefix, the first token is the command
-        _command = first_token;
+        _command = current_token;
     }
 
-    // Command is mandatory		safeSend(Client->getFd(), test1);
-
+    // Command is mandatory as per IRC RFC.
     if (_command.empty()) {
-         // std::cerr << "Error: No command found." << std::endl;
+         // This check is a bit redundant if previous checks pass, but harmless.
          return false;
     }
 
     // 4. Process parameters
-    std::string params_part; // String containing all characters after the command/space
-    // Use getline to read the REST of the stringstream's line
-    std::getline(ss, params_part);
+    // After reading the command, the stream pointer is at the start of parameters or end of line.
+    // We need to get the rest of the line, including any leading spaces that follow the command
+    // and any internal spaces within a trailing parameter.
 
-    // Trim leading space(s) that were between command and parameters
-    size_t first_param_char_pos = params_part.find_first_not_of(" ");
+    std::string remainder_of_line;
+    std::getline(ss, remainder_of_line); // Read all remaining characters on the line
 
-    if (first_param_char_pos == std::string::npos) {
-        // No parameters found (only whitespace or empty string remaining)
-        return true; // Parsing successful
+    // Trim leading whitespace from remainder_of_line
+    size_t first_non_space = remainder_of_line.find_first_not_of(" ");
+    if (first_non_space == std::string::npos) {
+        // No parameters or only whitespace after the command
+        return true; // Parsing successful, no parameters
     }
+    remainder_of_line = remainder_of_line.substr(first_non_space);
 
-    // The actual string containing parameters, starting from the first non-space character
-    std::string actual_params_str = params_part.substr(first_param_char_pos);
+    // --- REVISED PARAMETER PARSING ---
+    std::stringstream params_ss(remainder_of_line);
+    std::string param_token;
 
-    // Check for trailing parameter (starts with ':')
-    if (!actual_params_str.empty() && actual_params_str[0] == ':') {
-        // The rest of the string *after the colon* is a single parameter.
-        // Handle the case where only ":" is left (empty trailing parameter).
-         if (actual_params_str.length() > 1) {
-             _paramsList.push_back(actual_params_str.substr(1)); // Store content after ':'
-         } else {
-             _paramsList.push_back(""); // The parameter is an empty string (case: "COMMAND :")
-         }
+    // Loop through parameters
+    while (params_ss >> param_token) { // Read token by token
+        if (param_token[0] == ':') {
+            // Found a leading colon for a parameter. This means it's the trailing parameter.
+            // All remaining content in the stringstream, starting from the character
+            // after the colon, is part of this single parameter.
 
-    } else {
-        // No leading colon, split parameters by spaces
-        std::stringstream params_ss(actual_params_str);
-        std::string param_token;
-        while (params_ss >> param_token) {
+            // Get the part AFTER the colon
+            std::string actual_trailing_content = param_token.substr(1);
+
+            // Append any remaining content from the stringstream
+            // (There might be a space after the ':token' if it's not at the end of the line)
+            std::string rest_of_trailing;
+            std::getline(params_ss, rest_of_trailing); // Get the rest of the line
+
+            // Concatenate the initial part (after colon) with the rest.
+            // If rest_of_trailing is not empty, it implies there was a space, so add it back.
+            if (!rest_of_trailing.empty()) {
+                actual_trailing_content += rest_of_trailing;
+            }
+            
+            _paramsList.push_back(actual_trailing_content);
+            break; // After processing the trailing parameter, we are done with parameters.
+        } else {
+            // Not a trailing parameter, just a regular middle parameter.
             _paramsList.push_back(param_token);
         }
     }
+    // --- END REVISED PARAMETER PARSING ---
 
-    // If we reached here, parsing of command and parameters was successful
-    return true;
+    return true; // Parsing successful
 }
+
 
 
 // --- toRawString Method (Same as before, should work correctly with fixed parsing) ---

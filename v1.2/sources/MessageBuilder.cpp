@@ -6,7 +6,7 @@ namespace MessageBuilder {
 
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick) {
-        return SERVER_PREFIX + " 433 * " + nick + " :Nickname is already in use.\r\n"; // Changed first nick to '*' as per RFC
+        return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n"; // Changed first nick to '*' as per RFC
     }
 
     // A more generic error builder, useful for 401, 461 etc.

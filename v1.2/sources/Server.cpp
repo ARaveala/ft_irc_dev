@@ -497,7 +497,15 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
 }
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
-	std::string msg = MessageBuilder::buildNickChange(client->getOldNick(), "failsafe", client->getNickname());
+	std::cout<<"show old name = "<<client->getOldNick()<<"show new nickname = "<<client->getNickname()<<"\n";
+	std::string msg;
+	if (client->getMsg().isActive(MsgType::NICKNAME_IN_USE))
+	{
+		std::string name = client->getMsg().getMsgParam(0);
+		msg = MessageBuilder::buildNicknameInUse(name);
+	}
+	else
+		msg = MessageBuilder::buildNickChange(client->getOldNick(), "failsafe", client->getNickname());
 	broadcastMessageToClients(client, msg, false);
 	if (client->isMsgEmpty() == true)
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);

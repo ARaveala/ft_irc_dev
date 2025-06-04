@@ -45,10 +45,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		client->setOldNick(client->getNickname());
 		client->getMsg().prep_nickname(client->getNicknameRef(), client->getFd(), _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
-		//if (client->isMsgEmpty()) {
-		//	_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		//}
-		//client->getMsg().callDefinedMsg();//(client->getMsg().getActiveMsgType());
 		return ; 
 	}
 	if (command == "PING"){

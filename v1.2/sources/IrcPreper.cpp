@@ -36,7 +36,7 @@ void IrcMessage::prep_nickname(std::string& nickname, int client_fd, std::map<in
 	{
 		nickname.clear();
 		nickname = getParam(0);
-	}
+	} 
 }
 
 /*void IrcMessage::getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue) {

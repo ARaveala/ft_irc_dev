@@ -54,7 +54,11 @@ class IrcMessage {
 		void printMessage(const IrcMessage& msg);
 
 		
-		
+		bool isActive(MsgType type) {
+		    return _msgState.test(static_cast<size_t>(type));
+		}
+
+
 		// araveala has added this to help give you full control
 		int countOccurrences(const std::string& text, const std::string& pattern);
 		// naming is changable
@@ -74,8 +78,8 @@ class IrcMessage {
 		//void dispatchCommand(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
-
-		MsgType getActiveMsgType() const;
+		const std::string getMsgParam(int index) { return _params[index]; };
+		//MsgType getActiveMsgType() const { return _msgState; };
 
 
 		// moving from server to here 

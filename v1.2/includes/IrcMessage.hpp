@@ -31,7 +31,7 @@ class IrcMessage {
 		std::map<std::string, int> nickname_to_fd;
 		std::map<int, std::string> fd_to_nickname;
 		static const std::set<std::string> _illegal_nicknames;
-	
+	 	size_t _bytesSentForCurrentMessage = 0;
 		static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
@@ -68,13 +68,13 @@ class IrcMessage {
 		// must go through epoll
 		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
 		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
-		void removeQueueMessage() { _messageQue.pop_front();};
+		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };
-		std::string getQueueMessage() { return _messageQue.front();};
+		std::string& getQueueMessage() { return _messageQue.front();};
 		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
+		//void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
 		// apprenbtly this is normal, can look at mariadb databse code, huge signitures but small code bodies. no need to pass entire object 
 		//void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
 		//void dispatchCommand(Client& Client, const std::string message, Server& server);
@@ -96,7 +96,7 @@ class IrcMessage {
 		// message types and params
 		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
 		
-		void setWelcomeType(std::vector<std::string> sendParams);
+		//void setWelcomeType(std::vector<std::string> sendParams);
 	
 	    void callDefinedMsg();//(MsgType msgType);
 		void callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast);
@@ -110,8 +110,17 @@ class IrcMessage {
 			//_illegal_nicknames.clear()
 		};
 
-
-
+		void advanceCurrentMessageOffset(ssize_t bytes_sent) {
+		        _bytesSentForCurrentMessage += bytes_sent;
+		    }
+		size_t getRemainingBytesInCurrentMessage() const {
+        		if (_messageQue.empty()) return 0;
+        	return _messageQue.front().length() - _bytesSentForCurrentMessage;
+    	}
+		const char* getCurrentMessageCstrOffset() const {
+		       if (_messageQue.empty()) return nullptr;
+		       return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
+		   }
 
 
 };

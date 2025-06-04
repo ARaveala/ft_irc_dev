@@ -110,6 +110,8 @@ void Server::create_Client(int epollfd) {
 		// create an instance of new Client and add to server map
 		_Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd);
 		_timer_map[timer_fd] = client_fd;
+		//std::shared_ptr<Client> = _Clients[client_fd];
+
 		std::cout << "New Client created , fd value is  == " << _Clients[client_fd]->getFd() << std::endl;
 		
 		set_current_client_in_progress(client_fd);
@@ -118,7 +120,17 @@ void Server::create_Client(int epollfd) {
 		_nickname_to_fd.insert({_Clients[client_fd]->getNickname(), _Clients[client_fd]->getFd()});
 		if (!_Clients[client_fd]->get_acknowledged()){
 			//_Clients[client_fd]->set_pendingAcknowledged(true);
-			_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef());//, _Clients[client_fd]->getMsg().getQue());
+			//_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef());//, _Clients[client_fd]->getMsg().getQue());
+			//std::string msg = MessageBuilder::generatewelcome(_Clients[client_fd]->getNickname());
+			//std::string name_change = ":server NOTICE #testchannel :Nickname update detected\r\n";//":" + _Clients[client_fd]->getNickname() + " NICK " + _Clients[client_fd]->getNickname() + "\r\n";
+			//updateEpollEvents(client_fd, EPOLLOUT, true);
+			_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
+			//_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * END\r\n");
+			//_Clients[client_fd]->getMsg().queueMessage("NICK startingNick\r\n");
+			//_Clients[client_fd]->getMsg().queueMessage("USER "  + _Clients[client_fd]->getClientUname() + " 0 * :Real Name\r\n");
+			
+			//_Clients[client_fd]->getMsg().queueMessage(msg);
+			//_Clients[client_fd]->getMsg().queueMessage(name_change);
 			set_client_count(1);		
 		}
 	}
@@ -362,20 +374,20 @@ void Server::send_message(std::shared_ptr<Client> client)
 
 	int fd;
 	fd = client->getFd();
-	if (!client->get_acknowledged())
-	{
-		//ignore this for now
-		std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
-		client->set_acknowledged();		
-	}	
+	
 	while (client->isMsgEmpty() == false && client->getMsg().getQueueMessage() != "") {
 
 		std::string msg = client->getMsg().getQueueMessage();
-		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
-		while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
-            ssize_t bytes_to_send = msg.length();
-            ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);
 
+		size_t remaining_bytes_to_send = client->getMsg().getRemainingBytesInCurrentMessage();
+        const char* send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
+		
+		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
+		//while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
+        //    ssize_t bytes_to_send = msg.length();
+            //ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);
+            ssize_t bytes_sent = send(fd, send_buffer_ptr, remaining_bytes_to_send, MSG_NOSIGNAL);
+			//usleep(5000); 
             if (bytes_sent == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     // Socket buffer is full. Cannot send more right now.
@@ -389,8 +401,23 @@ void Server::send_message(std::shared_ptr<Client> client)
                     return;
                 }
             } else{
-				client->getMsg().removeQueueMessage(); // Remove the original (full) message
-			 	if (static_cast<ssize_t>(bytes_sent) < bytes_to_send) {
+				client->getMsg().advanceCurrentMessageOffset(bytes_sent); 
+				//client->getMsg().removeQueueMessage(); // Remove the original (full) message
+			 	if (client->getMsg().getRemainingBytesInCurrentMessage() == 0) {
+                // The entire current message has been sent.
+                client->getMsg().removeQueueMessage(); // Remove from queue, reset offset for next message.
+                std::cout << "DEBUG: Full message sent for FD " << fd << ". Moving to next message.\n";
+                // The outer 'while' loop will now check for the next message in the queue.
+	            } else {
+	                // Partial send of the current message.
+	                // Still more bytes to send for *this* message.
+	                // Leave EPOLLOUT enabled. The next time send_message is called,
+	                // it will automatically pick up from the new offset.
+	                std::cout << "DEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
+	                          << " bytes. Remaining: " << client->getMsg().getRemainingBytesInCurrentMessage() << ".\n";
+	                return; // Exit send_message. Epoll will re-trigger for remaining bytes.
+				}
+				/*if (static_cast<ssize_t>(bytes_sent) < bytes_to_send) {
                 // Partial send of the current message.
 			    	client->getMsg().queueMessageFront(msg.substr(bytes_sent));
                 	//std::cout << "DEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
@@ -399,12 +426,18 @@ void Server::send_message(std::shared_ptr<Client> client)
                 // Entire current message was sent.
                 	//std::cout << "DEBUG: Full part of current message sent for FD " << fd << ".\n";
                 	break; // Exit the inner while loop to remove this message and try the next.
-            	}
+            	}*/
 			}
-        } 
+        //} 
 	}
 	if (client->isMsgEmpty()) {
-			updateEpollEvents(fd, EPOLLOUT, false);
+		if (!client->get_acknowledged())
+		{
+			//ignore this for now
+			std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+			client->set_acknowledged();		
+		}	
+		updateEpollEvents(fd, EPOLLOUT, false);
 	}
 
 }
@@ -426,9 +459,9 @@ void Server::send_server_broadcast()
 				}
 				else perror("send error");
 			}
-			/*if (bytes_sent > 0) {
+			if (bytes_sent > 0) {
 			
-			}*/
+			}
 		}
 		_server_broadcasts.pop_front();  //remove sent message
 	}
@@ -497,11 +530,35 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
 }
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
-	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());
+	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
+ 
 	broadcastMessageToClients(client, msg, false);
+	 std::cout << "DEBUG NICK Self-Message: Processing NICK for Client " << client->getNickname() 
+              << " (FD: " << client->getFd() << ")\n";
+    std::cout << "DEBUG NICK Self-Message: Before queuing, client->isMsgEmpty() is " 
+              << (client->isMsgEmpty() ? "true" : "false") << " for FD " << client->getFd() << "\n";
+
 	if (client->isMsgEmpty() == true)
+	{
+		 std::cout << "DEBUG NICK Self-Message: Queue WAS empty for Client " << client->getNickname() 
+                  << ", enabling EPOLLOUT for FD " << client->getFd() << ".\n";
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+	}
+	else {
+        std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
+                  << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
+    }
 	client->getMsg().queueMessage(msg);
+	//client->getMsg().queueMessage(msg);
+	//"WHO newnick\r\n";
+	//":newnick JOIN #testchannel\r\n";
+	//":oldnick NICK newnick\r\n"
+	//":server NOTICE #testchannel :Nickname update detected\r\n"
+	//client->getMsg().queueMessage(":newnick JOIN #testchannel\r\n");
+
+	std::cout << "DEBUG NICK Self-Message: Message QUEUED for Client " << client->getNickname() 
+              << " (FD: " << client->getFd() << "). Current queue size after: " << client->getMsg().getQue().size() << "\n";
 }
 
 void Server::handleQuit(std::shared_ptr<Client> client) {
@@ -582,16 +639,22 @@ if (!client) {
 	std::cout<<"Entering handling nick name command , client exists!\n";
 	//std::string msg  = MessageBuilder::buildNickChange(client->getOldNick(), "failsafe", client->getNickname());
     std::cout<<"the message built for sending "<< msg <<"\n";
-	// Use a std::set to ensure each client receives the message only once,
-    // even if they are in multiple shared channels.
     std::set<std::shared_ptr<Client>> recipients;
+	std::map<std::string, std::weak_ptr<Channel>> client_joined_channels_copy = client->getJoinedChannels();
 	std::vector<std::string> channels_to_process;
-    for (const auto& pair : client->getJoinedChannels()) {
+    for (const auto& pair : client_joined_channels_copy) {
         std::cout<<"handling pairs and geting joined channles\n";
-		if (pair.second.lock()) {
+		if (std::shared_ptr<Channel> channel_sptr = pair.second.lock()) {
+		    channels_to_process.push_back(pair.first);
+		} else {
+		    // This warning indicates a channel was removed from the server while still in client's list.
+		    std::cerr << "WARNING: weak_ptr to channel '" << pair.first << "' expired in client's joined list.\n";
+		}
+		//CHANGE BACK 
+		/*if (pair.second.lock()) {
 			std::cout<<"a channel pushewd back \n";
             channels_to_process.push_back(pair.first);
-    	}
+    	}*/
 	}
     for (const std::string& channel_name : channels_to_process) {
         auto channel_ptr = get_Channel(channel_name); 
@@ -600,7 +663,12 @@ if (!client) {
 				 channel_ptr->removeClient(client->getNickname());
 			 // Add all members of this channel to the recipients set.
             // `std::set` automatically handles duplicates, ensuring each client is added only once.
-            for (const auto& pairInChannelMap : channel_ptr->getAllClients()) { // Assuming Channel::getMembers() returns shared_ptrs
+            /*for (const auto& pairInChannelMap : get_Clients())
+			{
+				std::shared_ptr<Client> memberClient = pairInChannelMap.second;
+				recipients.insert(memberClient);
+			}*/
+			for (const auto& pairInChannelMap : channel_ptr->getAllClients()) { // Assuming Channel::getMembers() returns shared_ptrs
                  std::shared_ptr<Client> memberClient = pairInChannelMap.first.lock();
 				if (memberClient->getFd() == client->getFd()) {
                        // std::cout << "DEBUG: Skipping self (" << memberClient->getNickname() << ") in channel '" << pairInChannelMap.first << "' broadcast." << std::endl;
@@ -635,6 +703,74 @@ if (!client) {
 	}
 
 }
+/*void Server::broadcastMessageToClients(std::shared_ptr<Client> client, const std::string& msg, bool isQuitBroadcast) {
+    if (!client) {
+        std::cerr << "Server::broadcastMessageToClients: Received null client pointer.\n";
+        return;
+    }
+    std::cout << "Entering broadcastMessageToClients for: " << client->getNickname() << ", message: [" << msg << "]\n";
+    std::cout << "Message built for sending: " << msg << "\n";
+	if (isQuitBroadcast)
+		std::cout<<"this is the case that quit is true for some rfeason \n";
+    // IMPORTANT: Create a COPY of the joined channels map.
+    // This prevents iterator invalidation if the client's channels change concurrently.
+    std::map<std::string, std::weak_ptr<Channel>> client_joined_channels_copy = client->getJoinedChannels();
+
+    // This set will collect all UNIQUE recipients *excluding* the acting client.
+    std::set<std::shared_ptr<Client>> recipients_for_broadcast;
+
+    // Iterate over the COPY of joined channels
+    for (const auto& pair : client_joined_channels_copy) {
+        std::cout << "Handling channel: " << pair.first << "\n";
+        // Lock the weak_ptr to get a shared_ptr, ensuring the channel still exists.
+        // As you've noted, the weak_ptr is not expiring here, so this should always succeed.
+        if (std::shared_ptr<Channel> channel_sptr = pair.second.lock()) {
+            std::cout << "Channel locked successfully: " << channel_sptr->getName() << "\n";
+
+            // Channel::getAllClients() returns a COPY of its map, which is good.
+            // Iterate over this copy to prevent iterator invalidation if the channel's members change.
+            // **Potential Bug Location: WeakPtrCompare used by Channel::getAllClients() internally**
+            std::map<std::weak_ptr<Client>, std::pair<std::bitset<3UL>, int>, WeakPtrCompare> channel_clients_copy = channel_sptr->getAllClients();
+            for (const auto& pairInChannelMap : channel_clients_copy) {
+                // Lock the weak_ptr to get a shared_ptr for the member client.
+                // As you've noted, the weak_ptr is not expiring here, so this should always succeed.
+                std::shared_ptr<Client> memberClient = pairInChannelMap.first.lock();
+                
+                // IMPORTANT: Ensure memberClient is valid and it's NOT the acting client.
+                // The acting client's message is handled by handleNickCommand.
+                if (memberClient && memberClient->getFd() != client->getFd()) {
+                    recipients_for_broadcast.insert(memberClient);
+                    std::cout << "DEBUG: Added " << memberClient->getNickname() << " (FD " << memberClient->getFd() << ") to broadcast recipients.\n";
+                } else if (memberClient && memberClient->getFd() == client->getFd()) {
+                    std::cout << "DEBUG: Skipped acting client " << memberClient->getNickname() << " (FD " << memberClient->getFd() << ") for broadcast (handled separately).\n";
+                } else {
+                    // This 'else' block would only be hit if memberClient is nullptr,
+                    // which you confirmed isn't happening. Good!
+                    std::cerr << "WARNING: Encountered null memberClient during broadcast iteration (should not happen if weak_ptr is not expiring).\n";
+                }
+            }
+        } else {
+            // This 'else' block would only be hit if channel_sptr is nullptr,
+            // which you confirmed isn't happening. Good!
+            std::cerr << "WARNING: weak_ptr to channel '" << pair.first << "' expired during broadcast setup (should not happen).\n";
+        }
+    }
+
+    // Now, queue the message for all collected unique recipients (excluding the acting client).
+    for (const auto& recipientClient : recipients_for_broadcast) {
+        bool wasEmpty = recipientClient->isMsgEmpty();
+        recipientClient->getMsg().queueMessage(msg);
+        if (wasEmpty) {
+            updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
+            std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << "). Epoll event updated.\n";
+        } else {
+            std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << "). Message queue was not empty.\n";
+        }
+    }
+    std::cout << "DEBUG: Finished broadcastMessageToClients. Total recipients: " << recipients_for_broadcast.size() << "\n";
+
+    // Ignoring quit rules/code here as per your request.
+}*/
 void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender) {
     if (!channel) {
         std::cerr << "Error: Attempted to broadcast to a null channel pointer.\n";
@@ -673,7 +809,7 @@ void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const 
         }
     }
 }
-
+#include<chrono>
 
 void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
     auto it = _epollEventMap.find(fd);
@@ -698,7 +834,16 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
         std::cout << "DEBUG: Epoll flag 0x" << std::hex << flag_to_toggle << std::dec << " for FD " << fd << " already in desired state. No epoll_ctl call.\n";
         return; // No change needed
     }
-
+	/*it->second.events = EPOLLOUT | EPOLLET | EPOLLONESHOT;
+	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &it->second) == -1) {
+        perror("epoll_ctl EPOLL_CTL_MOD (setEpollFlagStatus) failed");
+        std::cerr << "ERROR: Failed to set epoll flag status for FD " << fd
+                  << ". Flag: 0x" << std::hex << flag_to_toggle << std::dec
+                  << ", Enable: " << (enable ? "true" : "false")
+                  << ". Error: " << strerror(errno) << ".\n";
+        // If epoll_ctl fails here, it's often a severe issue (e.g., FD is bad).
+        // Consider calling disconnectClient(fd) here in a production server.
+	}*/
     // Update the 'events' member of the struct directly in your map
     it->second.events = new_mask;
 
@@ -715,6 +860,11 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
         std::cout << "DEBUG: Epoll flag status updated for FD " << fd
                   << ". New total mask: 0x" << std::hex << new_mask << std::dec << "\n";
     }
+	if (it->second.events & EPOLLOUT) {
+		auto now = std::chrono::system_clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+		std::cout << "DEBUG: EPOLLOUT triggered at " << ms << " ms for FD " << fd << std::endl;
+	}
 }
 /*Channel Server::getChannel(const std::string& channelName){
     auto it = _channels.find(channelName);
@@ -743,6 +893,7 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
 
 # include <cstdlib>
 
+//this is not an emergency 
 std::string generateUniqueNickname() {
     std::string newNick;
     std::vector<std::string> adjectives = {"the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild", "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"};

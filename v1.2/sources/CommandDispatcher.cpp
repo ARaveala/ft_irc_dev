@@ -28,7 +28,7 @@ CommandDispatcher::~CommandDispatcher() {}
 
 
 }*/
-
+#include <sys/socket.h>
 void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
 {
 
@@ -37,25 +37,54 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         return;
     }
 	std::string command = client->getMsg().getCommand();
+	// this may not be needed but could be the soruce of inconsitent behaviour, it has not fixed it ;(
+	if (command == "CAP")
+	{
+		if (params[0] == "END")
+			return;
+		std::string msg = MessageBuilder::buildCapResponse(client->getNickname(), params[1]);
+		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		client->getMsg().queueMessage(msg);
+	}
 	if (command == "QUIT")
 	{
 		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		_server->handleQuit(client);
 		return ;
 	}
-	if (command == "WHOIS")
+
+	/*if (command == "WHOIS")
 	{
 		if (!params[0].empty() && params[0] != client->getClientUname())
 		{
 			client->setClientUname(params[0]);
 		}
 		//return;
+	}*/
+	if (command == "USER")
+	{
+		client->setHasSentUser();
+		//return ;
 	}
 	if (command == "NICK") {
+		client->setHasSentNick();
 		client->setOldNick(client->getNickname()); // we might not need this anymore 
 		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client->getFd(), _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
+		//sendToClient(client.fd, forcePing);
+		//std::string message = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());;
+		//send(client->getFd(), message.c_str(), message.size(), 0);
+		//client->safeSend(client->getFd(), "PONG :server/r/n");
+		//shutdown(client->getFd(), SHUT_WR); 
 		return ; 
+	}
+	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
+		client->setHasRegistered();
+		client->getMsg().queueMessage(":server 001 " + client->getNickname() + " :Welcome to IRC!\r\n");
+		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
+		client->getMsg().queueMessage(msg);
+		
+
 	}
 	if (command == "PING"){
 		client->sendPong();
@@ -170,6 +199,31 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		
 		size_t paramSize = params.size();
 		std::cout<<"TELL ME THE SIZE OF PARAMSLIST BEFORE DOING ANYTHING TO IT = "<<paramSize<<"\n";
+
+		 if (params.size() == 1) {
+        	std::string channel_name = params[0];
+        	std::shared_ptr<Channel> channel = _server->get_Channel(channel_name); // Assuming _server->get_Channel is valid
+
+ 	       if (!channel) {
+    	        // Channel does not exist
+        	    //client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "403", client->getNickname(), channel_name, "No such channel"));
+            	return;
+		   }
+		//	if (channel->getTopic().empty()) { // Assuming Channel has getTopic()
+	    //        client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "331", client->getNickname(), channel_name, "No topic is set"));
+	    //    } else {
+	    //        client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "332", client->getNickname(), channel_name, ":" + channel->getTopic()));
+	    //    }
+	    //    return; // Important: Exit after handling the query!
+			std::string modes =  ":localhost 324 " + client->getNickname() + " #bbq +nt\r\n";
+			std::string checktopic = channel->getTopic();
+			std::cout<<"checking the topic is set to what "<<checktopic<<" \n";
+		   	std::string topic = ":localhost 332 " + client->getNickname() + " #bbq :Welcome to #bbq!\r\n";
+			
+		   	client->getMsg().queueMessage(modes);
+		   	client->getMsg().queueMessage(topic);
+			_server->updateEpollEvents(client->getFd(), EPOLLOUT,true);
+		}
 
 		if ((ClientModeCount = client->getMsg().countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags
 		{
@@ -317,7 +371,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				}
 				// eed to check does channel exist
 				if (_server->channelExists(params[0]) == true) {
-					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname() + +"!ident@localhost " + " PRIVMSG " + params[0] + " " + buildMessage + "\r\n", client);
+					// MessageBuilder 
+					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + buildMessage + "\r\n", client);
 				}
 				// check is it a channel name , starts with #, collect to _serverchannelbroadcast
 				// is it just a nickname , collect to messageQue, send to only that fd of

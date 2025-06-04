@@ -52,7 +52,7 @@ void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
 	_params = sendParams;
 }
 
-void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
+/*void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(MsgType::WELCOME));
 	_msgState.set(static_cast<size_t>(MsgType::HOST_INFO));
@@ -60,7 +60,7 @@ void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
 	_msgState.set(static_cast<size_t>(MsgType::SERVER_INFO));
 	_params.clear();
 	_params = sendParams;
-}
+}*/
 
 int IrcMessage::countOccurrences(const std::string& text, const std::string& pattern) {
     std::regex regexPattern(pattern);  // Create regex from pattern

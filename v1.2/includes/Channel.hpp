@@ -17,7 +17,7 @@
  * if either left or right weak_ptr is expired it prevents us from comapring them . 
  * 
  */
-struct WeakPtrCompare {
+/*struct WeakPtrCompare {
     bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
         auto l = lhs.lock();  // Convert weak_ptr to shared_ptr safely
         auto r = rhs.lock();  
@@ -26,8 +26,16 @@ struct WeakPtrCompare {
 
         return l->getNickname() < r->getNickname();
     }
-};
+};*/
 
+struct WeakPtrCompare {
+    bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
+        // This provides a strict weak ordering for weak_ptrs (and shared_ptrs),
+        // based on the address of their internal control block.
+        // It correctly handles expired and null weak_ptrs consistently.
+        return lhs.owner_before(rhs);
+    }
+};
 /*std::string buildNicknameListFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
 	std::string nickNameList = nullptr;
 	while (auto clientPtr = weakClient.lock()) {  // ✅ Convert weak_ptr to shared_ptr safely

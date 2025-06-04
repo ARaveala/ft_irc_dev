@@ -134,7 +134,9 @@ class Server {
 		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);
+		std::map<int, std::shared_ptr<Client>> get_Clients() {return _Clients;};
 		std::shared_ptr<Channel> get_Channel(std::string channelName);
+		
 		std::map<int, std::string>& get_fd_to_nickname();
 		std::map<std::string, int>& get_nickname_to_fd();
 		// returns the whole map 

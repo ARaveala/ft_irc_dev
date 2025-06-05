@@ -110,7 +110,7 @@ void Client::setDefaults(){
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
 	_nickName = generateUniqueNickname();
-	_username = "Clientanon";
+	_username = _nickName;
 	_fullName = "fullanon";
 }
 

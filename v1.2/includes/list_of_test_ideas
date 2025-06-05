@@ -26,3 +26,6 @@ part
 send bible
 
 ] /RAWLOG OPEN ~/logz/log.log
+sudo tcpdump -i lo port 6668 -A | grep PRIVMSG to look for priv message only 
+sudo netstat -tnp | grep port num show us connected clients and server
+

@@ -4,7 +4,7 @@
 # A simple example that can be used to practice.
 # This script is used to test the ports and passwords of server start
 
-output=$(./ft_irc 1234 "hell" 2>&1)
+output=$(./localhost 1234 "hell" 2>&1)
 echo "captured output = $output"
 
 if echo "$output" | grep "ERROR:"; then

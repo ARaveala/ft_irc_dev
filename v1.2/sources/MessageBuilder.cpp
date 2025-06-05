@@ -31,23 +31,29 @@ std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std:
 
 namespace MessageBuilder {
 
-std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
-    switch (type) {
-        case MsgType::NICKNAME_IN_USE:
-            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildNicknameInUse), params);
+	std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
+	    switch (type) {
+	        case MsgType::NICKNAME_IN_USE:
+	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildNicknameInUse), params);
 
-        case MsgType::RPL_NICK_CHANGE:
-            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
+	        case MsgType::RPL_NICK_CHANGE:
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
 
-        default:
-            return "Error: Unknown message type";
-    }
-}
+	        default:
+	            return "Error: Unknown message type";
+	    }
+	}
 
+
+	std::string generatewelcome(const std::string& nickname) {
+		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname);
+	}
     // Helper for common server prefix (you can make this a constant or pass it)
-    const std::string SERVER_PREFIX = ":ft_irc"; // Or ":ft_irc" as used in some of your macros
-	const std::string SERVER_AT = "@ft_irc";
+    const std::string SERVER_PREFIX = ":localhost"; // Or ":localhost" as used in some of your macros
+	const std::string SERVER_AT = "@localhost";
 	const std::string QUIT_MSG = "Client disconnected";
+
+
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick) {
         return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n"; // Changed first nick to '*' as per RFC
@@ -75,46 +81,67 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
     // Welcome Package
     std::string buildWelcome(const std::string& nickname) {
-        return ":server 001 " + nickname + " :Welcome to the IRC server " + nickname + "!\r\n"; // Added nick to end as per RFC
+        return SERVER_PREFIX + " 001 " + nickname + " :Welcome to the IRC server " + nickname + "!\r\n"; // Added nick to end as per RFC
     }
 
     std::string buildHostInfo(const std::string& nickname) {
-        return ":server 002 " + nickname + " :Your host is ft_irc, running version 1.0\r\n";
+        return SERVER_PREFIX + " 002 " + nickname + " :Your host is localhost, running version 1.0\r\n";
     }
 
     std::string buildServerCreation(const std::string& nickname) {
-        return ":server 003 " + nickname + " :This server was created today\r\n";
+        return SERVER_PREFIX + " 003 " + nickname + " :This server was created today\r\n";
     }
 
     std::string buildServerInfo(const std::string& nickname) {
-        return ":server 004 " + nickname + " ft_irc 1.0 o o\r\n";
+        return SERVER_PREFIX + " 004 " + nickname + " localhost 1.0 o o\r\n";
     }
 
-    // Channel related messages
-    // Note: The JOIN_CHANNEL macro was missing the user@host prefix.
-    // It's crucial for correct IRC protocol messages. Assuming sender_prefix is "nick!user@host".
+	// cap response 
+	std::string buildCapResponse(const std::string& clientNickname, const std::string& requestedCaps) {
+		    std::string acknowledgedCaps = "";
+
+    // Acknowledge 'multi-prefix' if the client requested it AND your server supports it.
+    if (requestedCaps.find("multi-prefix") != std::string::npos) {
+        acknowledgedCaps += "multi-prefix";
+    }
+
+    // Acknowledge 'sasl' if the client requested it AND your server supports it.
+    if (requestedCaps.find("sasl") != std::string::npos) {
+        if (!acknowledgedCaps.empty()) acknowledgedCaps += " "; // Add space if already added caps
+        acknowledgedCaps += "sasl";
+    }
+
+    // You might add logic here to send CAP NAK if no requested capabilities were supported.
+    // For this project, sending an ACK with supported caps is usually sufficient.
+
+    return SERVER_PREFIX + " CAP " + clientNickname + " ACK :" + acknowledgedCaps + "\r\n";
+	}
+		//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
     std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName) {
         return nickname_prefix + " JOIN :" + channelName + "\r\n"; // Channel names are sometimes prefixed with ':'
     }
 
     std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList) {
-        return ":ft_irc 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
+        return ":localhost 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
     }
 
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName) {
-        return ":ft_irc 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
+        return ":localhost 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
     }
 
     // Added 'topic' parameter that was missing in your macro
     std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic) {
-        return ":ft_irc 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
+        return ":localhost 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
     }
 
     // Client related messages
     // Note: The RPL_NICK_CHANGE macro is for *broadcasting* a nick change.
     // It takes oldnick as the prefix, and newnick as the argument.
+	/*std::string buildNickChange2(const std::string& oldnick, const std::string& newnick) {
+        return ":" + oldnick  + " NICK " +  newnick + "\r\n";
+    }*/
     std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick) {
-        return ":" + oldnick + "!" + username + "@ft_irc NICK " +  newnick + "\r\n";
+        return ":" + oldnick + "!" + username + "@localhost NICK " +  newnick + "\r\n";
     }
     std::string buildClientQuit(const std::string& nickname, const std::string& username) {
         return ":" + nickname +"!" + username + SERVER_AT + " QUIT :" + QUIT_MSG + "\r\n";

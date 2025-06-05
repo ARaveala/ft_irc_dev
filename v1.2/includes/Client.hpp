@@ -14,6 +14,9 @@ class Client {
 		int _failed_response_counter = 0;
 		bool _channelCreator = false;
 		bool _quit = false;
+		bool _hasSentNick = false;
+		bool _hasSentUSer = false;
+		bool _registered = false;
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _oldNick;
@@ -41,9 +44,18 @@ class Client {
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
+		void setHasSentNick() {_hasSentNick = true;};
+		void setHasSentUser() {_hasSentUSer = true;};
+		void setHasRegistered() {_registered = true;};
+
 		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
 		
 		const std::string& getOldNick() {  return _oldNick; };
+
+		bool getHasSentNick() {return _hasSentNick;};
+		bool getHasSentUser() {return _hasSentUSer;};
+		bool getHasRegistered() {return _registered;};
+		
 		bool getQuit() {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();

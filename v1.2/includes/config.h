@@ -72,7 +72,7 @@ namespace Modes {
  */
 namespace config {
 	constexpr int MAX_CLIENTS = 10;
-	constexpr int TIMEOUT_CLIENT = 3000; // this should be larger than epoll timeout
+	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
 	constexpr std::size_t CLIENT_NUM_MODES = 3;
@@ -117,12 +117,12 @@ namespace IRCMessage {
 	inline constexpr const char* pass_msg = "PASS :password\r\n";
 	inline std::string get_nick_msg(const std::string& nickname) {
 		std::stringstream ss;
-        ss << "@ft_irc new nickname is now :" << nickname << "\r\n";
+        ss << "@localhost new nickname is now :" << nickname << "\r\n";
         return ss.str(); }
 	inline constexpr const char* nick_msg = "*:*!Client@localhost NICK :helooo\r\n";	
 	//inline constexpr const char* nick_msg = ":NICK :helooo\r\n";
 	//inline constexpr const char* nick_msg = ":*!Client@localhost NICK :helooo\r\n";	
-	//inline constexpr const char* nick_msg = "@ft_irc new nickname name is now :nickname\r\n";
+	//inline constexpr const char* nick_msg = "@localhost new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
 /**

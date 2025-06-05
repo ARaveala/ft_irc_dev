@@ -7,7 +7,7 @@
 #include <string>
 #include <iostream>
 #include <deque>
-
+#include "MessageBuilder.hpp"
 /**
  * @brief here we prepare the message queues fore sending in what will ultimatley be the
  * one and only sending function . We pass everything by reference so we dont have to pass the objects, 
@@ -18,11 +18,11 @@
  * @param broadcastQueue reference
  */
 
-void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::string>& messageQue) {
+/*void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::string>& messageQue) {
 {
-	setWelcomeType({nickname});
-	callDefinedMsg();
-}
+	//setWelcomeType({nickname});
+	MessageBuilder::generatewelcome(nickname);
+}*/
 // yes the parameters are long but this is the best way i could see how to run this function without passing entire objects 
 /*void IrcMessage::readyQuit(std::deque<std::string>& channelsToNotify, FuncType::DequeRef1 prepareQuit , int fd, std::function<void(int)> removeClient) {
     //setType();
@@ -31,7 +31,8 @@ void IrcMessage::prepWelcomeMessage(std::string& nickname)//, std::deque<std::st
 }*/
 
 void IrcMessage::prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
-{	
+{	if (username.empty())
+		std::cout<<"asdasdasd\n";
 	if (check_and_set_nickname(getParam(0), client_fd, fd_to_nick, nick_to_fd))
 	{
 		std::string oldnick = nickname;
@@ -74,9 +75,9 @@ void IrcMessage::prep_join_channel(std::string channleName, std::string nickname
 {
 
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
-	std::string test1 = ":ft_irc 353 " + nickname + " = " + channleName + " :" + clientList + "\r\n";
-	std::string test2 = ":ft_irc 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names
-	std::string test3 = ":ft_irc 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic
+	std::string test1 = ":localhost 353 " + nickname + " = " + channleName + " :" + clientList + "\r\n";
+	std::string test2 = ":localhost 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names
+	std::string test3 = ":localhost 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic
 	messageQue.push_back(whoJoins);
 	//messageQue.push_back(welcomeToChannel);
 	messageQue.push_back(test1);

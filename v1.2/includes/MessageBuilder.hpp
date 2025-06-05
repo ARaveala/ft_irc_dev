@@ -14,10 +14,13 @@ namespace MessageBuilder {
     std::string buildNeedMoreParams(const std::string& nickname, const std::string& command); // For 461
 
     // Welcome Package
+	std::string generatewelcome(const std::string& nickname);
     std::string buildWelcome(const std::string& nickname);
     std::string buildHostInfo(const std::string& nickname);
     std::string buildServerCreation(const std::string& nickname);
     std::string buildServerInfo(const std::string& nickname);
+
+	std::string buildCapResponse(const std::string& clientNickname, const std::string& requestedCaps);
 
     // Channel related messages
     std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);
@@ -27,6 +30,7 @@ namespace MessageBuilder {
     std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
 
     // Client related messages
+	//std::string buildNickChange2(const std::string& oldnick, const std::string& newnick);
     std::string buildNickChange(const std::string& oldnick, const std::string& username, const std::string& newnick);
     std::string buildClientQuit(const std::string& nickname, const std::string& username);
 

@@ -124,7 +124,10 @@ void Server::create_Client(int epollfd) {
 			//std::string msg = MessageBuilder::generatewelcome(_Clients[client_fd]->getNickname());
 			//std::string name_change = ":server NOTICE #testchannel :Nickname update detected\r\n";//":" + _Clients[client_fd]->getNickname() + " NICK " + _Clients[client_fd]->getNickname() + "\r\n";
 			//updateEpollEvents(client_fd, EPOLLOUT, true);
+			
+			_Clients[client_fd]->getMsg().queueMessage(":localhost NOTICE * :initilization has begun.......\r\n");
 			_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
+
 			//_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * END\r\n");
 			//_Clients[client_fd]->getMsg().queueMessage("NICK startingNick\r\n");
 			//_Clients[client_fd]->getMsg().queueMessage("USER "  + _Clients[client_fd]->getClientUname() + " 0 * :Real Name\r\n");
@@ -369,6 +372,7 @@ void Server::setEpollout(int fd)
 	event.data.fd = fd;
 	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
 }
+#include <iomanip>
 void Server::send_message(std::shared_ptr<Client> client)
 {
 
@@ -383,6 +387,17 @@ void Server::send_message(std::shared_ptr<Client> client)
         const char* send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
 		
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
+					// Right before your queueMessage call:
+			std::cout << "DEBUG: params[0] content (raw): [" << msg << "]" << std::endl;
+			// Or to show non-printable characters:
+			std::cout << "DEBUG: params[0] content (hex): [";
+			for (char c : msg) {
+			    if (c == '\r') std::cout << "\\r";
+			    else if (c == '\n') std::cout << "\\n";
+			    else if (c >= ' ' && c <= '~') std::cout << c; // Printable ASCII
+			    else std::cout << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (int)(unsigned char)c << std::dec;
+			}
+			std::cout << "]" << std::endl;
 		//while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
         //    ssize_t bytes_to_send = msg.length();
             //ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);

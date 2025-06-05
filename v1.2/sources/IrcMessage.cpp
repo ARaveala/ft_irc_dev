@@ -112,6 +112,8 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 	// check nickname is all lowercase
     for (char c : nickname) {
          if (!std::islower(static_cast<unsigned char>(c))) {
+			if (c == '_')
+				continue;
              std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Contains non-lowercase chars." << std::endl;
              return false;
          }
@@ -226,8 +228,9 @@ bool IrcMessage::parse(const std::string& rawMessage)
     _command.clear();
     _paramsList.clear();
 
-        std::string message_content = rawMessage;
-
+    std::string message_content = rawMessage;
+	std::cout<<"¤¤¤¤¤¤¤ showing raw message= "<<rawMessage<<" showing message_content = "
+	<< message_content<<"\n";
     // Remove any trailing \r or \n characters
     // This makes the parsing more robust to different newline styles.
     while (!message_content.empty() &&

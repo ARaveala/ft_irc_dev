@@ -29,3 +29,4 @@ send bible
 sudo tcpdump -i lo port 6668 -A | grep PRIVMSG to look for priv message only 
 sudo netstat -tnp | grep port num show us connected clients and server
 
+when testing with netcat, send irssi to server, add \r\n press cntrlv then cntrl m then enter 

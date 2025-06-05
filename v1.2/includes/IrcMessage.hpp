@@ -81,6 +81,7 @@ class IrcMessage {
 		void clearQue() {_messageQue.clear();};
 
 		const std::string getMsgParam(int index) const{ return _params[index]; };
+		void changeTokenParam(int index, const std::string& newValue) {_paramsList[index] = newValue;};
 		const std::vector<std::string>& getMsgParams() { return _params; };
 		//MsgType getActiveMsgType() const { return _msgState; };
 

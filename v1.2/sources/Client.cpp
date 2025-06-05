@@ -83,7 +83,13 @@ bool Client::extractAndParseNextCommand() {
     }
 	std::string full_message = _read_buff.substr(0, crlf_pos);
     _read_buff.erase(0, crlf_pos + 2); // Consume the message from the buffer
-	_msg.parse(full_message);
+	if (_msg.parse(full_message) == true)
+	{
+		std::cout<<"token parser shows true \n";
+	}
+	else
+		std::cout<<"token parser shows false \n";
+
 	return true;
 }
 

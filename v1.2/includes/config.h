@@ -52,9 +52,10 @@ enum class ErrorType {
 
 namespace Modes {
 	enum ClientMode {
-   		OPERATOR,     	// 0
+   		OPERATOR,		// 0
 		FOUNDER,		// 1
-		CLIENT_NONE		// 2
+		CLIENT_NONE,	// 2
+		INVISABLE		// 3
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0

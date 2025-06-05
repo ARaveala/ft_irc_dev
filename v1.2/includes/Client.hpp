@@ -12,8 +12,12 @@ class Client {
 		int _fd;
 		int _timer_fd;
 		int _failed_response_counter = 0;
+
+		bool _invisable = false; // bitset using MODES:: to be swapped for this bool, used for registartion debuggging
+
 		bool _channelCreator = false;
 		bool _quit = false;
+		bool _hasSentCap = false;
 		bool _hasSentNick = false;
 		bool _hasSentUSer = false;
 		bool _registered = false;
@@ -44,6 +48,14 @@ class Client {
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
+		
+		//testing only 
+		void setInvis(bool onoff) {_invisable = onoff;};
+		bool getInvis() {return _invisable;};
+		
+		
+		
+		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUSer = true;};
 		void setHasRegistered() {_registered = true;};
@@ -52,6 +64,7 @@ class Client {
 		
 		const std::string& getOldNick() {  return _oldNick; };
 
+		bool getHasSentCap() {return _hasSentCap;};
 		bool getHasSentNick() {return _hasSentNick;};
 		bool getHasSentUser() {return _hasSentUSer;};
 		bool getHasRegistered() {return _registered;};

@@ -149,6 +149,9 @@ class Server {
 		bool checkTimers(int fd);
 		////void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
 	
+		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
+
+
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
 		void addChannelMessage(std::string message)  {_channel_broadcasts.push_back(message);};
 

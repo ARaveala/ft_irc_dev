@@ -99,7 +99,6 @@ void Server::create_Client(int epollfd) {
 	} else {
 		//int flag = 1;
 		//int buf_size = 1024;
-
 		//setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
 		//setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(flag));	
 		make_socket_unblocking(client_fd);
@@ -109,24 +108,28 @@ void Server::create_Client(int epollfd) {
 		// errro handling if timer_fd failed
 		// create an instance of new Client and add to server map
 		_Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd);
+		std::shared_ptr<Client> client = _Clients[client_fd];
+		
 		_timer_map[timer_fd] = client_fd;
 		//std::shared_ptr<Client> = _Clients[client_fd];
 
-		std::cout << "New Client created , fd value is  == " << _Clients[client_fd]->getFd() << std::endl;
+		std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
 		
 		set_current_client_in_progress(client_fd);
-		_Clients[client_fd]->setDefaults();
-		_fd_to_nickname.insert({_Clients[client_fd]->getFd(), _Clients[client_fd]->getNickname()});
-		_nickname_to_fd.insert({_Clients[client_fd]->getNickname(), _Clients[client_fd]->getFd()});
-		if (!_Clients[client_fd]->get_acknowledged()){
+		client->setDefaults();
+		_fd_to_nickname.insert({client_fd, client->getNickname()});
+		_nickname_to_fd.insert({client->getNickname(), client_fd});
+		if (!client->get_acknowledged()){
 			//_Clients[client_fd]->set_pendingAcknowledged(true);
 			//_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef());//, _Clients[client_fd]->getMsg().getQue());
 			//std::string msg = MessageBuilder::generatewelcome(_Clients[client_fd]->getNickname());
 			//std::string name_change = ":server NOTICE #testchannel :Nickname update detected\r\n";//":" + _Clients[client_fd]->getNickname() + " NICK " + _Clients[client_fd]->getNickname() + "\r\n";
 			//updateEpollEvents(client_fd, EPOLLOUT, true);
-			
-			_Clients[client_fd]->getMsg().queueMessage(":localhost NOTICE * :initilization has begun.......\r\n");
-			_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
+			client->getMsg().queueMessage("NICK " +  client->getNickname() + "\r\n");
+			client->getMsg().queueMessage(":localhost NOTICE * :initilization has begun.......\r\n");
+			client->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
+			//client->getMsg().queueMessage("NICK " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
 
 			//_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * END\r\n");
 			//_Clients[client_fd]->getMsg().queueMessage("NICK startingNick\r\n");
@@ -380,11 +383,11 @@ void Server::send_message(std::shared_ptr<Client> client)
 	fd = client->getFd();
 	
 	while (client->isMsgEmpty() == false && client->getMsg().getQueueMessage() != "") {
-
+		
 		std::string msg = client->getMsg().getQueueMessage();
 
 		size_t remaining_bytes_to_send = client->getMsg().getRemainingBytesInCurrentMessage();
-        const char* send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
+        std::string send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
 		
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
 					// Right before your queueMessage call:
@@ -401,7 +404,8 @@ void Server::send_message(std::shared_ptr<Client> client)
 		//while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
         //    ssize_t bytes_to_send = msg.length();
             //ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);
-            ssize_t bytes_sent = send(fd, send_buffer_ptr, remaining_bytes_to_send, MSG_NOSIGNAL);
+            ssize_t bytes_sent = send(fd, send_buffer_ptr.c_str(), remaining_bytes_to_send, MSG_NOSIGNAL);
+			
 			//usleep(5000); 
             if (bytes_sent == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -446,6 +450,9 @@ void Server::send_message(std::shared_ptr<Client> client)
         //} 
 	}
 	if (client->isMsgEmpty()) {
+		//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
+		//	send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
+
 		if (!client->get_acknowledged())
 		{
 			//ignore this for now
@@ -542,6 +549,9 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	
 	if (client->isMsgEmpty() == true)
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
+	//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
+	//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
+
 	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
 }
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
@@ -907,11 +917,107 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
  */
 
 # include <cstdlib>
-
+#include <fstream>
 //this is not an emergency 
+
 std::string generateUniqueNickname() {
+    std::vector<std::string> adjectives = {
+        "the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild",
+        "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"
+    };
+
+    std::string newNick = "anon" + adjectives[rand() % adjectives.size()] + static_cast<char>('a' + rand() % 26);
+
+    std::ofstream configFile("config");  // ✅ Opens the file for writing
+    if (configFile.is_open()) {
+        configFile << "servers = (\n";
+        configFile << "  {\n";
+        configFile << "    address = \"localhost\";\n";
+        configFile << "    port = 6669;\n";
+        configFile << "    nick = \"" << newNick << "\";\n";  // ✅ Ensures Irssi uses generated nickname
+        configFile << "    user = \"user_" << newNick << "\";\n";  // ✅ Explicit user field
+        configFile << "    realname = \"real_" << newNick << "\";\n";
+        configFile << "  }\n";
+        configFile << ");\n\n";
+
+        // ✅ Adding explicit settings to override machine defaults
+        configFile << "settings = {\n";
+        configFile << "  core = {\n";
+        configFile << "    real_name = \"real_" << newNick << "\";\n";
+        configFile << "    user_name = \"user_" << newNick << "\";\n";
+        configFile << "    nick = \"" << newNick << "\";\n";
+        configFile << "  };\n";
+        configFile << "};\n\n";
+
+        // ✅ Define a placeholder channel entry to force correct config parsing
+        configFile << "channels = (\n";
+        configFile << "  {\n";
+        configFile << "    name = \"#test_channel\";\n";
+        configFile << "    chatnet = \"LocalNet\";\n";
+        configFile << "    autojoin = \"No\";\n";
+        configFile << "  }\n";
+        configFile << ");\n\n";
+
+        // ✅ Keep structured elements for proper config interpretation
+        configFile << "IRCSource = {\n";
+        configFile << "  type = \"IRC\";\n";
+        configFile << "  max_kicks = \"1\";\n";
+        configFile << "  max_msgs = \"4\";\n";
+        configFile << "  max_whois = \"1\";\n";
+        configFile << "};\n";
+
+        configFile.close();
+        std::cout << "Config updated! Generated nickname: " << newNick << std::endl;
+    } else {
+        std::cerr << "Error: Unable to write to config file." << std::endl;
+    }
+
+    return newNick;
+}
+/*std::string generateUniqueNickname() {
     std::string newNick;
     std::vector<std::string> adjectives = {"the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild", "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"};
         newNick = "anon" + adjectives[ static_cast<size_t>(rand()) % adjectives.size()] + static_cast<char>('a' + rand() % 26);
-    return newNick;
+    std::ofstream configFile("config");  // ✅ Opens the file for writing
+    if (configFile.is_open()) {
+        configFile << "servers = (\n";
+        configFile << "  {\n";
+        configFile << "    address = \"localhost\";\n";
+        configFile << "    port = 6669;\n";
+        configFile << "    nick = \"" << newNick << "\";\n";  // ✅ Inserts generated name
+        configFile << "    username = \"user_" << "user_" + newNick << "\";\n";
+        configFile << "    realname = \"real_" << newNick + "\";\n";
+        configFile << "  }\n";
+        configFile << ");\n";
+
+        configFile.close();
+        std::cout << "Config updated! Generated nickname: " << newNick << std::endl;
+    } else {
+        std::cerr << "Error: Unable to write to config file." << std::endl;
+    }
+
+	return newNick;
+}*/
+
+void Server::handleWhoIs(std::shared_ptr<Client> client, std::string param) {
+		/*--If target_nick is generatedname (your client's actual nickname):
+		Send :<your_server_name> 311 generatedname generatedname ~user host * :realname\r\n
+		Send :<your_server_name> 318 generatedname generatedname :End of WHOIS list\r\n
+--*/
+		std::cout<<"show me the param = "<<param<<" and the nick ="<<client->getNickname()<<"\n";
+		if (param != client->getNickname()) // or name no exist for some reason 
+		{
+		    std::string whoisResponse = ":localhost 311 " + client->getNickname() + " " + client->getClientUname()  + " localhost * :"+ client->getfullName() + "\r\n";
+		    std::string whoisEnd = ":localhost 318 " + client->getNickname() + " " + client->getNickname() + " :End of WHOIS list\r\n";
+			//sendToClient(client.fd, whoisResponse);
+			client->getMsg().queueMessage(":" + client->getNickname() + " NICK " +  client->getNickname() + "\r\n");
+			client->getMsg().queueMessage(whoisResponse);
+			client->getMsg().queueMessage(whoisEnd);
+
+			//client->getMsg().queueMessage(":localhost 401 " + client->getNickname() + " " + params[0] + " :NO suck nick\r\n");
+			// if msg empty !!
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		}
+//		Send :<your_server_name> 401 generatedname configname :No such nick/channel\r\n (using generatedname as the source of the error, as that's the client's real nick).
+
 }

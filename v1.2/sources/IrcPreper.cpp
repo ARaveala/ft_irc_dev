@@ -73,7 +73,7 @@ void IrcMessage::prep_nickname_msg(std::string& nickname, std::deque<std::string
 
 void IrcMessage::prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList)
 {
-
+	
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
 	std::string test1 = ":localhost 353 " + nickname + " = " + channleName + " :" + clientList + "\r\n";
 	std::string test2 = ":localhost 366 " + nickname + " " + channleName + " :End of /NAMES list\r\n"; // ✅ End of names

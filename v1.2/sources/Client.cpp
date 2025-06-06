@@ -116,15 +116,15 @@ void Client::setDefaults(){
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
 	_nickName = generateUniqueNickname();
-	_username = _nickName;
-	_fullName = "fullanon";
+	_username = "user_" + _nickName;
+	_fullName = "real_" + _nickName;
 }
 
 void Client::sendPing() {
-	safeSend(_fd, "PING :server/r/n");
+	safeSend(_fd, "PING :localhost/r/n");
 }
 void Client::sendPong() {
-	safeSend(_fd, "PONG :server/r/n");
+	safeSend(_fd, "PONG :localhost/r/n");
 }
 
 

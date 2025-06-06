@@ -73,6 +73,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}*/
 	if (command == "USER")
 	{
+		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
+		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 		client->setHasSentUser();
 		//return ;
 	}
@@ -80,20 +82,29 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		if (client->getHasSentNick() == false)
 		{
 			std::cout<<"@@@@@@@@@@{{{{{{{{7777777777777777777CLIENT NICKNAME IS BEING SENT 1ST TIME--------------------ooooooooommmmmmmmmmmmmmm--------------\n";
-			std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
-
+			/*std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
+			
 			//client->getMsg().changeTokenParam(0, client->getNickname());
 			client->getMsg().queueMessage(":localhost 433 * "+ params[0] + " :Nickname is already in use.\r\n");
-			//client->getMsg().queueMessage(":" + oldnick + "!" + client->getNickname() + "@localhost NICK " +  client->getNickname() + "\r\n";);
+			_server->updateEpollEvents(client_fd, EPOLLOUT, true);*/
+			//client->getMsg().queueMessage("NICK " + client->getNickname() + "\r\n");
+
+			client->getMsg().queueMessage(":" + params[0] + " NICK " +  client->getNickname() + "\r\n");
 			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 			client->setHasSentNick();
 			return;
 			//std::cout<<"CHECKING PARAM AAAFTER WE HAVE CHANGING"<<client->getMsg().getParam(0)<<"\n";
 
 		}
+		//illegal????
+		std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
+		send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
+
 		client->setOldNick(client->getNickname()); // we might not need this anymore 
 		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
+		//client->getMsg().queueMessage("PING :server\r\n");
+
 		//sendToClient(client.fd, forcePing);
 		//std::string message = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());;
 		//send(client->getFd(), message.c_str(), message.size(), 0);
@@ -111,13 +122,21 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	}
 	if (command == "PING"){
-		client->sendPong();
+		
+//		client->sendPong();
 		std::cout<<"sending pong back "<<std::endl;
+		client->getMsg().queueMessage("PONG :localhost/r/n");
+		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return;
 		//Client->set_failed_response_counter(-1);
 		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
 	}
 	if (command == "PONG"){
-		std::cout<<"------------------- we recived pong inside message handling haloooooooooo"<<std::endl;
+		std::cout<<"sending ping back "<<std::endl;
+		client->getMsg().queueMessage("PING :localhost/r/n");
+		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return;
+
 	}
 
     if (command == "JOIN"){
@@ -458,17 +477,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "WHOIS")
 	{
-		/*If target_nick is generatedname (your client's actual nickname):
-		Send :<your_server_name> 311 generatedname generatedname ~user host * :realname\r\n
-		Send :<your_server_name> 318 generatedname generatedname :End of WHOIS list\r\n*/
-		std::cout<<"show me the param = "<<params[0]<<" and the nick ="<<client->getNickname()<<"\n";
-		if (params[0] != client->getNickname()) // or name no exist for some reason 
-		{
-			client->getMsg().queueMessage(":localhost 401 " + client->getNickname() + " " + params[0] + " :NO suck nick\r\n");
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		}
-//		Send :<your_server_name> 401 generatedname configname :No such nick/channel\r\n (using generatedname as the source of the error, as that's the client's real nick).
-	}
+		_server->handleWhoIs(client, params[0]);
 
+	}
 	//client->getMsg().printMessage(client->getMsg());
 }

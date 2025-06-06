@@ -58,7 +58,7 @@ void debug_helper_print_events(struct epoll_event* events)
  * how to test if everything is non blocking MAX CLIENTS IS MAX 510 DUE TO USING EPOLL FOR TIMER_FD ALSO,
  * SIGNAL FD AND CLIENT FDS AND SERVER FD
  */
-
+#include <chrono>
 int loop(Server &server)
 {
 	int epollfd = 0;
@@ -71,7 +71,7 @@ int loop(Server &server)
 	{
 		// from epoll fd, in events struct this has niche error handling
 		int nfds = epoll_pwait(epollfd, events, config::MAX_CLIENTS, config::TIMEOUT_EPOLL, &sigmask);
-		if (nfds != 0)
+		if (nfds == 0)
 			std::cout << "epoll_wait returned: " << nfds << " events\n";
 		/*if (errno == EINTR) {
 			std::cerr << "accept() interrupted by signal, retrying..." << std::endl;
@@ -100,13 +100,14 @@ int loop(Server &server)
 						server.handle_client_connection_error(e.getType());
 					}
 				}
-				else if (server.get_Client(fd)->get_acknowledged() == true) {
+				else if (server.get_Client(fd)->get_acknowledged() == true && server.get_Client(fd)->getQuit() == false) {
 					bool read_to_buffer = server.checkTimers(fd);
 					if (read_to_buffer == true)
 					{
 						try {
 							//std::cout<<" reciveing message\n";
-							server.get_Client(fd)->receive_message(fd, server);
+							server.handleReadEvent(fd);
+							//server.get_Client(fd)->receive_message(fd, server);
 							//std::cout<<" message recived\n";
 							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
@@ -124,11 +125,13 @@ int loop(Server &server)
 			if (events[i].events & EPOLLOUT) {
 				int fd = events[i].data.fd;
 				try {
-					//if (_Clients[client_fd]->get_acknowledged())
+					auto now = std::chrono::system_clock::now();
+					auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+					std::cout << "DEBUG: send triggered----------------- " << ms << " ms for FD " << fd << std::endl;
 					server.send_message(server.get_Client(fd));
 					std::cout<<"client messages should be sent by now !!!!\n";
-					server.send_server_broadcast();
-					server.sendChannelBroadcast();
+					if (server.get_Client(fd)->getQuit() == true)
+						server.remove_Client(fd);
 				} catch(const ServerException& e) {
 					if (e.getType() == ErrorType::NO_Client_INMAP)
 						continue ;

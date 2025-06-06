@@ -52,8 +52,10 @@ enum class ErrorType {
 
 namespace Modes {
 	enum ClientMode {
-   		OPERATOR,     	// 0
-		CLIENT_NONE			// 1
+   		OPERATOR,		// 0
+		FOUNDER,		// 1
+		CLIENT_NONE,	// 2
+		INVISABLE		// 3
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0
@@ -71,11 +73,12 @@ namespace Modes {
  */
 namespace config {
 	constexpr int MAX_CLIENTS = 10;
-	constexpr int TIMEOUT_CLIENT = 3000; // this should be larger than epoll timeout
-	constexpr int TIMEOUT_EPOLL = 0;
+	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
+	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CLIENT_NUM_MODES = 3;
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
+	constexpr std::size_t MSG_TYPE_NUM = 9;
 }
 
 namespace errVal {
@@ -115,12 +118,12 @@ namespace IRCMessage {
 	inline constexpr const char* pass_msg = "PASS :password\r\n";
 	inline std::string get_nick_msg(const std::string& nickname) {
 		std::stringstream ss;
-        ss << "@ft_irc new nickname is now :" << nickname << "\r\n";
+        ss << "@localhost new nickname is now :" << nickname << "\r\n";
         return ss.str(); }
 	inline constexpr const char* nick_msg = "*:*!Client@localhost NICK :helooo\r\n";	
 	//inline constexpr const char* nick_msg = ":NICK :helooo\r\n";
 	//inline constexpr const char* nick_msg = ":*!Client@localhost NICK :helooo\r\n";	
-	//inline constexpr const char* nick_msg = "@ft_irc new nickname name is now :nickname\r\n";
+	//inline constexpr const char* nick_msg = "@localhost new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
 /**
@@ -130,6 +133,7 @@ namespace IRCMessage {
  */
 namespace FuncType {
 	using DequeRef1 = std::function<void(std::deque<std::string>&)>;
+	//using setMsgRef = std::function<void(MsgType, std::vector<std::string>&)>;
 }
 /*
 This is like global variables but its encapsulated in the Config, so its much harder to 

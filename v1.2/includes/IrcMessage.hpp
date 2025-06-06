@@ -10,13 +10,14 @@
 #include "IrcResources.hpp"
 #include <bitset>
 #include <functional>
+#include "config.h"
 class Client; // Forward declaration
 class Server;
 
 class IrcMessage {
 	private:
 		// int current_fd;
-		std::bitset<8> _msgState;  //tracks active error
+		std::bitset<config::MSG_TYPE_NUM> _msgState;  //tracks active error
 	    std::vector<std::string> _params;
 		MsgType _activeMsg = MsgType::NONE;
 
@@ -30,7 +31,7 @@ class IrcMessage {
 		std::map<std::string, int> nickname_to_fd;
 		std::map<int, std::string> fd_to_nickname;
 		static const std::set<std::string> _illegal_nicknames;
-	
+	 	size_t _bytesSentForCurrentMessage = 0;
 		static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
@@ -53,26 +54,36 @@ class IrcMessage {
 		void printMessage(const IrcMessage& msg);
 
 		
-		
+		bool isActive(MsgType type) {
+		    return _msgState.test(static_cast<size_t>(type));
+		}
+		MsgType getActiveMessageType() const {
+    		return _activeMsg;  // Returns the currently active message type
+		}
+
 		// araveala has added this to help give you full control
+		int countOccurrences(const std::string& text, const std::string& pattern);
 		// naming is changable
 		// these are now required as subject requires all activity including read and write
 		// must go through epoll
 		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
-		void removeQueueMessage() { _messageQue.pop_front();};
+		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
+		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };
-		std::string getQueueMessage() { return _messageQue.front();};
-		void prep_nickname(std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
+		std::string& getQueueMessage() { return _messageQue.front();};
+		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
-		void prep_join_channel(std::string channleName, std::string& nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
+		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
+		//void prepWelcomeMessage(std::string& nickname);//, std::deque<std::string>& messageQue);
 		// apprenbtly this is normal, can look at mariadb databse code, huge signitures but small code bodies. no need to pass entire object 
-		void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
-		//void handle_message(Client& Client, const std::string message, Server& server);
+		//void readyQuit(std::deque<std::string>& channelsToNotify, std::function<void(std::deque<std::string>&)>, int fd, std::function<void(int)> removeClient);
+		//void dispatchCommand(Client& Client, const std::string message, Server& server);
 		void clearQue() {_messageQue.clear();};
 
-
-		MsgType getActiveMsgType() const;
+		const std::string getMsgParam(int index) const{ return _params[index]; };
+		void changeTokenParam(int index, const std::string& newValue) {_paramsList[index] = newValue;};
+		const std::vector<std::string>& getMsgParams() { return _params; };
+		//MsgType getActiveMsgType() const { return _msgState; };
 
 
 		// moving from server to here 
@@ -86,10 +97,10 @@ class IrcMessage {
 		// message types and params
 		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
 		
-		void setWelcomeType(std::vector<std::string> sendParams);
+		//void setWelcomeType(std::vector<std::string> sendParams);
 	
 	    void callDefinedMsg();//(MsgType msgType);
-	
+		void callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast);
 		//void getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue);
 		// cleanup functions
 		void clearAllMsg() {
@@ -100,8 +111,17 @@ class IrcMessage {
 			//_illegal_nicknames.clear()
 		};
 
-
-
+		void advanceCurrentMessageOffset(ssize_t bytes_sent) {
+		        _bytesSentForCurrentMessage += bytes_sent;
+		    }
+		size_t getRemainingBytesInCurrentMessage() const {
+        		if (_messageQue.empty()) return 0;
+        	return _messageQue.front().length() - _bytesSentForCurrentMessage;
+    	}
+		const char* getCurrentMessageCstrOffset() const {
+		       if (_messageQue.empty()) return nullptr;
+		       return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
+		   }
 
 
 };

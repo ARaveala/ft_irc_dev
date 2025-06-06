@@ -13,8 +13,13 @@
 // connection registration
 // https://modern.ircdocs.horse/#connection-registration
 
+#include "CommandDispatcher.hpp"
 
-
+/*enum sendToo {
+	PRIV,
+	CHANNEL,
+	SERVER
+};*/
 /**
  * @brief The server class manages server related requests and 
  * redirects to client/Client, message handling or channel handling when
@@ -40,6 +45,7 @@ class Server {
 		int _signal_fd;
 		int _epoll_fd;
 		int _private_fd = 0;
+		
 		std::string _password;
 
 		std::map<const std::string, std::shared_ptr<Channel>> _channels;
@@ -51,10 +57,15 @@ class Server {
 		////std::map<int, std::string> fd_to_nickname;
 		std::map<int, struct epoll_event> _epollEventMap;
 		////static const std::set<std::string> _illegal_nicknames;
-		// Helper function to convert a string to lowercase (defined inline in header)
+
+	// attempt to make a singulat place for all message deques.
+		//std::map<sendToo, std::deque<std::string>> _toSend;
+
+
 		std::deque<std::string> _server_broadcasts; // for broadcasting server wide messages
 		std::deque<std::string> _channel_broadcasts;
-		std::deque<std::string> _channelsToNotify;
+		//std::deque<std::string> _channelsToNotify;
+		std::deque<std::shared_ptr<Channel>> _channelsToNotify;
 		/*static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
@@ -74,7 +85,7 @@ class Server {
 		std::map<std::string, int> _nickname_to_fd;
 		std::map<int, std::string> _fd_to_nickname;
 		
-
+		std::unique_ptr<CommandDispatcher> _commandDispatcher;
 		// Using std::map for nicknames; use std::unordered_map if preferred
 		// #include <unordered_map>
 		
@@ -102,6 +113,9 @@ class Server {
 		////bool check_and_set_nickname(std::string nickname, int fd);  // ai
 		// get channel
 		
+		void setEpollout(int fd);
+
+		
 		// GETTERS
 		int getPort() const;
 		int getFd() const;
@@ -110,16 +124,19 @@ class Server {
 		int get_client_count() const;
 		int get_event_pollfd() const;
 		int get_current_client_in_progress() const;
+		
 		//epoll_event& get_epoll_event_struct(int fd);
 		std::map<int, struct epoll_event> get_struct_map() {return _epollEventMap; };
 		std::string get_password() const;
 		////std::string get_nickname(int fd) const;  // ai
 		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
 		std::deque<std::string>& getChannelBroadcastQue() { return _channel_broadcasts; }
-		std::deque<std::string>& getChannelsToNotify() { return _channelsToNotify; }
+		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
 		// returns a Client shared_pointer from the map
 		std::shared_ptr<Client> get_Client(int fd);
+		std::map<int, std::shared_ptr<Client>> get_Clients() {return _Clients;};
 		std::shared_ptr<Channel> get_Channel(std::string channelName);
+		
 		std::map<int, std::string>& get_fd_to_nickname();
 		std::map<std::string, int>& get_nickname_to_fd();
 		// returns the whole map 
@@ -131,7 +148,15 @@ class Server {
 		void shutdown();
 		bool checkTimers(int fd);
 		////void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
+	
+		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
+
+
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
+		void addChannelMessage(std::string message)  {_channel_broadcasts.push_back(message);};
+
+
+
 		// epoll stuff
 		int setup_epoll(int epoll_fd, int fd, uint32_t events);
 		int setup_epoll_timer(int epoll_fd, int timeout_seconds);
@@ -145,6 +170,13 @@ class Server {
 		bool channelExists(const std::string& channelName) const;
 		void createChannel(const std::string& channelName);//, Client& client
 		Channel* getChannel(const std::string& channelName);
+		void handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password);
+		void handleReadEvent(int client_fd);
+		void handleQuit(std::shared_ptr<Client> client);
+		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender);
+		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
+		void handleNickCommand(std::shared_ptr<Client> client);
+		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
 };
 
 std::string generateUniqueNickname();

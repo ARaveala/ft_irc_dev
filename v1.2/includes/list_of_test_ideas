@@ -1,0 +1,32 @@
+nick name 
+* empty
+* taken nickname
+* nickname had unwanted characters
+
+modes
+* more client modes than client names +ioo user1
+* more client names than client modes +io user1 user2
+* channel modes and client modes with and without client names
+* client names that dont exist
+* client names that are not in the channel
+* client name that has just been kicked.
+
+join
+* join multiple clienst
+* join invite only 
+* join after kcicked
+* join when in another channel
+
+part
+* when not in a channel
+* when in a channel
+* when in multiple channels
+* try to activate mode when parted
+
+send bible
+
+] /RAWLOG OPEN ~/logz/log.log
+sudo tcpdump -i lo port 6668 -A | grep PRIVMSG to look for priv message only 
+sudo netstat -tnp | grep port num show us connected clients and server
+
+when testing with netcat, send irssi to server, add \r\n press cntrlv then cntrl m then enter 

@@ -23,6 +23,8 @@
  * 
  */
 
+
+
 /**
  * @brief Creates a struct for epoll events such as EPOLLIN
  * for monitoring and adds the created struct to a kernel-managed data structure,
@@ -37,31 +39,14 @@ int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 
 	event.events = events; // Monitor for read events
 	event.data.fd = fd; // File descriptor to monitor
-	//int add_result = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event);
-	//if (add_result == -1) {
-	//	std::cerr << "EPOLL ADD ERROR: FD " << fd << " failed! Errno: " << strerror(errno) << std::endl;
-	//} else {
-	//}
+
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == errVal::FAILURE)
 		throw ServerException(ErrorType::EPOLL_FAILURE_1, "could not add fd to epoll");
-		/*auto it = _epollEventMap.find(fd);
-		if (it != _epollEventMap.end()) {
-			epoll_event ev = it->second;
-			// Use ev safely
-		}*///do we really need to check if it exists before adding it ? 
-	
+
 	_epollEventMap.emplace(fd, event);//[fd] = event;
 	
 	std::cout << "✅ FD " << fd << " successfully added to epoll!" << std::endl;
 
-	/*std::cout << "Current epoll event map state:" << std::endl;
-	for (const auto& [fd, ev] : _epollEventMap) {
-		std::cout << "FD " << fd << " → Events: "
-				<< ((ev.events & EPOLLIN) ? " READ " : "")
-				<< ((ev.events & EPOLLOUT) ? " WRITE " : "")
-				<< ((ev.events & EPOLLERR) ? " ERROR " : "")
-				<< std::endl;
-	}*/
 	return 0;
 }
 

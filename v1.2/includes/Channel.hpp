@@ -17,7 +17,7 @@
  * if either left or right weak_ptr is expired it prevents us from comapring them . 
  * 
  */
-struct WeakPtrCompare {
+/*struct WeakPtrCompare {
     bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
         auto l = lhs.lock();  // Convert weak_ptr to shared_ptr safely
         auto r = rhs.lock();  
@@ -26,8 +26,16 @@ struct WeakPtrCompare {
 
         return l->getNickname() < r->getNickname();
     }
-};
+};*/
 
+struct WeakPtrCompare {
+    bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
+        // This provides a strict weak ordering for weak_ptrs (and shared_ptrs),
+        // based on the address of their internal control block.
+        // It correctly handles expired and null weak_ptrs consistently.
+        return lhs.owner_before(rhs);
+    }
+};
 /*std::string buildNicknameListFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
 	std::string nickNameList = nullptr;
 	while (auto clientPtr = weakClient.lock()) {  // ✅ Convert weak_ptr to shared_ptr safely
@@ -52,9 +60,12 @@ class Channel {
 	private:
 		std::string _name;
 		std::string _topic;
+		int _ClientLimit = 0;
 		int _clientCount = 0;
-		std::map<std::weak_ptr<Client>, std::pair<std::bitset<2>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
-		std::bitset<5> _ChannelModes;
+		std::string _password;
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+		std::bitset<config::CHANNEL_NUM_MODES> _ChannelModes;
+		std::deque<std::string> _invites;
 		// this does need its own map your right, only of the joined clienst focourse
 		// duh
 		///std::map<int, std::shared_ptr<Client>>& _clients;
@@ -67,18 +78,38 @@ class Channel {
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
 		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
-		
-		void setMode(std::string mode, std::string nickname); // const 
+		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
+		int setClientMode(std::string mode, std::string nickname, std::string currentClientName); // const 
+		int setChannelMode(std::string mode, std::string nickname, std::string currentClientName, std::string channelname, const std::string pass, std::map<std::string, int>& listOfClients,  std::function<void(MsgType, std::vector<std::string>&)> setMsgType);
 		Modes::ClientMode charToClientMode(const char& modeChar);
 		Modes::ChannelMode charToChannelMode(const char& modeChar); 
+		//void setChannelMode(std::string mode);
+		bool setModeBool(char onoff);
+		bool canClientJoin(const std::string& nickname, const std::string& password );
+
+
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
-		bool isClientInChannel(Client* Client) const;
+
+		bool isClientInChannel(const std::string& nickname) const {
+			for (const auto& entry : _ClientModes) {
+        		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+            		return true;
+        	}
+			return false;
+    }
+	// we could substitute with a throw here
+    return {};  // return empty weak_ptr if no match is found
+		};
+
+//		bool isClientInChannel(Client* Client) const;
+
 		//const std::set<Client*>& getClient() const;
 		//bool addOperator(Client* Client);
 		bool removeOperator(Client* Client);

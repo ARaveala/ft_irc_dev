@@ -18,6 +18,7 @@
 #include "SendException.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
+#include <regex>
 //#include "ChannelManager.hpp"
 // --- Constructor ---
 IrcMessage::IrcMessage() {}
@@ -32,7 +33,12 @@ void IrcMessage::setCommand(const std::string& command) { _command = command; }
 const std::string& IrcMessage::getPrefix() const { return _prefix; }
 const std::string& IrcMessage::getCommand() const { return _command; }
 const std::vector<std::string>& IrcMessage::getParams() const { return _paramsList; }
-const std::string IrcMessage::getParam(unsigned long index) const { return _paramsList[index]; }
+const std::string IrcMessage::getParam(unsigned long index) const { 
+	// needs to check index is not out of bounds
+	//if (_paramsList.size() >= index)
+	//	return "";
+	return _paramsList[index];
+ }
 
 // definition of illegal nick_names ai
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
@@ -41,22 +47,28 @@ std::set<std::string> const IrcMessage::_illegal_nicknames = {
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(msg));  //activate only one msg
-
 	_activeMsg = msg;
 	_params.clear();
 	_params = sendParams;
 }
 
-void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
+/*void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
-    _msgState.set(static_cast<size_t>(MsgType::WELCOME));  //activate only one msg
+    _msgState.set(static_cast<size_t>(MsgType::WELCOME));
 	_msgState.set(static_cast<size_t>(MsgType::HOST_INFO));
 	_msgState.set(static_cast<size_t>(MsgType::SERVER_CREATION));
 	_msgState.set(static_cast<size_t>(MsgType::SERVER_INFO));
 	_params.clear();
 	_params = sendParams;
-}
+}*/
 
+int IrcMessage::countOccurrences(const std::string& text, const std::string& pattern) {
+    std::regex regexPattern(pattern);  // Create regex from pattern
+    auto begin = std::sregex_iterator(text.begin(), text.end(), regexPattern);
+    auto end = std::sregex_iterator();
+
+    return std::distance(begin, end);  // Count matches
+}
 /*MsgType IrcMessage::getActiveMsgType() const {
     for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {
@@ -65,7 +77,16 @@ void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
     }
     return MsgType::NONE;
 }*/
-
+void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast)
+{
+	for (size_t i = 0; i < _msgState.size(); ++i) {
+        if (_msgState.test(i)) {
+			MsgType msgType = static_cast<MsgType>(i);
+			std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
+			channelbroadcast.push_back(TheMessage);
+        }
+    }	
+}
 void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
 {
 	for (size_t i = 0; i < _msgState.size(); ++i) {
@@ -82,13 +103,17 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
 
     // 1. Check for invalid characters
 	// check nickname exists
-    if (nickname.empty()) {
-         std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
+	std::cout << "#### Nickname '" << nickname  << fd << ": Empty." << std::endl;
+
+	if (nickname.empty()) {
+		std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
         return false;
     }
 	// check nickname is all lowercase
     for (char c : nickname) {
          if (!std::islower(static_cast<unsigned char>(c))) {
+			if (c == '_')
+				continue;
              std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Contains non-lowercase chars." << std::endl;
              return false;
          }
@@ -141,7 +166,7 @@ bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<i
          std::cout << "#### FD " << fd << " does not have an existing nickname." << std::endl;
     }
 
-    // udpate both maps
+    // update both maps
     std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
 	nick_to_fd.insert({processed_nickname, fd});
     fd_to_nick.insert({fd, processed_nickname});
@@ -158,43 +183,44 @@ std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_n
      if (it != fd_to_nick.end()) {
          return it->second; // Return the nickname
      }
-     return "";
+     return ""; //todo this looks odd - it returns nothing, but not eg null?
 }
+
 /*std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
 	return _fd_to_nickname;
 }*/
+
 int IrcMessage::get_fd(const std::string& nickname) const {
      std::string processed_nickname = to_lowercase(nickname);
 
      auto it = _nickname_to_fd.find(processed_nickname);
      if (it != _nickname_to_fd.end()) {
-         return it->second; // Return the fd
+         return it->second;
      }
      return -1; // nickname not found
 }
 
+
+/**
+ * @brief Call this when a client disconnects to clean up their nickname entry.
+ * @param fd file discriptor.
+ * @param fd_to_nick map of fd<-nickname.
+ * @return void
+ */
 void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
-    // Call this when a client disconnects to clean up their nickname entry
-    auto fd_it = fd_to_nick.find(fd);
-    if (fd_it != fd_to_nick.end()) {
-
-        // find the nickname from the fd
-		std::string old_nickname = fd_it->second;
-        
+    auto it = fd_to_nick.find(fd);
+    if (it != fd_to_nick.end()) {
+		std::string old_nickname = it->second;
 		std::cout << "#### Removing fd " << fd << " and nickname '" << old_nickname << "' due to disconnect." << std::endl;
-
-        // Remove from nickname_to_fd map using the nickname
         _nickname_to_fd.erase(old_nickname);
-        // Remove from fd_to_nickname map using the iterator
-		fd_to_nick.erase(fd_it);
-
+		fd_to_nick.erase(it);
         std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
     } else {
          std::cout << "#### No nickname found for fd " << fd << " upon disconnect." << std::endl;
     }
 }
 
-// --- Parse Method (Corrected Parameter Handling) ---
+//asdf
 bool IrcMessage::parse(const std::string& rawMessage)
 {
     // 1. Clear previous state
@@ -202,93 +228,108 @@ bool IrcMessage::parse(const std::string& rawMessage)
     _command.clear();
     _paramsList.clear();
 
-    // 2. Find the CRLF terminator (\r\n)
-    size_t crlf_pos = rawMessage.find("\r\n");
-    if (crlf_pos == std::string::npos) {
-        // std::cerr << "Error: Message missing CRLF terminator." << std::endl; // Keep for debugging
-        return false;
+    std::string message_content = rawMessage;
+	std::cout<<"¤¤¤¤¤¤¤ showing raw message= "<<rawMessage<<" showing message_content = "
+	<< message_content<<"\n";
+    // Remove any trailing \r or \n characters
+    // This makes the parsing more robust to different newline styles.
+    while (!message_content.empty() &&
+           (message_content.back() == '\r' || message_content.back() == '\n')) {
+        message_content.pop_back();
     }
 
-    // Work with the message content before CRLF
-    std::string message_content = rawMessage.substr(0, crlf_pos);
     if (message_content.empty()) {
-         // std::cerr << "Error: Empty message content before CRLF." << std::endl;
-         return false;
-    }
-
-    std::stringstream ss(message_content); // Use stringstream
-
-    std::string first_token;
-    ss >> first_token; // Read the first token
-
-    if (first_token.empty()) {
-        // Should ideally not happen if message_content is not empty
+        // Only newlines or empty message received
+        // std::cerr << "Debug: Received empty line or only newlines." << std::endl;
         return false;
     }
+
+    std::stringstream ss(message_content);
+
+    std::string current_token;
 
     // 3. Check for prefix (starts with ':')
-    if (first_token[0] == ':') {
-        _prefix = first_token.substr(1); // Store prefix (without the leading ':')
+    // Read the first token (will skip leading spaces, which is fine)
+    ss >> current_token;
+
+    if (current_token.empty()) {
+        // This should not happen if message_content is not empty, but good for robustness
+        return false;
+    }
+
+    if (current_token[0] == ':') {
+        _prefix = current_token.substr(1); // Store prefix (without the leading ':')
 
         // Attempt to read the command - must exist after a prefix
-        std::string command_token;
-        if (!(ss >> command_token) || command_token.empty()) {
+        if (!(ss >> _command) || _command.empty()) {
              // std::cerr << "Error: Prefix present but no command found after it." << std::endl;
              _prefix.clear(); // Clear prefix if command is missing
              return false;
         }
-        _command = command_token;
-
     } else {
         // No prefix, the first token is the command
-        _command = first_token;
+        _command = current_token;
     }
 
-    // Command is mandatory		safeSend(Client->getFd(), test1);
-
+    // Command is mandatory as per IRC RFC.
     if (_command.empty()) {
-         // std::cerr << "Error: No command found." << std::endl;
+         // This check is a bit redundant if previous checks pass, but harmless.
          return false;
     }
 
     // 4. Process parameters
-    std::string params_part; // String containing all characters after the command/space
-    // Use getline to read the REST of the stringstream's line
-    std::getline(ss, params_part);
+    // After reading the command, the stream pointer is at the start of parameters or end of line.
+    // We need to get the rest of the line, including any leading spaces that follow the command
+    // and any internal spaces within a trailing parameter.
 
-    // Trim leading space(s) that were between command and parameters
-    size_t first_param_char_pos = params_part.find_first_not_of(" ");
+    std::string remainder_of_line;
+    std::getline(ss, remainder_of_line); // Read all remaining characters on the line
 
-    if (first_param_char_pos == std::string::npos) {
-        // No parameters found (only whitespace or empty string remaining)
-        return true; // Parsing successful
+    // Trim leading whitespace from remainder_of_line
+    size_t first_non_space = remainder_of_line.find_first_not_of(" ");
+    if (first_non_space == std::string::npos) {
+        // No parameters or only whitespace after the command
+        return true; // Parsing successful, no parameters
     }
+    remainder_of_line = remainder_of_line.substr(first_non_space);
 
-    // The actual string containing parameters, starting from the first non-space character
-    std::string actual_params_str = params_part.substr(first_param_char_pos);
+    // --- REVISED PARAMETER PARSING ---
+    std::stringstream params_ss(remainder_of_line);
+    std::string param_token;
 
-    // Check for trailing parameter (starts with ':')
-    if (!actual_params_str.empty() && actual_params_str[0] == ':') {
-        // The rest of the string *after the colon* is a single parameter.
-        // Handle the case where only ":" is left (empty trailing parameter).
-         if (actual_params_str.length() > 1) {
-             _paramsList.push_back(actual_params_str.substr(1)); // Store content after ':'
-         } else {
-             _paramsList.push_back(""); // The parameter is an empty string (case: "COMMAND :")
-         }
+    // Loop through parameters
+    while (params_ss >> param_token) { // Read token by token
+        if (param_token[0] == ':') {
+            // Found a leading colon for a parameter. This means it's the trailing parameter.
+            // All remaining content in the stringstream, starting from the character
+            // after the colon, is part of this single parameter.
 
-    } else {
-        // No leading colon, split parameters by spaces
-        std::stringstream params_ss(actual_params_str);
-        std::string param_token;
-        while (params_ss >> param_token) {
+            // Get the part AFTER the colon
+            std::string actual_trailing_content = param_token.substr(1);
+
+            // Append any remaining content from the stringstream
+            // (There might be a space after the ':token' if it's not at the end of the line)
+            std::string rest_of_trailing;
+            std::getline(params_ss, rest_of_trailing); // Get the rest of the line
+
+            // Concatenate the initial part (after colon) with the rest.
+            // If rest_of_trailing is not empty, it implies there was a space, so add it back.
+            if (!rest_of_trailing.empty()) {
+                actual_trailing_content += rest_of_trailing;
+            }
+            
+            _paramsList.push_back(actual_trailing_content);
+            break; // After processing the trailing parameter, we are done with parameters.
+        } else {
+            // Not a trailing parameter, just a regular middle parameter.
             _paramsList.push_back(param_token);
         }
     }
+    // --- END REVISED PARAMETER PARSING ---
 
-    // If we reached here, parsing of command and parameters was successful
-    return true;
+    return true; // Parsing successful
 }
+
 
 
 // --- toRawString Method (Same as before, should work correctly with fixed parsing) ---
@@ -304,28 +345,18 @@ std::string IrcMessage::toRawString() const
     // 2. Add command (command is mandatory according to structure)
     ss << _command;
 
-    // 3. Add parameters
+// 3. Add parameters
     for (size_t i = 0; i < _paramsList.size(); ++i) {
-        // All parameters are space-separated
-        ss << " ";
+        ss << " "; // All parameters are space-separated
 
-        // Check if this is the last parameter AND if it contains a space or is empty
-        bool is_last_param = (i == _paramsList.size() - 1);
-        bool needs_trailing_prefix = false;
-
-        if (is_last_param) {
-            // Check if the last parameter contains a space or is empty
-            if (_paramsList[i].find(' ') != std::string::npos || _paramsList[i].empty()) {
-                 needs_trailing_prefix = true;
-            }
+        // If this is the LAST parameter, it always gets a leading colon.
+        // This is the standard behavior for "trailing" parameters in IRC.
+        if (i == _paramsList.size() - 1) {
+            ss << ":" << _paramsList[i]; // Add the colon and the parameter value
+        } else {
+            // Otherwise, it's a middle parameter, just add its value
+            ss << _paramsList[i];
         }
-
-        if (needs_trailing_prefix) {
-            ss << ":"; // Add the trailing prefix
-        }
-
-        // Add the parameter value
-        ss << _paramsList[i];
     }
 
     // 4. Add the CRLF terminator

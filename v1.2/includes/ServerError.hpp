@@ -25,7 +25,7 @@ class ServerException : public std::exception {
 		std::string get_error_msg() const {
 		switch (_type) {
            	case ErrorType::CLIENT_DISCONNECTED: return "Client Disconnected";
-        	case ErrorType::SERVER_SHUTDOWN: return "server shutdown destroying evrything hold .....";
+        	case ErrorType::SERVER_shutDown: return "server shutDown destroying evrything hold .....";
 			case ErrorType::EPOLL_FAILURE_0: return "Epoll failed to complete"; //clean
 			case ErrorType::EPOLL_FAILURE_1: return "Epoll failed to complete"; // dirty 
 			case ErrorType::SOCKET_FAILURE: return "socket failed to complete"; // can i move this to socket exception

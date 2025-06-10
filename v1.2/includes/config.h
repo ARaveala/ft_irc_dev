@@ -37,7 +37,7 @@ namespace Global {
 
 enum class ErrorType {
 	CLIENT_DISCONNECTED,
-	SERVER_SHUTDOWN,
+	SERVER_shutDown,
 	EPOLL_FAILURE_0,
 	EPOLL_FAILURE_1,
 	SOCKET_FAILURE,
@@ -50,12 +50,15 @@ enum class ErrorType {
 
 };
 
+//HANDLE HERE seperate modes client and channel are seperate u twat
+// reconsider bitset to bool ??? 
 namespace Modes {
 	enum ClientMode {
    		OPERATOR,		// 0
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
-		INVISABLE		// 3
+		INVISABLE,		// 3
+
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0

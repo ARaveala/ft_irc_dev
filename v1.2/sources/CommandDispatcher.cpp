@@ -39,9 +39,15 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
     }
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
+	std::cout<<"handling cap with param = "<<params[1]<<"\n";
 	// this may not be needed but could be the soruce of inconsitent behaviour, it has not fixed it ;(
 	if (command == "CAP")
 	{
+		client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " LS :multi-prefix sasl\r\n");
+        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :multi-prefix\r\n");
+        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :END\r\n");
+		client->setHasSentCap();
+
 		/*if (params[0] == "LS")
 		{
 			client->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
@@ -49,12 +55,34 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		}
 			return;*/
-		if (params[0] == "END")
-			return;
-		std::string msg = MessageBuilder::buildCapResponse(client->getNickname(), params[1]);
-		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		client->getMsg().queueMessage(msg);
-		client->setHasSentCap();
+		/*if (params[0] == "END")
+		{
+			
+			//std::cout<<"handling cap end = \n";
+			client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :END\r\n");
+			
+			
+			
+			//client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " END\r\n");
+			client->getMsg().queueMessage(":localhost 322 " + client->getNickname() + " #testchannel 10 :Testing channel\r\n");
+			client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
+			client->getMsg().queueMessage(":localhost JOIN #testchannel\r\n");
+
+
+			//client->getMsg().queueMessage(":localhost 461 " + client->getNickname() + " :No enough parameters\r\n");
+			//client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :No active channels\r\n");
+			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			//return;
+			client->setHasSentCap();
+
+		}
+		else {
+			std::string msg = MessageBuilder::buildCapResponse(client->getNickname(), params[1]);
+			std::cout<<"TTTTTTTTTTTTTTTT ====== what we sending back for caps ["<<msg<<"]\n";
+			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			client->getMsg().queueMessage(msg);
+			
+		}*/
 	}
 	if (command == "QUIT")
 	{
@@ -74,6 +102,17 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "USER")
 	{
 		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
+		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
+		client->getMsg().queueMessage(msg);
+		// stating end of registartion 
+		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
+		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+		//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
+		//client->getMsg().queueMessage(":localhost NOTICE server :User state finalized.\r\n");
+
+//		
+//		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+		//client->getMsg().queueMessage(":localhost 005 " + client->getNickname() + " :NETWORK=YourIRC\r\n");
 		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 		client->setHasSentUser();
 		//return ;
@@ -88,31 +127,45 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			client->getMsg().queueMessage(":localhost 433 * "+ params[0] + " :Nickname is already in use.\r\n");
 			_server->updateEpollEvents(client_fd, EPOLLOUT, true);*/
 			//client->getMsg().queueMessage("NICK " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":server NOTICE * :Nickname processed\r\n");
+			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
+			//client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
 
-			client->getMsg().queueMessage(":" + params[0] + " NICK " +  client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":server NOTICE * :User " + params[0] + " changed nickname to " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":server NOTICE * :Nickname processed\r\n");
+			//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
+			//client->getMsg().queueMessage(":server NICK " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":server 311 " + client->getNickname() + " " + client->getNickname() + " localhost * :Real Name\r\n");
+			//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
+			//client->getMsg().queueMessage("WHOIS " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
 			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 			client->setHasSentNick();
 			return;
 			//std::cout<<"CHECKING PARAM AAAFTER WE HAVE CHANGING"<<client->getMsg().getParam(0)<<"\n";
 
 		}
+
 		//illegal????
-		std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
-		send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
+		//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
+		//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
 
 		client->setOldNick(client->getNickname()); // we might not need this anymore 
 		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
+		
 		//client->getMsg().queueMessage("PING :server\r\n");
-
+		//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
 		//sendToClient(client.fd, forcePing);
 		//std::string message = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());;
 		//send(client->getFd(), message.c_str(), message.size(), 0);
 		//client->safeSend(client->getFd(), "PONG :server/r/n");
-		//shutdown(client->getFd(), SHUT_WR); 
+		//shutDown(client->getFd(), SHUT_WR); 
 		return ; 
 	}
-	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
+	/*if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
 		client->setHasRegistered();
 		//usleep(5000);
 		//client->getMsg().queueMessage(":server 001 " + client->getNickname() + " :Welcome to IRC!\r\n");
@@ -120,12 +173,13 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		client->getMsg().queueMessage(msg);
 		
 
-	}
+	}*/
 	if (command == "PING"){
 		
 //		client->sendPong();
 		std::cout<<"sending pong back "<<std::endl;
 		client->getMsg().queueMessage("PONG :localhost/r/n");
+		client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
 		//Client->set_failed_response_counter(-1);
@@ -133,7 +187,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "PONG"){
 		std::cout<<"sending ping back "<<std::endl;
+		
 		client->getMsg().queueMessage("PING :localhost/r/n");
+		
+		
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
 
@@ -144,7 +201,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
 		if (!params[0].empty())
 		{
+			// HANDLE HERE 
 			_server->handleJoinChannel(client, params[0], params[1]);
+			//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
 			
 			// handle join
 			// ischannel
@@ -194,8 +254,20 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		else// if(client->getHasSentCap() == true) 
 		{
 			
-			client->getMsg().queueMessage(":localhost 461 " + client->getNickname() + " JOIN :Not enough parameters\r\n");
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			//client->getMsg().queueMessage(":localhost 461 " + client->getNickname() + " JOIN :Not enough parameters\r\n");
+			// client->getMsg().queueMessage(":server 451 " + client->getNickname() + " :You have not registered\r\n");
+			// client->getMsg().queueMessage(":localhost 331 " + client->getNickname() + " :No channel specified\r\n");
+			// client->getMsg().queueMessage(":localhost NOTICE server :JOIN request received but ignored.\r\n");
+			//client->getMsg().queueMessage(":localhost 366 " + client->getNickname() + " :End of channel list\r\n");
+			// client->getMsg().queueMessage(":localhost 403 " + client->getNickname() + " :No default channel available\r\n");
+			if (client->getHasSentCap() == true)
+			{
+				std::cout<<"hhhhhhhhhhhhhh    ENTERING join on first HANDLING \n";
+				client->getMsg().queueMessage(":localhost 322 " + client->getNickname() + " #dummychannel 0 :\r\n");
+				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
+				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+			}
 		}
 	}
 
@@ -213,8 +285,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	{
 		std::cout<<"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&ENTERING MODE HANDLING \n";
 		std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<params.size()<<"\n";
+		// HANDLE HERE SETING MODES CHANNEL AND CLIENT DIFFERENT.
 		if (params.size() == 2)
 		{
+			//std::cout<<"TELL ME THE SIZE OF PARAMSLIST = \n"
 			// is name given clients name 
 			if (params[0] != client->getNickname())
 			{
@@ -226,10 +300,14 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			{
 				client->setInvis(true);
 				client->getMsg().queueMessage(":**:" + params[0] + " MODE " + params[0] +" :+i\r\n**");
+
+
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
 			}
+			return;
 		}
+
 //:**:anonthe_evill MODE anonthe_evill :+i\r\n**
 		/*
 		// re write starts
@@ -478,6 +556,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "WHOIS")
 	{
 		_server->handleWhoIs(client, params[0]);
+		//client->getMsg().queueMessage("RECONNECT\r\n");
 
 	}
 	//client->getMsg().printMessage(client->getMsg());

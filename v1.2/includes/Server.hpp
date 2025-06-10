@@ -145,7 +145,7 @@ class Server {
 		// message handling
 		void handle_client_connection_error(ErrorType err_type);
 		void acknowladgeClient();
-		void shutdown();
+		void shutDown();
 		bool checkTimers(int fd);
 		////void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
 	

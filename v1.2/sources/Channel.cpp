@@ -196,6 +196,7 @@ bool Channel::canClientJoin(const std::string& nickname, const std::string& pass
 	std::cout<<"handling can client join to client named = "<<nickname<<"\n";
 	if(_ChannelModes.test(Modes::INVITE_ONLY))
 	{
+		std::cout<<"INVITE ONLY = \n";
 		auto it = std::find(_invites.begin(), _invites.end(), nickname);//_invites.find(nickname);
 		if (it != _invites.end())
 		{
@@ -209,6 +210,7 @@ bool Channel::canClientJoin(const std::string& nickname, const std::string& pass
 	// will handle rest , but in this file they go 
 	if (_ChannelModes.test(Modes::PASSWORD))
 	{
+		std::cout<<"password needed \n";
 		if (password == "")
 		{
 			// set msg no password provided 

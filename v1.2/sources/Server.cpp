@@ -97,10 +97,21 @@ void Server::create_Client(int epollfd) {
  	if (client_fd < 0) {
 		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
 	} else {
-		//int flag = 1;
+		int flag = 1;
+		socklen_t optlen = sizeof(flag);
 		//int buf_size = 1024;
-		//setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &buf_size, sizeof(buf_size));
-		//setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, (void*)&flag, sizeof(flag));	
+		setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &flag, optlen);
+		setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, optlen);
+		/*std::cout<<"CHECKING DEBUG FLAG VALUES APPLIED?????????????????????????????????????\n";
+		// Check TCP_NODELAY
+		getsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, &optlen);
+		std::cout << "DEBUG: TCP_NODELAY applied? " << (flag ? "YES" : "NO") << std::endl;
+
+		// Check SO_SNDBUF
+		getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &flag, &optlen);
+		std::cout << "DEBUG: SO_SNDBUF value = " << flag << " bytes" << std::endl;
+		std::cout<<"CHECKING DEBUG FLAG VALUES APPLIED ENDED?????????????????????????????????????\n";*/
+
 		make_socket_unblocking(client_fd);
 		//setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)); 
 		setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET); //not a fan of epollet
@@ -111,7 +122,6 @@ void Server::create_Client(int epollfd) {
 		std::shared_ptr<Client> client = _Clients[client_fd];
 		
 		_timer_map[timer_fd] = client_fd;
-		//std::shared_ptr<Client> = _Clients[client_fd];
 
 		std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
 		
@@ -120,23 +130,11 @@ void Server::create_Client(int epollfd) {
 		_fd_to_nickname.insert({client_fd, client->getNickname()});
 		_nickname_to_fd.insert({client->getNickname(), client_fd});
 		if (!client->get_acknowledged()){
-			//_Clients[client_fd]->set_pendingAcknowledged(true);
-			//_Clients[client_fd]->getMsg().prepWelcomeMessage(_Clients[client_fd]->getNicknameRef());//, _Clients[client_fd]->getMsg().getQue());
-			//std::string msg = MessageBuilder::generatewelcome(_Clients[client_fd]->getNickname());
-			//std::string name_change = ":server NOTICE #testchannel :Nickname update detected\r\n";//":" + _Clients[client_fd]->getNickname() + " NICK " + _Clients[client_fd]->getNickname() + "\r\n";
-			//updateEpollEvents(client_fd, EPOLLOUT, true);
-			client->getMsg().queueMessage("NICK " +  client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage("NICK " +  client->getNickname() + "\r\n");
+			
 			client->getMsg().queueMessage(":localhost NOTICE * :initilization has begun.......\r\n");
 			client->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
-			//client->getMsg().queueMessage("NICK " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
-
-			//_Clients[client_fd]->getMsg().queueMessage(":localhost CAP * END\r\n");
-			//_Clients[client_fd]->getMsg().queueMessage("NICK startingNick\r\n");
-			//_Clients[client_fd]->getMsg().queueMessage("USER "  + _Clients[client_fd]->getClientUname() + " 0 * :Real Name\r\n");
-			
-			//_Clients[client_fd]->getMsg().queueMessage(msg);
-			//_Clients[client_fd]->getMsg().queueMessage(name_change);
+			//no update epollout as its on for the first call
 			set_client_count(1);		
 		}
 	}
@@ -245,6 +243,13 @@ void Server::handleReadEvent(int client_fd) {
         return;
     }
 
+	/*int recvBufferSize;
+    socklen_t optlen = sizeof(recvBufferSize);
+
+    getsockopt(client_fd, SOL_SOCKET, SO_RCVBUF, &recvBufferSize, &optlen);
+    std::cout << "WEEWOOOWEEWOOOOOO    DEBUGGIN:: Receive Buffer Size: " << recvBufferSize << " bytes" << std::endl;*/
+
+
     char buffer[config::BUFFER_SIZE];
     ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0); // Server does the recv, ONCE per event!
 	std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
@@ -284,7 +289,7 @@ void Server::handleReadEvent(int client_fd) {
     }
 }
 
-void Server::shutdown() {
+void Server::shutDown() {
 	// close all sockets
 	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
 		close(it->first);
@@ -316,11 +321,11 @@ void Server::shutdown() {
 	_server_broadcasts.clear();
 	//_illegal_nicknames.clear();
 
-	std::cout<<"server shutdown completed"<<std::endl;
+	std::cout<<"server shutDown completed"<<std::endl;
 }
 
 Server::~Server(){
-	//shutdown();
+	//shutDown();
 }
 
 /**
@@ -378,6 +383,14 @@ void Server::setEpollout(int fd)
 #include <iomanip>
 void Server::send_message(std::shared_ptr<Client> client)
 {
+	/**
+	 * int pending_bytes;
+socklen_t optlen = sizeof(pending_bytes);
+getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &pending_bytes, &optlen);
+std::cout << "DEBUG: Socket has " << pending_bytes << " bytes pending to send.\n";
+
+	 * 
+	 */
 
 	int fd;
 	fd = client->getFd();
@@ -391,7 +404,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 		
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
 					// Right before your queueMessage call:
-			std::cout << "DEBUG: params[0] content (raw): [" << msg << "]" << std::endl;
+			/*std::cout << "DEBUG: params[0] content (raw): [" << msg << "]" << std::endl;
 			// Or to show non-printable characters:
 			std::cout << "DEBUG: params[0] content (hex): [";
 			for (char c : msg) {
@@ -400,17 +413,37 @@ void Server::send_message(std::shared_ptr<Client> client)
 			    else if (c >= ' ' && c <= '~') std::cout << c; // Printable ASCII
 			    else std::cout << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (int)(unsigned char)c << std::dec;
 			}
-			std::cout << "]" << std::endl;
+			std::cout << "]" << std::endl;*/
 		//while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
         //    ssize_t bytes_to_send = msg.length();
             //ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);
-            ssize_t bytes_sent = send(fd, send_buffer_ptr.c_str(), remaining_bytes_to_send, MSG_NOSIGNAL);
 			
+			/*socklen_t optlen = sizeof(remaining_bytes_to_send);
+			getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &remaining_bytes_to_send, &optlen);
+			std::cout << "DEBUG:: BEFORE SEND: Socket has " << remaining_bytes_to_send << " bytes pending to send.\n";*/
+			/*struct tcp_info info;
+			socklen_t info_len = sizeof(info);
+			getsockopt(fd, IPPROTO_TCP, TCP_INFO, &info, &info_len);
+			std::cout << "DEBUG BEFORE: Unacked Bytes (Real Pending Send Data): " << info.tcpi_unacked << std::endl;*/
+			  
+			ssize_t bytes_sent = send(fd, send_buffer_ptr.c_str(), remaining_bytes_to_send, MSG_NOSIGNAL);
+			//send(fd, "", 0, MSG_NOSIGNAL);
+
+			/*struct tcp_info info2;
+			socklen_t info_len2 = sizeof(info2);
+			getsockopt(fd, IPPROTO_TCP, TCP_INFO, &info2, &info_len2);
+			std::cout << "DEBUG AFTER: Unacked Bytes (Real Pending Send Data): " << info2.tcpi_unacked << std::endl;*/
+
+			/*socklen_t optlen2 = sizeof(remaining_bytes_to_send);
+			getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &remaining_bytes_to_send, &optlen2);
+			std::cout << "DEBUG:: AFTER SEND: Socket has " << remaining_bytes_to_send << " bytes pending to send.\n";*/
+
+
 			//usleep(5000); 
             if (bytes_sent == -1) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     // Socket buffer is full. Cannot send more right now.
-                    //std::cout << "DEBUG: send() returned EAGAIN/EWOULDBLOCK for FD " << fd << ". Pausing write.\n";
+                    std::cout << "DEBUG::DEBUG send() returned EAGAIN/EWOULDBLOCK for FD " << fd << ". Pausing write.\n";
                     return; // <<< EXIT send_message. Epoll will re-trigger.
                 } else {
                     // Fatal error (e.g., connection reset, broken pipe).
@@ -420,6 +453,7 @@ void Server::send_message(std::shared_ptr<Client> client)
                     return;
                 }
             } else{
+				//std::cout << "DEBUG: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
 				client->getMsg().advanceCurrentMessageOffset(bytes_sent); 
 				//client->getMsg().removeQueueMessage(); // Remove the original (full) message
 			 	if (client->getMsg().getRemainingBytesInCurrentMessage() == 0) {
@@ -432,7 +466,7 @@ void Server::send_message(std::shared_ptr<Client> client)
 	                // Still more bytes to send for *this* message.
 	                // Leave EPOLLOUT enabled. The next time send_message is called,
 	                // it will automatically pick up from the new offset.
-	                std::cout << "DEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
+	                std::cout << "ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖDEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
 	                          << " bytes. Remaining: " << client->getMsg().getRemainingBytesInCurrentMessage() << ".\n";
 	                return; // Exit send_message. Epoll will re-trigger for remaining bytes.
 				}
@@ -456,9 +490,10 @@ void Server::send_message(std::shared_ptr<Client> client)
 		if (!client->get_acknowledged())
 		{
 			//ignore this for now
-			std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+			//std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
 			client->set_acknowledged();		
-		}	
+		}
+		//usleep(3000);
 		updateEpollEvents(fd, EPOLLOUT, false);
 	}
 
@@ -517,6 +552,12 @@ std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
 
 void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password)
 {
+	// HANDLE HERE 
+	// channel modes and client modes need to be seperate 
+
+	if (!password.empty())
+		std::cout<<"attempting tooooooo!--------------------------------------";
+
 	std::cout<<"attempting tooooooo!--------------------------------------";
 	// check there is a param 0
 	if (channelName == "")
@@ -537,8 +578,14 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	//std::string pass = "";
 	//if (client->getMsg().getParams().size() == 2) // biger than 2 ?
 	//pass = client->getMsg().getParam(1); 
-	if (!currentChannel->canClientJoin(client->getNickname(), password))
+	
+	// HANDLE HERE must check!!
+	/*if (!currentChannel->canClientJoin(client->getNickname(), password))
+	{
+		std::cout<<"client is denied join rights !--------------------------------------";
+		// this must bve handled 
 		return ;
+	}*/
 		// set msg
 		//return
 	client->addChannel(channelName, get_Channel(channelName));
@@ -551,7 +598,8 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
 	//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
 	//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
-
+	//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
+	std::cout<<"channel should allow join !--------------------------------------";
 	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
 }
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
@@ -574,6 +622,17 @@ void Server::handleNickCommand(std::shared_ptr<Client> client) {
         std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
                   << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
     }
+	//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
+	//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
+	//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
+	//std::string arg = "";
+	//client->getMsg().queueMessage(arg);
+	//client->getMsg().queueMessage(":server NOTICE * : \r\n");
+	//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
+	//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
+				//client->getMsg().queueMessage(":server 001 " + client->getNickname() + " :Welcome!\r\n");
+
+	//client->getMsg().queueMessage("PING :localhost\r\n");
 	client->getMsg().queueMessage(msg);
 	//client->getMsg().queueMessage(msg);
 	//"WHO newnick\r\n";
@@ -1007,10 +1066,10 @@ void Server::handleWhoIs(std::shared_ptr<Client> client, std::string param) {
 		std::cout<<"show me the param = "<<param<<" and the nick ="<<client->getNickname()<<"\n";
 		if (param != client->getNickname()) // or name no exist for some reason 
 		{
-		    std::string whoisResponse = ":localhost 311 " + client->getNickname() + " " + client->getClientUname()  + " localhost * :"+ client->getfullName() + "\r\n";
-		    std::string whoisEnd = ":localhost 318 " + client->getNickname() + " " + client->getNickname() + " :End of WHOIS list\r\n";
+		    std::string whoisResponse = ":localhost 311 " + client->getNickname() + " " + client->getNickname()  + " localhost * :Real Name\r\n";
+		    std::string whoisEnd = ":localhost 318 " + client->getNickname() + " :End of WHOIS list\r\n";
 			//sendToClient(client.fd, whoisResponse);
-			client->getMsg().queueMessage(":" + client->getNickname() + " NICK " +  client->getNickname() + "\r\n");
+			//client->getMsg().queueMessage(":" + client->getNickname() + " NICK " +  client->getNickname() + "\r\n");
 			client->getMsg().queueMessage(whoisResponse);
 			client->getMsg().queueMessage(whoisEnd);
 

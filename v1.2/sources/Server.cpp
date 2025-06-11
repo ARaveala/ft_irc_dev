@@ -580,12 +580,12 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	//pass = client->getMsg().getParam(1); 
 	
 	// HANDLE HERE must check!!
-	/*if (!currentChannel->canClientJoin(client->getNickname(), password))
+	if (!currentChannel->canClientJoin(client->getNickname(), password))
 	{
 		std::cout<<"client is denied join rights !--------------------------------------";
 		// this must bve handled 
 		return ;
-	}*/
+	}
 		// set msg
 		//return
 	client->addChannel(channelName, get_Channel(channelName));

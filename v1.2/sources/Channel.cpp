@@ -1,6 +1,7 @@
 #include "Channel.hpp"
 #include <iostream>
 #include <bitset>
+#include <config.h>
 #include "IrcResources.hpp"
 /*Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
     std::cout << "Channel '" << _name << "' created." << std::endl;
@@ -8,6 +9,8 @@
 
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
+	_ChannelModes.reset();  //set all modes to off (0)
+    _ChannelModes.set(Modes::ChannelMode::TOPIC);  // enable topic protection by default, why to show we can
 }
 Channel::~Channel() {
     std::cout << "Channel '" << _name << "' destroyed." << std::endl;
@@ -72,6 +75,16 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 	// we could substitute with our own  throw here
 	throw std::runtime_error("Client not found get client modes!");
 	//return ;  // return empty weak_ptr if no match is found
+}
+std::string Channel::getCurrentModes() const {
+
+	std::string activeModes = "+";
+    for (size_t i = 0; i < Modes::channelModeChars.size(); ++i) {
+        if (_ChannelModes.test(i)) {
+            activeModes += Modes::channelModeChars[i];
+        }
+    }
+    return activeModes;
 }
 
 /*std::bitset<config::CHANNEL_NUM_MODES>& Channel::getChannelModes()
@@ -249,9 +262,15 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
 		{
 			setClientMode("+o", client->getNickname(), "");
 			setClientMode("+q", client->getNickname(), "");
+			// if we add any other here we must remeber to set to 0 or 1
 			client->setChannelCreator(false);
 		}
-		
+		else 
+		{
+			// make sure these modes are set to 0
+			setClientMode("-o", client->getNickname(), "");
+			setClientMode("-q", client->getNickname(), "");
+		}
 		_clientCount += 1;
 	} else {
 		std::cout << "Client already exists in channel!" << std::endl;

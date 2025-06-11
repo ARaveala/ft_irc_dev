@@ -80,7 +80,8 @@ class Channel {
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
-		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
+		//std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
+		std::string getCurrentModes() const;
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
 		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
@@ -112,20 +113,11 @@ class Channel {
 
 		//const std::set<Client*>& getClient() const;
 		//bool addOperator(Client* Client);
-		bool removeOperator(Client* Client);
+		//bool removeOperator(Client* Client);
 		bool isOperator(Client* Client) const;
-		void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
+		//void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
 		//void setMode(const std::string& mode, Client* Client);
-		void removeMode(const std::string& mode, Client* Client);
-// these could go into config.h as namespace?? these are just index values
-// with fancy name
-		/*const std::size_t MODE_OPERATOR = 0;
-		const std::size_t MODE_USER_LIMIT= 1;
-		const std::size_t MODE_INVITE_ONLY = 2;
-		const std::size_t MODE_PASSWORD = 3;
-		const std::size_t MODE_TOPIC = 4;*/
-		// void changeNickname();
-		//clean up for terminal proplems
+		//void removeMode(const std::string& mode, Client* Client);
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};

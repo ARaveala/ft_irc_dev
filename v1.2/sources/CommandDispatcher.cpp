@@ -285,11 +285,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	{
 		std::cout<<"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&ENTERING MODE HANDLING \n";
 		std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<params.size()<<"\n";
-		// HANDLE HERE SETING MODES CHANNEL AND CLIENT DIFFERENT.
 		if (params.size() == 2)
 		{
-			//std::cout<<"TELL ME THE SIZE OF PARAMSLIST = \n"
-			// is name given clients name 
 			if (params[0] != client->getNickname())
 			{
 				std::cout<<"client can only change own modes, unless in channel\n";
@@ -298,10 +295,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			// should do sign var, and mode var
 			if (params[1] == "+i")
 			{
-				client->setInvis(true);
+				client->setMode(clientPrivModes::INVISABLE);
 				client->getMsg().queueMessage(":**:" + params[0] + " MODE " + params[0] +" :+i\r\n**");
-
-
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
 			}
@@ -342,15 +337,13 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 		// re write ends 
 */
+		std::cout<<"WE ARE HANDLING CHANNEL MODES NOW FOR SOME REASON HELOOOOOOOOOOOOO ?????\n";
 		std::shared_ptr <Channel> currentChannel = _server->get_Channel(params[0]);
 		std::string mode = params[1];
 		//std::string test = "+abc";
 		std::string name;
 		size_t ClientModeCount = 0;
 		std::string validClientPattern = R"([+-][o]+)"; // once this is done it should be easy to add more
-		
-		//size_t paramSize = params.size();
-		//std::cout<<"TELL ME THE SIZE OF PARAMSLIST BEFORE DOING ANYTHING TO IT = "<<paramSize<<"\n";
 
 		 if (params.size() == 1) {
         	std::string channel_name = params[0];
@@ -367,14 +360,17 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	    //        client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "332", client->getNickname(), channel_name, ":" + channel->getTopic()));
 	    //    }
 	    //    return; // Important: Exit after handling the query!
-			std::string modes =  ":localhost 324 " + client->getNickname() + " #bbq +nt\r\n";
+			std::string modeResponse = ":localhost MODE " + channel->getName() + " " + channel->getCurrentModes() + "\r\n";
+			
+			/*std::string modes =  ":localhost 324 " + client->getNickname() + " #bbq +nt\r\n";
 			std::string checktopic = channel->getTopic();
 			std::cout<<"checking the topic is set to what "<<checktopic<<" \n";
-		   	std::string topic = ":localhost 332 " + client->getNickname() + " #bbq :Welcome to #bbq!\r\n";
+		   	std::string topic = ":localhost 332 " + client->getNickname() + " #bbq :Welcome to #bbq!\r\n";*/
 			
-		   	client->getMsg().queueMessage(modes);
-		   	client->getMsg().queueMessage(topic);
+		   	client->getMsg().queueMessage(modeResponse);
+		   	//client->getMsg().queueMessage(topic);
 			_server->updateEpollEvents(client->getFd(), EPOLLOUT,true);
+			return;
 		}
 
 		/*if ((ClientModeCount = client->getMsg().countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags

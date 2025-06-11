@@ -14,7 +14,7 @@ class Client {
 		int _failed_response_counter = 0;
 
 		bool _invisable = false; // bitset using MODES:: to be swapped for this bool, used for registartion debuggging
-
+		std::bitset<config::CLIENT_PRIV_NUM_MODES> _ClientPrivModes;
 		bool _channelCreator = false;
 		bool _quit = false;
 		bool _hasSentCap = false;
@@ -52,8 +52,9 @@ class Client {
 		//testing only 
 		void setInvis(bool onoff) {_invisable = onoff;};
 		bool getInvis() {return _invisable;};
-		
-		
+		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
+		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
+		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
 		
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};

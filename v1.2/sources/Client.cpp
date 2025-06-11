@@ -13,7 +13,9 @@
 #include "CommandDispatcher.hpp"
 Client::Client(){}
 
-Client::Client(int fd, int timer_fd) : _fd(fd), _timer_fd(timer_fd){}
+Client::Client(int fd, int timer_fd) : _fd(fd), _timer_fd(timer_fd){
+	_ClientPrivModes.reset();
+}
 
 Client::~Client(){
 	// when the client is deleted , go through clienst list of channels it 

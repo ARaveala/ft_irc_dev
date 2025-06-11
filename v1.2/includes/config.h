@@ -57,7 +57,6 @@ namespace Modes {
    		OPERATOR,		// 0
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
-		INVISABLE,		// 3
 
 	};
 	enum ChannelMode {
@@ -65,10 +64,19 @@ namespace Modes {
     	INVITE_ONLY,    // 1 
     	PASSWORD, 		// 2
     	TOPIC,   		// 3
-		NONE			// 4
+		NONE			// 4 out of bounds saftey?
 	};
+	constexpr std::array<char, 4> channelModeChars = {'l', 'i', 'k', 't'};
+	//constexpr std::array<char, 2> channelModeChars = {'o', 'q'};
 }
 
+namespace clientPrivModes{
+	enum mode {
+		INVISABLE,		// 0
+		PLACEHOLDER		// 1
+
+	};
+}
 /**
  * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 
  * we can set it low to showcase how we error handle in the case of a client disconnect
@@ -79,7 +87,8 @@ namespace config {
 	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 3;
+	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
 	constexpr std::size_t MSG_TYPE_NUM = 9;
 }

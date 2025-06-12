@@ -46,3 +46,12 @@ response = client.recv(4096)
 print("Server response:", response.decode())
 
 client.close()
+
+
+
+/window new split
+/window name debug
+/log open -window debug raw_log.txt
+/log start raw_log.txt
+
+stat commands

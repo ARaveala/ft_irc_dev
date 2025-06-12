@@ -8,7 +8,7 @@
 #include <map>
 #include "config.h"
 #include "Client.hpp"
-
+#include <algorithm>
 /**
  * @brief a custome comparator, since we use weak_ptrs as keys and they do not 
  * have comparison operators defined, a map can not order the keys, this comparitor
@@ -60,6 +60,7 @@ class Channel {
 	private:
 		std::string _name;
 		std::string _topic;
+		unsigned long _ulimit;
 		int _ClientLimit = 0;
 		int _clientCount = 0;
 		std::string _password;
@@ -85,19 +86,33 @@ class Channel {
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
 		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
-		int setClientMode(std::string mode, std::string nickname, std::string currentClientName); // const 
-		int setChannelMode(std::string mode, std::string nickname, std::string currentClientName, std::string channelname, const std::string pass, std::map<std::string, int>& listOfClients,  std::function<void(MsgType, std::vector<std::string>&)> setMsgType);
+		//int setClientMode(std::string mode, std::string nickname, std::string currentClientName); // const 
+///		int setChannelMode(std::string mode, std::string nickname, std::string currentClientName, std::string channelname, const std::string pass, std::map<std::string, int>& listOfClients,  std::function<void(MsgType, std::vector<std::string>&)> setMsgType);
+		std::vector<std::string> setChannelMode(char modeChar , bool enableMode, const std::string& target);
+		
 		Modes::ClientMode charToClientMode(const char& modeChar);
 		Modes::ChannelMode charToChannelMode(const char& modeChar); 
 		//void setChannelMode(std::string mode);
 		bool setModeBool(char onoff);
 		bool canClientJoin(const std::string& nickname, const std::string& password );
-
+		//bool hasMode(Modes::ChannelMode mode) { return _ChannelModes.test(mode);};
 
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
 
+		bool isValidChannelMode(char modeChar) const {
+		    return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
+		}
+
+		bool isValidClientMode(char modeChar) const {
+		    return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();
+		}
+		bool channelModeRequiresParameter(char modeChar) const {
+        // 'o' and 'v' (client modes within channel) require parameters 
+        // 'k' (channel key) and 'l' (user limit) also require parameters
+        	return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');
+    	}
 		bool isClientInChannel(const std::string& nickname) const {
 			for (const auto& entry : _ClientModes) {
         		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
@@ -109,7 +124,10 @@ class Channel {
     return {};  // return empty weak_ptr if no match is found
 		};
 
-//		bool isClientInChannel(Client* Client) const;
+		std::pair<MsgType, std::vector<std::string>> initialModeValidation( const std::string& ClientNickname, size_t paramsSize);
+		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;
+		std::vector<std::string> applymodes(std::vector<std::string> params);
+		//		bool isClientInChannel(Client* Client) const;
 
 		//const std::set<Client*>& getClient() const;
 		//bool addOperator(Client* Client);

@@ -55,7 +55,10 @@ class Client {
 		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
 		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
 		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
-		
+		std::string getCurrentModes() const; 
+		bool isValidClientMode(char modeChar) {
+		    return std::find(clientPrivModes::clientPrivModeChars.begin(), clientPrivModes::clientPrivModeChars.end(), modeChar) != clientPrivModes::clientPrivModeChars.end();
+		}
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUSer = true;};
@@ -69,7 +72,7 @@ class Client {
 		bool getHasSentNick() {return _hasSentNick;};
 		bool getHasSentUser() {return _hasSentUSer;};
 		bool getHasRegistered() {return _registered;};
-		
+		std::string getPrivateModeString(); // const and all that 
 		bool getQuit() {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();

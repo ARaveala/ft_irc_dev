@@ -77,7 +77,7 @@ int IrcMessage::countOccurrences(const std::string& text, const std::string& pat
     }
     return MsgType::NONE;
 }*/
-void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast)
+/*void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast)
 {
 	for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {
@@ -86,8 +86,8 @@ void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadca
 			channelbroadcast.push_back(TheMessage);
         }
     }	
-}
-void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
+}*/
+/*void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
 {
 	for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {
@@ -96,7 +96,7 @@ void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::s
 			_messageQue.push_back(TheMessage);
         }
     }
-}
+}*/
 // we should enum values or alike or we can just send the correct error message straight from here ?
 // check_and_set_nickname definition, std::string& nickref
 bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {

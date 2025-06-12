@@ -547,7 +547,7 @@ std::shared_ptr<Channel> Server::get_Channel(std::string ChannelName) {
 		if (it->first == ChannelName)
 			return it->second;
 	}
-	throw ServerException(ErrorType::NO_Client_INMAP, "can not get_Client()");
+	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
 }
 
 void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password)
@@ -787,74 +787,107 @@ if (!client) {
 	}
 
 }
-/*void Server::broadcastMessageToClients(std::shared_ptr<Client> client, const std::string& msg, bool isQuitBroadcast) {
-    if (!client) {
-        std::cerr << "Server::broadcastMessageToClients: Received null client pointer.\n";
-        return;
+
+void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
+ // --- 1. Basic Parameter Count Check (Always first) ---
+    ModeCommandContext context;
+ 	if (params.empty()) {
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
+		updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+		return;
     }
-    std::cout << "Entering broadcastMessageToClients for: " << client->getNickname() << ", message: [" << msg << "]\n";
-    std::cout << "Message built for sending: " << msg << "\n";
-	if (isQuitBroadcast)
-		std::cout<<"this is the case that quit is true for some rfeason \n";
-    // IMPORTANT: Create a COPY of the joined channels map.
-    // This prevents iterator invalidation if the client's channels change concurrently.
-    std::map<std::string, std::weak_ptr<Channel>> client_joined_channels_copy = client->getJoinedChannels();
+    std::string target = params[0];
+    bool targetIsChannel = (target[0] == '#');
 
-    // This set will collect all UNIQUE recipients *excluding* the acting client.
-    std::set<std::shared_ptr<Client>> recipients_for_broadcast;
+    // --- 2. Handle Logic based on Target Type ---
+    if (targetIsChannel) {
+        std::shared_ptr<Channel> channel;
+        // Attempt to get the channel object, handling non-existent channels via exception.
+        try {
+            channel = get_Channel(target); // This can throw ServerException(ErrorType::NO_CHANNEL_INMAP)
+        } catch (const ServerException& e) {
+            // Catch the specific exception for non-existent channel
+            if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
+                client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {target}));
+				updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
-    // Iterate over the COPY of joined channels
-    for (const auto& pair : client_joined_channels_copy) {
-        std::cout << "Handling channel: " << pair.first << "\n";
-        // Lock the weak_ptr to get a shared_ptr, ensuring the channel still exists.
-        // As you've noted, the weak_ptr is not expiring here, so this should always succeed.
-        if (std::shared_ptr<Channel> channel_sptr = pair.second.lock()) {
-            std::cout << "Channel locked successfully: " << channel_sptr->getName() << "\n";
-
-            // Channel::getAllClients() returns a COPY of its map, which is good.
-            // Iterate over this copy to prevent iterator invalidation if the channel's members change.
-            // **Potential Bug Location: WeakPtrCompare used by Channel::getAllClients() internally**
-            std::map<std::weak_ptr<Client>, std::pair<std::bitset<3UL>, int>, WeakPtrCompare> channel_clients_copy = channel_sptr->getAllClients();
-            for (const auto& pairInChannelMap : channel_clients_copy) {
-                // Lock the weak_ptr to get a shared_ptr for the member client.
-                // As you've noted, the weak_ptr is not expiring here, so this should always succeed.
-                std::shared_ptr<Client> memberClient = pairInChannelMap.first.lock();
-                
-                // IMPORTANT: Ensure memberClient is valid and it's NOT the acting client.
-                // The acting client's message is handled by handleNickCommand.
-                if (memberClient && memberClient->getFd() != client->getFd()) {
-                    recipients_for_broadcast.insert(memberClient);
-                    std::cout << "DEBUG: Added " << memberClient->getNickname() << " (FD " << memberClient->getFd() << ") to broadcast recipients.\n";
-                } else if (memberClient && memberClient->getFd() == client->getFd()) {
-                    std::cout << "DEBUG: Skipped acting client " << memberClient->getNickname() << " (FD " << memberClient->getFd() << ") for broadcast (handled separately).\n";
-                } else {
-                    // This 'else' block would only be hit if memberClient is nullptr,
-                    // which you confirmed isn't happening. Good!
-                    std::cerr << "WARNING: Encountered null memberClient during broadcast iteration (should not happen if weak_ptr is not expiring).\n";
-                }
+				return; // Abort: Channel does not exist
             }
-        } else {
-            // This 'else' block would only be hit if channel_sptr is nullptr,
-            // which you confirmed isn't happening. Good!
-            std::cerr << "WARNING: weak_ptr to channel '" << pair.first << "' expired during broadcast setup (should not happen).\n";
+		}
+		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
+		//channel->initialModeValidation(client->getNickname(), params.size());
+		if (validationResult.first != MsgType::NONE) {
+            // If validation resulted in an error or a listing reply (like RPL_CHANNELMODEIS),
+            // send the appropriate message and return.
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+			return; // Abort: Validation failed or command was for listing
         }
+		validationResult = channel->modeSyntaxValidator(client->getNickname(), params);
+		if (validationResult.first != MsgType::NONE) {
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+			return; // Abort: modeSyntaxValidator found an error and sent a message.
+    	}
+
+		std::vector<std::string> modeparams = channel->applymodes(params);
+		std::vector<std::string> messageParams;
+		if (!modeparams.empty())
+		{
+			messageParams.push_back(client->getNickname());
+			messageParams.push_back(client->getClientUname());
+			messageParams.push_back(channel->getName());
+			if (!modeparams[0].empty())
+				messageParams.push_back(modeparams[0]);
+			if (!modeparams[1].empty())
+				messageParams.push_back(modeparams[1]);
+			else
+				messageParams.push_back("");
+			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams));
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+
+		}
+		
+
+	}
+	else { // Target is a client (private mode)
+        // A client can only set/list modes on themselves for private modes.
+        if (target != client->getNickname()) {
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::INVALID_TARGET, {client->getNickname(), target}));
+            updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			return; // Abort: Cannot set private modes for another user
+        }
+
+        // Handle private mode listing specifically (as Channel::initialModeValidation isn't called for clients).
+        if (params.size() == 1) {
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_UMODEIS, {client->getNickname(), client->getPrivateModeString()}));
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			return; // Abort: Command was for listing
+        }
+		if (params[1] == "+i")
+		{
+			client->setMode(clientPrivModes::INVISABLE);
+			client->getMsg().queueMessage(":**:" + params[0] + " MODE " + params[0] +" :+i\r\n**");
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			return;
+
+		}
+
     }
 
-    // Now, queue the message for all collected unique recipients (excluding the acting client).
-    for (const auto& recipientClient : recipients_for_broadcast) {
-        bool wasEmpty = recipientClient->isMsgEmpty();
-        recipientClient->getMsg().queueMessage(msg);
-        if (wasEmpty) {
-            updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
-            std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << "). Epoll event updated.\n";
-        } else {
-            std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << "). Message queue was not empty.\n";
-        }
-    }
-    std::cout << "DEBUG: Finished broadcastMessageToClients. Total recipients: " << recipients_for_broadcast.size() << "\n";
+    // --- 3. If we reach here, initial validations (basic param count, target existence, and permissions) passed. ---
+    // Now, proceed to modeSyntaxValidator for detailed flag/parameter parsing.
+    // modeSyntaxValidator will use the 'context' (target, targetIsChannel, channel) to perform its checks.
+    
 
-    // Ignoring quit rules/code here as per your request.
-}*/
+    // --- 4. If all checks pass, proceed with the actual mode application logic. ---
+    // ... (Your mode application logic will go here, which will use 'context') ...
+// }
+}
+
 void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender) {
     if (!channel) {
         std::cerr << "Error: Attempted to broadcast to a null channel pointer.\n";

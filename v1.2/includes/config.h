@@ -4,8 +4,8 @@
 #include <iostream>
 #include <functional> // for short cuts
 #include <deque> // for short cuts
-
-
+#include <memory>
+// oof i dont know if we should seperate a bunch of these into their own .h files ??
 /**
  * @brief 
  * this is a header file that contains global variables and constants
@@ -34,6 +34,7 @@
 namespace Global {
 	inline Server* server = nullptr;
 }*/
+class Channel;
 
 enum class ErrorType {
 	CLIENT_DISCONNECTED,
@@ -43,6 +44,7 @@ enum class ErrorType {
 	SOCKET_FAILURE,
 	ACCEPT_FAILURE,
 	NO_Client_INMAP, // next up senderror
+	NO_CHANNEL_INMAP,
 	BUFFER_FULL,
 	BAD_FD,
 	BROKEN_PIPE,
@@ -66,17 +68,27 @@ namespace Modes {
     	TOPIC,   		// 3
 		NONE			// 4 out of bounds saftey?
 	};
+
 	constexpr std::array<char, 4> channelModeChars = {'l', 'i', 'k', 't'};
-	//constexpr std::array<char, 2> channelModeChars = {'o', 'q'};
+	constexpr std::array<char, 2> clientModeChars = {'o', 'q'};
 }
 
 namespace clientPrivModes{
 	enum mode {
 		INVISABLE,		// 0
 		PLACEHOLDER		// 1
-
 	};
+	constexpr std::array<char, 2> clientPrivModeChars = {'i'};
 }
+
+
+struct ModeCommandContext {
+    std::string target;
+    bool targetIsChannel;
+    std::shared_ptr<Channel> channel; // Valid only if targetIsChannel is true
+};
+// Function to determine mode type
+
 /**
  * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 
  * we can set it low to showcase how we error handle in the case of a client disconnect
@@ -90,7 +102,7 @@ namespace config {
 	constexpr std::size_t CLIENT_NUM_MODES = 2;
 	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
-	constexpr std::size_t MSG_TYPE_NUM = 9;
+	constexpr std::size_t MSG_TYPE_NUM = 502;
 }
 
 namespace errVal {

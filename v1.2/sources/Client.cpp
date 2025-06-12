@@ -73,6 +73,17 @@ const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels()
         return _joinedChannels;
 }
 
+std::string Client::getPrivateModeString(){
+	std::string activeModes = "+";
+    for (size_t i = 0; i < Modes::channelModeChars.size(); ++i) {
+        if (_ClientPrivModes.test(i)) {
+            activeModes += Modes::clientModeChars[i];
+        }
+    }
+    return activeModes;
+}
+
+
 void Client::appendIncomingData(const char* buffer, size_t bytes_read) {
 	_read_buff.append(buffer, bytes_read);
 	// std::cout << "Debug - buffer after apening : [" << _read_buff << "]" << std::endl;
@@ -154,6 +165,16 @@ std::string Client::getChannel(std::string channelName)
 		std::cout<<"channel does not exist\n";
 	return "";
 		//_joinedChannels.push_back(channelName);
+}
+std::string Client::getCurrentModes() const {
+
+	std::string activeModes = "+";
+    for (size_t i = 0; i < Modes::clientModeChars.size(); ++i) {
+        if (_ClientPrivModes.test(i)) {
+            activeModes += Modes::clientModeChars[i];
+        }
+    }
+    return activeModes;
 }
 
 /*void Client::removeSelfFromChannel()

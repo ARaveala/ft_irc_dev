@@ -37,6 +37,14 @@ namespace MessageBuilder {
     // Server notices
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick);
 
+	 std::string buildNoSuchChannel(const std::string& clientNickname, const std::string& channelName);
+	std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName);
+	std::string buildInvalidTarget(const std::string& clientNickname, const std::string& target);
+	std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString);
+	std::string buildChannelModeIs(const std::string& clientNickname, const std::string& channelName, const std::string& modeString, const std::string& modeParams = "");
+	std::string buildChannelModeChange(const std::string& nickname, const std::string& username, const std::string channelname, const std::string& modes, const std::string& targets);
+
+	std::string buildClientModeChange(const std::string channelname, const std::string& modes);
     // You can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

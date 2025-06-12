@@ -9,11 +9,27 @@ enum class MsgType {
 	HOST_INFO,
 	SERVER_CREATION,
 	SERVER_INFO,
-	RPL_NICK_CHANGE,
-	NICKNAME_IN_USE,
-	NOT_OPERATOR,
+	RPL_NICK_CHANGE = 353,
+	NICKNAME_IN_USE = 433,
+	NOT_OPERATOR = 482,     // ERR_CHANOPRIVSNEEDED,
+	RPL_TOPIC = 332,
 	CLIENT_QUIT,
+	INVALID_PASSWORD,
+	PASSWORD_APPLIED,
+	INVALID_INVITE,
+	CHANNEL_MODE_CHANGED,
+	CLIENT_MODE_CHANGED,
+	USER_LIMIT_CHANGED,
+	NEED_MORE_PARAMS =  461, // ERR_NEEDMOREPARAMS,
+	NO_SUCH_CHANNEL = 403,  // ERR_NOSUCHCHANNEL,
+	NOT_IN_CHANNEL  = 442,   // ERR_NOTONCHANNEL,
+	INVALID_TARGET  = 502,   // ERR_USERSDONTMATCH (commonly used for this scenario),
+	NO_SUCH_NICK = 401,     // ERR_NOSUCHNICK
+	UNKNOWN_MODE  = 472,     // ERR_UNKNOWNMODE
 
+	 // Successful replies for mode listing
+    RPL_CHANNELMODEIS = 324, // Channel modes list
+    RPL_UMODEIS = 221        // User mode list
 };
 
 
@@ -44,7 +60,7 @@ enum class MsgType {
     (msgType == MsgType::SERVER_INFO) ? (":server 004 " + params[0] + " localhost 1.0 o o\r\n") : \
     throw std::runtime_error("Unknown welcome message type"))*/
 
-#define RESOLVE_MESSAGE(msgType, params) \
+/*#define RESOLVE_MESSAGE(msgType, params) \
     ((msgType == MsgType::WELCOME) ? WELCOME(params[0]) : \
     (msgType == MsgType::HOST_INFO) ? HOST_INFO(params[0]) : \
     (msgType == MsgType::SERVER_CREATION) ? SERVER_CREATION(params[0]) : \
@@ -53,7 +69,7 @@ enum class MsgType {
     (msgType == MsgType::NICKNAME_IN_USE) ? NICKNAME_IN_USE(params[0]) : \
 	(msgType == MsgType::CLIENT_QUIT) ? CLIENT_QUIT(params[0]): \
     "ERROR: Unknown message type or incorrect parameters")
-
+*/
 
 
 

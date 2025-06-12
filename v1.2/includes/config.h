@@ -55,7 +55,8 @@ namespace Modes {
    		OPERATOR,		// 0
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
-		INVISABLE		// 3
+		INVISABLE,		// 3
+		VOICE			// 4	i just added this
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0

@@ -79,8 +79,11 @@ class Channel {
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
-		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
+		std::bitset<config::CLIENT_NUM_MODES> getClientModes(const std::string nickname) const;
 		std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
+		std::string getClientModePrefix(std::shared_ptr<Client> client) const;
+
+
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
 		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
@@ -97,17 +100,8 @@ class Channel {
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
 
-		bool isClientInChannel(const std::string& nickname) const {
-			for (const auto& entry : _ClientModes) {
-        		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
-            		return true;
-        	}
-			return false;
-    }
-	// we could substitute with a throw here
-    return {};  // return empty weak_ptr if no match is found
-		};
-
+		bool isClientInChannel(const std::string& nickname) const;
+		
 //		bool isClientInChannel(Client* Client) const;
 
 		//const std::set<Client*>& getClient() const;
@@ -115,7 +109,7 @@ class Channel {
 		bool removeOperator(Client* Client);
 		bool isOperator(Client* Client) const;
 		void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
-		//void setMode(const std::string& mode, Client* Client);
+		void setMode(const std::string& mode, std::shared_ptr<Client> client);
 		void removeMode(const std::string& mode, Client* Client);
 // these could go into config.h as namespace?? these are just index values
 // with fancy name

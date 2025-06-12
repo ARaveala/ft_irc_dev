@@ -45,6 +45,7 @@ class Server {
 		int _signal_fd;
 		int _epoll_fd;
 		int _private_fd = 0;
+		std::string _server_name;
 		
 		std::string _password;
 
@@ -109,7 +110,7 @@ class Server {
 		void set_event_pollfd(int epollfd);
 		void set_current_client_in_progress(int fd);
 		void set_private_fd(int fd) {_private_fd = fd;};
-		void set_nickname_in_map(std::string, int); //todo
+		void set_nickname_in_map(std::string, int); 
 		////bool check_and_set_nickname(std::string nickname, int fd);  // ai
 		// get channel
 		
@@ -166,6 +167,7 @@ class Server {
 		void send_message(std::shared_ptr<Client> client);
 		void send_server_broadcast();
 		void sendChannelBroadcast();
+
 		// channel related 
 		bool channelExists(const std::string& channelName) const;
 		void createChannel(const std::string& channelName);//, Client& client
@@ -177,6 +179,11 @@ class Server {
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleNickCommand(std::shared_ptr<Client> client);
 		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
+
+
+		//whois
+		std::shared_ptr<Client> findClientByNickname(const std::string& nickname);
+
 };
 
 std::string generateUniqueNickname();

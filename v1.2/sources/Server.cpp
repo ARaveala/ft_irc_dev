@@ -18,6 +18,11 @@
 class ServerException;
 #include <unordered_set>
 #include "MessageBuilder.hpp"
+
+#include <algorithm> // Required for std::transform
+#include <cctype>    // Required for std::tolower (character conversion)
+
+
 Server::Server(){
 	std::cout << "#### Server instance created." << std::endl;
 }
@@ -999,25 +1004,110 @@ std::string generateUniqueNickname() {
 	return newNick;
 }*/
 
-void Server::handleWhoIs(std::shared_ptr<Client> client, std::string param) {
-		/*--If target_nick is generatedname (your client's actual nickname):
-		Send :<your_server_name> 311 generatedname generatedname ~user host * :realname\r\n
-		Send :<your_server_name> 318 generatedname generatedname :End of WHOIS list\r\n
---*/
-		std::cout<<"show me the param = "<<param<<" and the nick ="<<client->getNickname()<<"\n";
-		if (param != client->getNickname()) // or name no exist for some reason 
-		{
-		    std::string whoisResponse = ":localhost 311 " + client->getNickname() + " " + client->getClientUname()  + " localhost * :"+ client->getfullName() + "\r\n";
-		    std::string whoisEnd = ":localhost 318 " + client->getNickname() + " " + client->getNickname() + " :End of WHOIS list\r\n";
-			//sendToClient(client.fd, whoisResponse);
-			client->getMsg().queueMessage(":" + client->getNickname() + " NICK " +  client->getNickname() + "\r\n");
-			client->getMsg().queueMessage(whoisResponse);
-			client->getMsg().queueMessage(whoisEnd);
+void Server::set_nickname_in_map(std::string nickname, int fd) {
+    std::string lower_nickname = nickname;
+    std::transform(lower_nickname.begin(), lower_nickname.end(), lower_nickname.begin(),
+                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+    _nickname_to_fd[lower_nickname] = fd; // Store lowercase as key
+    _fd_to_nickname[fd] = nickname;      // Store original case here if needed (less critical for WHOIS lookup)
+}
 
-			//client->getMsg().queueMessage(":localhost 401 " + client->getNickname() + " " + params[0] + " :NO suck nick\r\n");
-			// if msg empty !!
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		}
-//		Send :<your_server_name> 401 generatedname configname :No such nick/channel\r\n (using generatedname as the source of the error, as that's the client's real nick).
 
+std::shared_ptr<Client> Server::findClientByNickname(const std::string& nickname) {
+    // 1. Prepare the nickname for case-insensitive lookup
+    //    IRC nicknames are case-insensitive for comparison.
+    std::string lower_nickname = nickname;
+    std::transform(lower_nickname.begin(), lower_nickname.end(), lower_nickname.begin(),
+                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+
+    // 2. Look up the file descriptor using the canonical (lowercase) nickname
+    auto it_nick_to_fd = _nickname_to_fd.find(lower_nickname);
+
+    if (it_nick_to_fd != _nickname_to_fd.end()) {
+        int client_fd = it_nick_to_fd->second; // Found the FD
+
+        // 3. Use the file descriptor to get the Client shared_ptr from _Clients map
+        auto it_client = _Clients.find(client_fd);
+        if (it_client != _Clients.end()) {
+            return it_client->second; // Found the Client shared_ptr
+        }
+        // This case should ideally not happen if _nickname_to_fd is kept consistent with _Clients
+        // but it's a good defensive check.
+        return nullptr; // Client not found in _Clients map despite FD being present
+    }
+
+    return nullptr; // Nickname not found in _nickname_to_fd map
+}
+
+
+
+void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
+    // 1. Find the target client
+    std::shared_ptr<Client> target_client = findClientByNickname(target_nick);
+
+    // 2. Handle Nick Not Found (ERR_NOSUCHNICK)
+    if (!target_client) {
+        std::string err_msg = ":" + _server_name + " 401 " + requester_client->getNickname() + " " + target_nick + " :No such nick/channel\r\n";
+        requester_client->getMsg().queueMessage(err_msg);
+        updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
+        return; // Important: stop here if nick not found
+    }
+
+    // 3. Construct and queue WHOIS replies for the TARGET CLIENT
+
+    // RPL_WHOISUSER (311)
+	// Ensure target_client->getHostname() exists and returns the correct string
+    std::string user_info_msg = ":" + _server_name + " 311 " + requester_client->getNickname() + " "
+                                + target_client->getNickname() + " "
+                                + target_client->getClientUname() + " "
+                                + target_client->getHostname() + " * :" // Make sure getHostname is implemented
+                                + target_client->getfullName() + "\r\n";
+    requester_client->getMsg().queueMessage(user_info_msg);
+
+   // RPL_WHOISSERVER (312)
+    std::string server_info_msg = ":" + _server_name + " 312 " + requester_client->getNickname() + " "
+                                + target_client->getNickname() + " "
+                                + _server_name + " :A & J IRC server\r\n";
+    requester_client->getMsg().queueMessage(server_info_msg);
+
+	// RPL_WHOISOPERATOR (313)
+    // Check if target_client is an operator
+    if (target_client->isOperator()) { // Requires isOperator() in Client
+        std::string oper_msg = ":" + _server_name + " 313 " + requester_client->getNickname() + " "
+                            + target_client->getNickname() + " :is an IRC operator\r\n";
+        requester_client->getMsg().queueMessage(oper_msg);
+    }
+
+	// RPL_WHOISIDLE (317)
+    // Requires getIdleTime() and getSignonTime() in Client
+    long idle_seconds = target_client->getIdleTime(); // Implement this
+    time_t signon_time = target_client->getSignonTime(); // Implement this
+    std::string idle_msg = ":" + _server_name + " 317 " + requester_client->getNickname() + " "
+                        + target_client->getNickname() + " " + std::to_string(idle_seconds) + " "
+                        + std::to_string(signon_time) + " :seconds idle, signon time\r\n";
+    requester_client->getMsg().queueMessage(idle_msg);
+
+	// RPL_WHOISCHANNELS (319)
+    std::string channels_str = "";
+    const auto& joined_channels_map = target_client->getJoinedChannels(); // Get the map of joined channels
+    for (const auto& pair : joined_channels_map) {
+        if (auto channel_ptr = pair.second.lock()) { // Safely get shared_ptr from weak_ptr
+            channels_str += channel_ptr->getClientModePrefix(target_client) + channel_ptr->getName() + " "; // Implement getClientModePrefix in Channel
+        }
+    }
+    if (!channels_str.empty()) {
+        // Remove trailing space if any
+        channels_str.pop_back(); // Remove last space
+        std::string channels_msg = ":" + _server_name + " 319 " + requester_client->getNickname() + " "
+                                + target_client->getNickname() + " :" + channels_str + "\r\n";
+        requester_client->getMsg().queueMessage(channels_msg);
+    }
+
+    // RPL_ENDOFWHOIS (318)
+    std::string end_msg = ":" + _server_name + " 318 " + requester_client->getNickname() + " "
+                        + target_client->getNickname() + " :End of WHOIS list\r\n";
+    requester_client->getMsg().queueMessage(end_msg);
+
+    // 4. Update Epoll Events to send queued messages
+    updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
 }

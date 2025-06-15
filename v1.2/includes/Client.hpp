@@ -1,11 +1,11 @@
 #pragma once
+
 #include <string>
 // https://modern.ircdocs.horse/#client-to-server-protocol-structure
 // Names of IRC entities (clients, servers, channels) are casemapped
 #include "IrcMessage.hpp"
-//#include <shared_ptr>
+#include <memory>
 class Server;
-//class IrcMessage;
 class Channel;
 class Client {
 	private:
@@ -13,13 +13,16 @@ class Client {
 		int _timer_fd;
 		int _failed_response_counter = 0;
 
+		time_t signonTime;			// todo set on registration
+		time_t lastActivityTime;	// todo update when read data is processed from clients socket.
+
 		bool _invisable = false; // bitset using MODES:: to be swapped for this bool, used for registartion debuggging
 
 		bool _channelCreator = false;
 		bool _quit = false;
 		bool _hasSentCap = false;
 		bool _hasSentNick = false;
-		bool _hasSentUSer = false;
+		bool _hasSentUser = false;
 		bool _registered = false;
 		std::string _read_buff;
 		std::string _send_buff;
@@ -27,6 +30,9 @@ class Client {
 		std::string _nickName;
 		std::string _username;
 		std::string _fullName;
+		std::string _hostname; // todo check this is set during connection
+		bool _isOperator;
+
 		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
 		//std::deque<std::string> _welcome;
@@ -39,8 +45,9 @@ class Client {
 		// list of channels Client is in 
 		bool _pendingAcknowledged = false;
 		bool _acknowledged = false;
+
 	public:
-		Client();
+		Client() = delete;
 		Client(int fd, int timerfd);
 		~Client();
 		int getFd();
@@ -53,12 +60,10 @@ class Client {
 		void setInvis(bool onoff) {_invisable = onoff;};
 		bool getInvis() {return _invisable;};
 		
-		
-		
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
-		void setHasSentUser() {_hasSentUSer = true;};
-		void setHasRegistered() {_registered = true;};
+		void setHasSentUser() {_hasSentUser = true;};
+		void setHasRegistered();
 
 		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
 		
@@ -66,7 +71,7 @@ class Client {
 
 		bool getHasSentCap() {return _hasSentCap;};
 		bool getHasSentNick() {return _hasSentNick;};
-		bool getHasSentUser() {return _hasSentUSer;};
+		bool getHasSentUser() {return _hasSentUser;};
 		bool getHasRegistered() {return _registered;};
 		
 		bool getQuit() {return _quit;};
@@ -78,6 +83,8 @@ class Client {
 		void setChannelCreator(bool onoff) { _channelCreator = onoff;};
 		void clearJoinedChannels() {_joinedChannels.clear();};
 		int get_timer_fd();
+		long getIdleTime() const;
+		time_t getSignonTime() const;
 		
 		bool getChannelCreator() {return _channelCreator;};
 
@@ -85,8 +92,15 @@ class Client {
 		std::string& getNicknameRef();
 		std::string getClientUname();
 		std::string getfullName();
+		const std::string& getHostname() const;
+		bool isOperator() const;
+
 		void setDefaults();
 		void setClientUname(std::string uname) {_username = uname;};
+
+		void setHostname(const std::string& hostname);
+		void setOperator(bool status);
+
 		//void addToMessageQue(std::string message) { _msg.queueMessage(message);};
 		bool addChannel(std::string channelName, std::shared_ptr<Channel> channel);
 		//void removeChannel(std::string channelName);
@@ -103,7 +117,7 @@ class Client {
 			}
 			return false;
 		};
-		int prepareQuit(std::deque<std::shared_ptr<Channel>> channelsToNotify);
+		int prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify);
 		//void dispatchCommand(const std::string message, Server& server);
 		// loops through to find which command fucntion to execute
 		void executeCommand(const std::string& command);
@@ -111,6 +125,8 @@ class Client {
 		
 		void appendIncomingData(const char* buffer, size_t bytes_read);
 		bool extractAndParseNextCommand();
+
+		void updateLastActivityTime();
     
 
 };

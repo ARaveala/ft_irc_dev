@@ -11,10 +11,29 @@
 #include "IrcMessage.hpp"
 //#include <string>
 #include "CommandDispatcher.hpp"
-Client::Client(){}
+#include <ctime>
 
-Client::Client(int fd, int timer_fd) : _fd(fd), _timer_fd(timer_fd){
-	_ClientPrivModes.reset();
+
+// Client::Client(){} never let this exist - is that stated in the hpp?
+
+Client::Client(int fd, int timer_fd) :
+	_fd(fd),
+	_timer_fd(timer_fd),
+	_failed_response_counter(0),
+	signonTime(0),          // Initialize to 0, set on registration
+	lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
+	_invisable(false),
+	_channelCreator(false),
+	_quit(false),
+	_hasSentCap(false),
+	_hasSentNick(false),
+	// _hasSentUSer(false),
+	_registered(false),
+	_isOperator(false)      // Initialize to false
+  _ClientPrivModes.reset();
+{
+		lastActivityTime = time(NULL);
+
 }
 
 Client::~Client(){
@@ -67,6 +86,14 @@ std::string Client::getClientUname(){
 
 std::string Client::getfullName(){
 	return _fullName;
+}
+
+const std::string& Client::getHostname() const {
+    return _hostname;
+}
+
+void Client::setHostname(const std::string& hostname) {
+    _hostname = hostname;
 }
 
 const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
@@ -125,19 +152,22 @@ void Client::set_acknowledged(){
 	
 }*/
 
-void Client::setDefaults(){
+void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
 	_nickName = generateUniqueNickname();
 	_username = "user_" + _nickName;
 	_fullName = "real_" + _nickName;
+	_isOperator = false;
+	signonTime = time(NULL);
+	lastActivityTime = time(NULL);
 }
 
 void Client::sendPing() {
-	safeSend(_fd, "PING :localhost/r/n");
+	safeSend(_fd, "PING :localhost/r/n"); // todo should these be \r\n?
 }
 void Client::sendPong() {
-	safeSend(_fd, "PONG :localhost/r/n");
+	safeSend(_fd, "PONG :localhost/r/n"); // todo should these be \r\n?
 }
 
 
@@ -179,7 +209,7 @@ std::string Client::getCurrentModes() const {
 
 /*void Client::removeSelfFromChannel()
 {}*/
-int Client::prepareQuit(std::deque<std::shared_ptr<Channel>> channelsToNotify) {
+int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) { // Gemini corrected this &
 
 	std::cout<<"preparing quit \n";
 	int indicator = 0;
@@ -221,4 +251,37 @@ bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channe
 	}
 	return true;
 
+}
+
+bool Client::isOperator() const {
+    return _isOperator;
+}
+
+void Client::setOperator(bool status) {
+    _isOperator = status;
+}
+
+time_t Client::getSignonTime() const {
+    return signonTime; // This value is set when client registers
+}
+
+long Client::getIdleTime() const {
+    // Calculate difference between current time and last activity time
+    return time(NULL) - lastActivityTime;
+}
+
+// Ensure this is called when client successfully registers
+void Client::setHasRegistered() {
+    _registered = true;
+    signonTime = time(NULL); // Set signon time upon successful registration
+    lastActivityTime = time(NULL); // Also set initial last activity time
+}
+
+// You need to ensure this is called whenever you read data from the client's socket
+// For example, in your Server::handleReadEvent:
+// client_ptr->updateLastActivityTime(); // Or directly set client_ptr->lastActivityTime = time(NULL);
+// Add this method to Client class:
+void Client::updateLastActivityTime() {
+   lastActivityTime = time(NULL);
+   // This might reside in server's main event loop when handling EPOLLIN events for clients
 }

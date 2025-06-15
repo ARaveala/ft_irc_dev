@@ -80,9 +80,11 @@ class Channel {
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
+
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
 		//std::bitset<config::CHANNEL_NUM_MODES>& getChannelModes();
 		std::string getCurrentModes() const;
+
 		//std::weak_ptr<Client> getElementByFd(const int fd);
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
 		//, const std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
@@ -100,6 +102,7 @@ class Channel {
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);
+
 
 		bool isValidChannelMode(char modeChar) const {
 		    return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
@@ -129,13 +132,16 @@ class Channel {
 		std::vector<std::string> applymodes(std::vector<std::string> params);
 		//		bool isClientInChannel(Client* Client) const;
 
+
 		//const std::set<Client*>& getClient() const;
 		//bool addOperator(Client* Client);
 		//bool removeOperator(Client* Client);
 		bool isOperator(Client* Client) const;
+
 		//void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
 		//void setMode(const std::string& mode, Client* Client);
 		//void removeMode(const std::string& mode, Client* Client);
+
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};

@@ -60,6 +60,8 @@ namespace Modes {
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
 
+
+
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0

@@ -17,7 +17,7 @@ class Client {
 		time_t lastActivityTime;	// todo update when read data is processed from clients socket.
 
 		bool _invisable = false; // bitset using MODES:: to be swapped for this bool, used for registartion debuggging
-
+		std::bitset<config::CLIENT_PRIV_NUM_MODES> _ClientPrivModes;
 		bool _channelCreator = false;
 		bool _quit = false;
 		bool _hasSentCap = false;
@@ -59,7 +59,15 @@ class Client {
 		//testing only 
 		void setInvis(bool onoff) {_invisable = onoff;};
 		bool getInvis() {return _invisable;};
-		
+
+		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
+		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
+		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
+		std::string getCurrentModes() const; 
+		bool isValidClientMode(char modeChar) {
+		    return std::find(clientPrivModes::clientPrivModeChars.begin(), clientPrivModes::clientPrivModeChars.end(), modeChar) != clientPrivModes::clientPrivModeChars.end();
+		}
+
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUser = true;};
@@ -73,7 +81,7 @@ class Client {
 		bool getHasSentNick() {return _hasSentNick;};
 		bool getHasSentUser() {return _hasSentUser;};
 		bool getHasRegistered() {return _registered;};
-		
+		std::string getPrivateModeString(); // const and all that 
 		bool getQuit() {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();

@@ -61,7 +61,7 @@ int manage_signal_events(int signal_fd)
 	if (si.ssi_signo == SIGUSR1) {
 		std::cout << "SIGNAL received! EPOLL CAUGHT IT YAY..." << std::endl;
 		// how to force certian signals to catch and handle
-		//server.shutdown();
+		//server.shutDown();
 		return 2; //config continue? break
 		//break;
 	}

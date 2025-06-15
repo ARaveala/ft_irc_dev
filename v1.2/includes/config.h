@@ -4,8 +4,8 @@
 #include <iostream>
 #include <functional> // for short cuts
 #include <deque> // for short cuts
-
-
+#include <memory>
+// oof i dont know if we should seperate a bunch of these into their own .h files ??
 /**
  * @brief 
  * this is a header file that contains global variables and constants
@@ -34,15 +34,17 @@
 namespace Global {
 	inline Server* server = nullptr;
 }*/
+class Channel;
 
 enum class ErrorType {
 	CLIENT_DISCONNECTED,
-	SERVER_SHUTDOWN,
+	SERVER_shutDown,
 	EPOLL_FAILURE_0,
 	EPOLL_FAILURE_1,
 	SOCKET_FAILURE,
 	ACCEPT_FAILURE,
 	NO_Client_INMAP, // next up senderror
+	NO_CHANNEL_INMAP,
 	BUFFER_FULL,
 	BAD_FD,
 	BROKEN_PIPE,
@@ -50,22 +52,44 @@ enum class ErrorType {
 
 };
 
+//HANDLE HERE seperate modes client and channel are seperate u twat
+// reconsider bitset to bool ??? 
 namespace Modes {
 	enum ClientMode {
    		OPERATOR,		// 0
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
-		INVISABLE,		// 3
-		VOICE			// 4	i just added this
+
+
+
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0
     	INVITE_ONLY,    // 1 
     	PASSWORD, 		// 2
     	TOPIC,   		// 3
-		NONE			// 4
+		NONE			// 4 out of bounds saftey?
 	};
+
+	constexpr std::array<char, 4> channelModeChars = {'l', 'i', 'k', 't'};
+	constexpr std::array<char, 2> clientModeChars = {'o', 'q'};
 }
+
+namespace clientPrivModes{
+	enum mode {
+		INVISABLE,		// 0
+		PLACEHOLDER		// 1
+	};
+	constexpr std::array<char, 2> clientPrivModeChars = {'i'};
+}
+
+
+struct ModeCommandContext {
+    std::string target;
+    bool targetIsChannel;
+    std::shared_ptr<Channel> channel; // Valid only if targetIsChannel is true
+};
+// Function to determine mode type
 
 /**
  * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 
@@ -77,9 +101,10 @@ namespace config {
 	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 3;
+	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
-	constexpr std::size_t MSG_TYPE_NUM = 9;
+	constexpr std::size_t MSG_TYPE_NUM = 502;
 }
 
 namespace errVal {

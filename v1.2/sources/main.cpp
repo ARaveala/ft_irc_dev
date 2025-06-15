@@ -125,9 +125,9 @@ int loop(Server &server)
 			if (events[i].events & EPOLLOUT) {
 				int fd = events[i].data.fd;
 				try {
-					auto now = std::chrono::system_clock::now();
-					auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-					std::cout << "DEBUG: send triggered----------------- " << ms << " ms for FD " << fd << std::endl;
+					//auto now = std::chrono::system_clock::now();
+					//auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+					//std::cout << "DEBUG: send triggered----------------- " << ms << " ms for FD " << fd << std::endl;
 					server.send_message(server.get_Client(fd));
 					std::cout<<"client messages should be sent by now !!!!\n";
 					if (server.get_Client(fd)->getQuit() == true)
@@ -202,7 +202,7 @@ int main(int argc, char** argv)
 				break;
 
 			}
-			/*case ErrorType::SERVER_SHUTDOWN:
+			/*case ErrorType::SERVER_shutDown:
 			{
 
 				std::cerr << e.what() << '\n';
@@ -242,6 +242,6 @@ int main(int argc, char** argv)
 		std::cout<<"an exception has been caught in main:: "<<e.what()<<std::endl;
 	}
 	// clean up
-	//server.shutdown();
+	//server.shutDown();
 	return 0;
 }

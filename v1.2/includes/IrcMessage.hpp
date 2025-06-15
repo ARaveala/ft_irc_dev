@@ -70,7 +70,7 @@ class IrcMessage {
 		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
 		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };
-		std::string& getQueueMessage() { return _messageQue.front();};
+		std::string& getQueueMessage() { return _messageQue.front();}; //return _messageQue.empty() ? "" : _messageQue.front();
 		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		//void prep_nickname_inuse(std::string& nickname, std::deque<std::string>& messageQue);
 		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
@@ -112,15 +112,19 @@ class IrcMessage {
 		};
 
 		void advanceCurrentMessageOffset(ssize_t bytes_sent) {
-		        _bytesSentForCurrentMessage += bytes_sent;
-		    }
+			//std::cout << "DEBUG:WW: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
+		        _bytesSentForCurrentMessage += std::min(_bytesSentForCurrentMessage + bytes_sent, _messageQue.front().length());//bytes_sent;
+		    //std::cout << "DEBUG:WW: After advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
+			}
 		size_t getRemainingBytesInCurrentMessage() const {
         		if (_messageQue.empty()) return 0;
-        	return _messageQue.front().length() - _bytesSentForCurrentMessage;
+        	return  std::max((size_t)0, _messageQue.front().length() - _bytesSentForCurrentMessage); // prevent overflow and returning of neg values
     	}
 		const char* getCurrentMessageCstrOffset() const {
 		       if (_messageQue.empty()) return nullptr;
-		       return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
+		        size_t safe_offset = std::min(_bytesSentForCurrentMessage, _messageQue.front().length());
+			    return _messageQue.front().c_str() + safe_offset;
+			  // return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
 		   }
 
 

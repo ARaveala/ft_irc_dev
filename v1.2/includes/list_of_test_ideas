@@ -30,3 +30,28 @@ sudo tcpdump -i lo port 6668 -A | grep PRIVMSG to look for priv message only
 sudo netstat -tnp | grep port num show us connected clients and server
 
 when testing with netcat, send irssi to server, add \r\n press cntrlv then cntrl m then enter 
+
+// here is a test to showcase why epollout is important to handle 
+import socket
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(("localhost", 6668))
+
+# Send a huge message to fill up the buffer
+long_message = "A" * 100000  # 100,000 characters
+client.send(long_message.encode())
+
+# Wait to see if the server drops data or hangs
+response = client.recv(4096)
+print("Server response:", response.decode())
+
+client.close()
+
+
+
+/window new split
+/window name debug
+/log open -window debug raw_log.txt
+/log start raw_log.txt
+
+stat commands

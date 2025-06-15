@@ -146,7 +146,7 @@ class Server {
 		// message handling
 		void handle_client_connection_error(ErrorType err_type);
 		void acknowladgeClient();
-		void shutdown();
+		void shutDown();
 		bool checkTimers(int fd);
 		////void remove_fd(int fd); // ai // we have remove client function , this could be called in there, to remove all new maps
 	
@@ -178,6 +178,7 @@ class Server {
 		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender);
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleNickCommand(std::shared_ptr<Client> client);
+		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
 
 

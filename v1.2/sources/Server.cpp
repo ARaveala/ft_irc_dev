@@ -107,15 +107,6 @@ void Server::create_Client(int epollfd) {
 		//int buf_size = 1024;
 		setsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &flag, optlen);
 		setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, optlen);
-		/*std::cout<<"CHECKING DEBUG FLAG VALUES APPLIED?????????????????????????????????????\n";
-		// Check TCP_NODELAY
-		getsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, &optlen);
-		std::cout << "DEBUG: TCP_NODELAY applied? " << (flag ? "YES" : "NO") << std::endl;
-
-		// Check SO_SNDBUF
-		getsockopt(client_fd, SOL_SOCKET, SO_SNDBUF, &flag, &optlen);
-		std::cout << "DEBUG: SO_SNDBUF value = " << flag << " bytes" << std::endl;
-		std::cout<<"CHECKING DEBUG FLAG VALUES APPLIED ENDED?????????????????????????????????????\n";*/
 
 		make_socket_unblocking(client_fd);
 		//setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)); 
@@ -134,9 +125,7 @@ void Server::create_Client(int epollfd) {
 		client->setDefaults();
 		_fd_to_nickname.insert({client_fd, client->getNickname()});
 		_nickname_to_fd.insert({client->getNickname(), client_fd});
-		if (!client->get_acknowledged()){
-			//client->getMsg().queueMessage("NICK " +  client->getNickname() + "\r\n");
-			
+		if (!client->get_acknowledged()){			
 			client->getMsg().queueMessage(":localhost NOTICE * :initilization has begun.......\r\n");
 			client->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
 			//no update epollout as its on for the first call
@@ -378,25 +367,16 @@ void Server::removeGhostFd()
 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, 0);
 }
 */
-void Server::setEpollout(int fd)
+/*void Server::setEpollout(int fd)
 {
 	struct epoll_event event;
 	event.events = EPOLLOUT | EPOLLIN | EPOLLET;
 	event.data.fd = fd;
 	epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, fd, &event);
-}
+}*/
 #include <iomanip>
 void Server::send_message(std::shared_ptr<Client> client)
 {
-	/**
-	 * int pending_bytes;
-socklen_t optlen = sizeof(pending_bytes);
-getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &pending_bytes, &optlen);
-std::cout << "DEBUG: Socket has " << pending_bytes << " bytes pending to send.\n";
-
-	 * 
-	 */
-
 	int fd;
 	fd = client->getFd();
 	
@@ -408,41 +388,8 @@ std::cout << "DEBUG: Socket has " << pending_bytes << " bytes pending to send.\n
         std::string send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
 		
 		std::cout<<"checking the message from que before send ["<< msg <<"] and the fd = "<<fd<<"\n";
-					// Right before your queueMessage call:
-			/*std::cout << "DEBUG: params[0] content (raw): [" << msg << "]" << std::endl;
-			// Or to show non-printable characters:
-			std::cout << "DEBUG: params[0] content (hex): [";
-			for (char c : msg) {
-			    if (c == '\r') std::cout << "\\r";
-			    else if (c == '\n') std::cout << "\\n";
-			    else if (c >= ' ' && c <= '~') std::cout << c; // Printable ASCII
-			    else std::cout << "\\x" << std::hex << std::setw(2) << std::setfill('0') << (int)(unsigned char)c << std::dec;
-			}
-			std::cout << "]" << std::endl;*/
-		//while (msg.length() > 0) { // Keep trying to send THIS message until it's gone
-        //    ssize_t bytes_to_send = msg.length();
-            //ssize_t bytes_sent = send(fd, msg.c_str(), bytes_to_send, MSG_NOSIGNAL);
-			
-			/*socklen_t optlen = sizeof(remaining_bytes_to_send);
-			getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &remaining_bytes_to_send, &optlen);
-			std::cout << "DEBUG:: BEFORE SEND: Socket has " << remaining_bytes_to_send << " bytes pending to send.\n";*/
-			/*struct tcp_info info;
-			socklen_t info_len = sizeof(info);
-			getsockopt(fd, IPPROTO_TCP, TCP_INFO, &info, &info_len);
-			std::cout << "DEBUG BEFORE: Unacked Bytes (Real Pending Send Data): " << info.tcpi_unacked << std::endl;*/
-			  
+
 			ssize_t bytes_sent = send(fd, send_buffer_ptr.c_str(), remaining_bytes_to_send, MSG_NOSIGNAL);
-			//send(fd, "", 0, MSG_NOSIGNAL);
-
-			/*struct tcp_info info2;
-			socklen_t info_len2 = sizeof(info2);
-			getsockopt(fd, IPPROTO_TCP, TCP_INFO, &info2, &info_len2);
-			std::cout << "DEBUG AFTER: Unacked Bytes (Real Pending Send Data): " << info2.tcpi_unacked << std::endl;*/
-
-			/*socklen_t optlen2 = sizeof(remaining_bytes_to_send);
-			getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &remaining_bytes_to_send, &optlen2);
-			std::cout << "DEBUG:: AFTER SEND: Socket has " << remaining_bytes_to_send << " bytes pending to send.\n";*/
-
 
 			//usleep(5000); 
             if (bytes_sent == -1) {
@@ -471,63 +418,19 @@ std::cout << "DEBUG: Socket has " << pending_bytes << " bytes pending to send.\n
 	                // Still more bytes to send for *this* message.
 	                // Leave EPOLLOUT enabled. The next time send_message is called,
 	                // it will automatically pick up from the new offset.
-	                std::cout << "ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖDEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
-	                          << " bytes. Remaining: " << client->getMsg().getRemainingBytesInCurrentMessage() << ".\n";
+	                //std::cout << "ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖDEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
+	                //          << " bytes. Remaining: " << client->getMsg().getRemainingBytesInCurrentMessage() << ".\n";
 	                return; // Exit send_message. Epoll will re-trigger for remaining bytes.
 				}
-				/*if (static_cast<ssize_t>(bytes_sent) < bytes_to_send) {
-                // Partial send of the current message.
-			    	client->getMsg().queueMessageFront(msg.substr(bytes_sent));
-                	//std::cout << "DEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
-                    //      << " bytes. Remaining: " << msg.length() << " in current message.\n";
-           		 } else { // (static_cast<size_t>(bytes_sent) == bytes_to_send)
-                // Entire current message was sent.
-                	//std::cout << "DEBUG: Full part of current message sent for FD " << fd << ".\n";
-                	break; // Exit the inner while loop to remove this message and try the next.
-            	}*/
 			}
-        //} 
 	}
 	if (client->isMsgEmpty()) {
-		//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
-		//	send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
-
-		if (!client->get_acknowledged())
-		{
-			//ignore this for now
-			//std::cout<<"SENDING WELCOME MESSAGE INCOMING 11111111111111111111\n";
+		if (!client->get_acknowledged()) {
 			client->set_acknowledged();		
 		}
-		//usleep(3000);
 		updateEpollEvents(fd, EPOLLOUT, false);
 	}
 
-}
-
-
-
-void Server::send_server_broadcast()
-{
-	while(!_server_broadcasts.empty())
-	{
-		std::string msg = _server_broadcasts.front();
-
-		for (auto& pair : _Clients ) {
-			ssize_t bytes_sent = send(pair.first, msg.c_str(), msg.length(), 0);
-			if (bytes_sent == -1) {
-				if (errno == EAGAIN || errno == EWOULDBLOCK) {
-					std::cout<<"triggering the conts???????????????????????????????????????????\n";
-					continue;  //No more space, stop writing
-				}
-				else perror("send error");
-			}
-			if (bytes_sent > 0) {
-			
-			}
-		}
-		_server_broadcasts.pop_front();  //remove sent message
-	}
-	_server_broadcasts.clear();
 }
 
 
@@ -627,25 +530,7 @@ void Server::handleNickCommand(std::shared_ptr<Client> client) {
         std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
                   << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
     }
-	//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
-	//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
-	//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
-	//std::string arg = "";
-	//client->getMsg().queueMessage(arg);
-	//client->getMsg().queueMessage(":server NOTICE * : \r\n");
-	//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
-	//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
-				//client->getMsg().queueMessage(":server 001 " + client->getNickname() + " :Welcome!\r\n");
-
-	//client->getMsg().queueMessage("PING :localhost\r\n");
 	client->getMsg().queueMessage(msg);
-	//client->getMsg().queueMessage(msg);
-	//"WHO newnick\r\n";
-	//":newnick JOIN #testchannel\r\n";
-	//":oldnick NICK newnick\r\n"
-	//":server NOTICE #testchannel :Nickname update detected\r\n"
-	//client->getMsg().queueMessage(":newnick JOIN #testchannel\r\n");
-
 	std::cout << "DEBUG NICK Self-Message: Message QUEUED for Client " << client->getNickname() 
               << " (FD: " << client->getFd() << "). Current queue size after: " << client->getMsg().getQue().size() << "\n";
 }
@@ -684,19 +569,9 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
             channel_ptr->removeClient(client->getNickname());
 
             // B) Build the PART message for *this specific channel context*.
-           	client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
-			std::string part_message =  MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());
-		   /*std::string part_message = MessageBuilder::buildClientQuit(
-                //client.getPrefix(),  consist of  nickname!username@hostname // Use the quitting client's full prefix for the message source
-                client->getNickname() + "!username@localhost",
-				//channel_name,
-				"Client disconnected"
-                //quit_message_reason
-            );*/
+           	//client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
+			std::string part_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
 
-            // C) Broadcast this PART message to the *remaining* members of THIS channel.
-            //    The broadcastMessageToChannel helper (which internally uses sendMessageToClient)
-            //    handles iterating the channel's members and queuing the message for each.
             broadcastMessageToChannel(channel_ptr, part_message, client); // 'client' is the sender to be excluded from broadcast
         } else {
             std::cerr << "WARNING: Client " << client->getNickname() << " was in channel "
@@ -739,11 +614,6 @@ if (!client) {
 		    // This warning indicates a channel was removed from the server while still in client's list.
 		    std::cerr << "WARNING: weak_ptr to channel '" << pair.first << "' expired in client's joined list.\n";
 		}
-		//CHANGE BACK 
-		/*if (pair.second.lock()) {
-			std::cout<<"a channel pushewd back \n";
-            channels_to_process.push_back(pair.first);
-    	}*/
 	}
     for (const std::string& channel_name : channels_to_process) {
         auto channel_ptr = get_Channel(channel_name); 
@@ -795,7 +665,7 @@ if (!client) {
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
  // --- 1. Basic Parameter Count Check (Always first) ---
-    ModeCommandContext context;
+    //ModeCommandContext context;
  	if (params.empty()) {
         client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
@@ -821,11 +691,11 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
             }
 		}
 		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
-		//channel->initialModeValidation(client->getNickname(), params.size());
 		if (validationResult.first != MsgType::NONE) {
             // If validation resulted in an error or a listing reply (like RPL_CHANNELMODEIS),
             // send the appropriate message and return.
             client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
+
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
 			return; // Abort: Validation failed or command was for listing
@@ -851,6 +721,7 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 				messageParams.push_back(modeparams[1]);
 			else
 				messageParams.push_back("");
+			broadcastMessageToChannel(channel, MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client);
 			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams));
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
@@ -916,11 +787,12 @@ void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const 
             if (sender && current_client_ptr->getFd() == sender->getFd()) {
                 continue; // Skip the sender
             }
-			if (current_client_ptr->isMsgEmpty() == true) {
+			current_client_ptr->getMsg().queueMessage (message_content);
+			if (!current_client_ptr->isMsgEmpty() == true) {
 				updateEpollEvents(current_client_ptr->getFd(), EPOLLOUT, true);
 			}
 
-			current_client_ptr->getMsg().queueMessage (message_content);
+
         } else {
             // This case means the weak_ptr is expired. The Client object no longer exists.
             // This is a sign that the client disconnected, and the channel's map
@@ -932,7 +804,7 @@ void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const 
     }
 }
 #include<chrono>
-
+// could we add if msg empty check here , then all cases where we call updatepoll must be called before message qued
 void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
     auto it = _epollEventMap.find(fd);
     if (it == _epollEventMap.end()) {
@@ -954,19 +826,8 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
     // Optimization: Only call epoll_ctl if the mask has actually changed
     if (new_mask == current_mask) {
         std::cout << "DEBUG: Epoll flag 0x" << std::hex << flag_to_toggle << std::dec << " for FD " << fd << " already in desired state. No epoll_ctl call.\n";
-        return; // No change needed
+        return; // No change needed this checks if epollout was already triggered and avoids doing it again 
     }
-	/*it->second.events = EPOLLOUT | EPOLLET | EPOLLONESHOT;
-	if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &it->second) == -1) {
-        perror("epoll_ctl EPOLL_CTL_MOD (setEpollFlagStatus) failed");
-        std::cerr << "ERROR: Failed to set epoll flag status for FD " << fd
-                  << ". Flag: 0x" << std::hex << flag_to_toggle << std::dec
-                  << ", Enable: " << (enable ? "true" : "false")
-                  << ". Error: " << strerror(errno) << ".\n";
-        // If epoll_ctl fails here, it's often a severe issue (e.g., FD is bad).
-        // Consider calling disconnectClient(fd) here in a production server.
-	}*/
-    // Update the 'events' member of the struct directly in your map
     it->second.events = new_mask;
 
     // Now, tell the kernel about the updated event set, passing a pointer to the stored struct.
@@ -982,19 +843,15 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
         std::cout << "DEBUG: Epoll flag status updated for FD " << fd
                   << ". New total mask: 0x" << std::hex << new_mask << std::dec << "\n";
     }
+
+	// debugging only 
 	if (it->second.events & EPOLLOUT) {
 		auto now = std::chrono::system_clock::now();
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 		std::cout << "DEBUG: EPOLLOUT triggered at " << ms << " ms for FD " << fd << std::endl;
 	}
 }
-/*Channel Server::getChannel(const std::string& channelName){
-    auto it = _channels.find(channelName);
-    if(it != _channels.end()){
-        return it->second;
-    }
-    return nullptr; // Channel not found
-}*/
+
 
 
 /**

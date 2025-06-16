@@ -235,7 +235,7 @@ namespace MessageBuilder {
     // 482 ERR_CHANOPRIVSNEEDED
     // Format: :<server> 482 <client> <channel name> :You're not channel operator
     std::string buildNotOperator(const std::string& clientNickname, const std::string& channelName) {
-        return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::NOT_OPERATOR)) + " " + clientNickname + " " + channelName + " :You're not channel operator\r\n";
+        return  SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::NOT_OPERATOR)) + " " + clientNickname + " " + channelName + " :You're not channel operator\r\n";
     }
 
     // 502 ERR_USERSDONTMATCH (Commonly used when a user tries to change modes on another user's private modes)
@@ -250,7 +250,7 @@ namespace MessageBuilder {
     // Format: :<server> 324 <client> <channel> <mode string> <mode params>
     // Example: :localhost 324 mynick #channel +nt
     std::string buildChannelModeIs(const std::string& clientNickname, const std::string& channelName, const std::string& modeString, const std::string& modeParams) {
-        return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::RPL_CHANNELMODEIS)) + " " + clientNickname + " " + channelName + " " + modeString + (modeParams.empty() ? "" : " " + modeParams) + "\r\n";
+        return  SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::RPL_CHANNELMODEIS)) + " " + clientNickname + " " + channelName + " " + modeString + (modeParams.empty() ? "" : " " + modeParams) + "\r\n";
     }
 
     // 221 RPL_UMODEIS

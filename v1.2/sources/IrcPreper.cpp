@@ -80,9 +80,9 @@ void IrcMessage::prep_join_channel(std::string channleName, std::string nickname
 	std::string test3 = ":localhost 332 " + nickname + " " + channleName + " :Welcome to " + channleName + "!\r\n"; // ✅ Channel topic
 	messageQue.push_back(whoJoins);
 	//messageQue.push_back(welcomeToChannel);
+	messageQue.push_back(test3);
 	messageQue.push_back(test1);
 	messageQue.push_back(test2);
-	messageQue.push_back(test3);
 }
 
 // the alternative to macros

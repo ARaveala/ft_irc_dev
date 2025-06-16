@@ -105,11 +105,7 @@ int loop(Server &server)
 					if (read_to_buffer == true)
 					{
 						try {
-							//std::cout<<" reciveing message\n";
 							server.handleReadEvent(fd);
-							//server.get_Client(fd)->receive_message(fd, server);
-							//std::cout<<" message recived\n";
-							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
 							if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
 								server.remove_Client(fd);

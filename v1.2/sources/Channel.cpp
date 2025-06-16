@@ -7,11 +7,6 @@
 #include <algorithm>
 #include <cctype>
 
-
-/*Channel::Channel(const std::string& channelName, std::map<int, std::shared_ptr<Client>>& clients) : _name(channelName), _topic(""), _clients(clients) {
-    std::cout << "Channel '" << _name << "' created." << std::endl;
-}*/
-
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
 	_ChannelModes.reset();  //set all modes to off (0)
@@ -115,6 +110,7 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 	throw std::runtime_error("Client not found get client modes!");
 	//return ;  // return empty weak_ptr if no match is found
 }
+// will add this back in a little later once my code is cleaner, incase debugging required
 /*std::bitset<config::CLIENT_NUM_MODES> Channel::getClientModes(const std::string nickname) const {
     std::string lower_nickname_param = nickname;
     std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
@@ -135,6 +131,46 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
     // This will return a new, default-constructed bitset by value, which is correct
     return std::bitset<config::CLIENT_NUM_MODES>();
 }*/
+
+// hold on to this, i dont think we need it, worth keeping incase of subtle issue
+/*void Channel::buildWhoReplyFor(std::shared_ptr<Client> requestingClient) {
+    if (!requestingClient)
+        return;
+
+    const std::string& channelName = this->getName();
+    const std::string& targetNick = requestingClient->getNickname();
+
+    for (std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare>::const_iterator it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
+        std::shared_ptr<Client> member = it->first.lock();
+        if (!member)
+            continue;
+
+        const std::bitset<config::CLIENT_NUM_MODES>& clientModes = it->second.first;
+
+        std::string nickname   = member->getNickname();
+        std::string username   = member->getClientUname();
+        std::string host       = "localhost";//member->getHost(); // or "localhost"
+        std::string realname   = member->getfullName();
+        std::string status     = "H"; // Assume the user is "here"
+
+        // Append "@" for operator if applicable
+        if (clientModes[Modes::OPERATOR])
+            status += "@";
+
+        // Build the 352 WHO reply line
+        std::string whoLine = ":localhost 352 " + targetNick + " " + channelName + " " +
+                              username + " " + host + " localhost " + nickname + " " +
+                              status + " :0 " + realname + "\r\n";
+
+        requestingClient->getMsg().queueMessage(whoLine);
+    }
+
+    // Final 315: End of /WHO list
+    std::string endLine = ":localhost 315 " + targetNick + " " + channelName + " :End of /WHO list\r\n";
+    requestingClient->getMsg().queueMessage(endLine);
+}*/
+
+
 std::string Channel::getCurrentModes() const {
 
 	std::string activeModes = "+";
@@ -146,20 +182,7 @@ std::string Channel::getCurrentModes() const {
     return activeModes;
 }
 
-/*std::bitset<config::CHANNEL_NUM_MODES>& Channel::getChannelModes()
-{
-	//std::cout << "Total Clients: " << _ClientModes.size() << std::endl;
-	for (auto& entry : _ClientModes) {
-		std::cout<<"whats thje name we looking at now = ["<<entry.first.lock()->getNickname()<<"]\n";
-		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
 
-            return entry.second.first;  // return the matching weak_ptr
-        }
-    }
-	// we could substitute with our own  throw here
-	throw std::runtime_error("Client not found get client modes!");
-	//return ;  // return empty weak_ptr if no match is found
-}*/
 
 void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
@@ -187,92 +210,8 @@ Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
 bool Channel::setModeBool(char onoff) {
 	return onoff == '+'; 
 }
-//16:31 -!- mode/#bbq [-oo pleb1 pleb2] by anonikins
-/*void Channel::setChannelMode(std::string mode)
-{
-//	char operation = mode[0];
-	char modechar = mode[1];
-	bool onoff = setModeBool(mode[0]);
-	//if (operation == '+')
-	//	onoff = true;
-
-	Modes::ChannelMode modeType = charToChannelMode(modechar);
-	if (modeType != Modes::NONE) {
-		_ChannelModes.set(modeType, onoff);
-	}
-
-}*/
 
 
-/* // we will try this 1
-	std::pair<bool, std::string> Channel::setChannelMode(char modeChar, bool enableMode, const std::string& modeParam) {
-    // Note: The operator check should primarily happen in CommandDispatcher::initialModeValidation.
-    // This function assumes the caller (CommandDispatcher) has already verified operator status.
-    // If you keep it here as a safety net, ensure getClientModes and Modes::OPERATOR are accessible.
-
-
-    Modes::ChannelMode cmodeType = Modes::charToChannelMode(modeChar);
-    
-    // The initialModeValidation should have caught UNKNOWN_MODE, so this might be redundant
-    // but good for internal consistency if this function can be called directly.
-    if (cmodeType == Modes::NONE) {
-        // This case should ideally not be reached if pre-validation is robust.
-        // If it is, consider logging an internal error.
-        return {false, ""}; // Indicate failure, no mode fragment
-    }
-
-    // Build the mode fragment string
-    std::string modeFragment = std::string(1, enableMode ? '+' : '-');
-    modeFragment += modeChar;
-
-    bool success = false;
-    switch (cmodeType) {
-        case Modes::USER_LIMIT: // +l <limit>
-            if (enableMode) {
-                if (modeParam.empty()) return {false, ""}; // Missing parameter for +l
-                try {
-                    unsigned int limit = std::stoul(modeParam); // Convert string to unsigned long
-                    _userLimit = limit;
-                    _ChannelModes.set(Modes::USER_LIMIT, true); // Ensure limit mode is ON
-                    modeFragment += " " + modeParam; // Add parameter to fragment
-                    success = true;
-                } catch (const std::exception& e) {
-                    // Invalid number format for limit
-                    return {false, ""};
-                }
-            } else { // -l (remove limit)
-                _userLimit = 0; // Or some default
-                _ChannelModes.set(Modes::USER_LIMIT, false);
-                success = true;
-            }
-            break;
-
-        case Modes::INVITE_ONLY: // +i
-            _ChannelModes.set(Modes::INVITE_ONLY, enableMode);
-            success = true;
-            break;
-
-        case Modes::PASSWORD: // +k <password>
-            if (enableMode) {
-                if (modeParam.empty()) return {false, ""}; // Missing parameter for +k
-                _password = modeParam;
-                _ChannelModes.set(Modes::PASSWORD, true); // Ensure password mode is ON
-                modeFragment += " " + modeParam; // Add parameter to fragment
-                success = true;
-            } else { // -k (remove password)
-                _password.clear(); // Clear the password
-                _ChannelModes.set(Modes::PASSWORD, false);
-                success = true;
-            }
-            break;
-
-        case Modes::TOPIC_SET_BY_OP: // +t
-            _ChannelModes.set(Modes::TOPIC_SET_BY_OP, enableMode);
-            success = true;
-            break;
-			    return {success, modeFragment};
-
- */
 std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 {
 	std::string modes;
@@ -280,7 +219,6 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 
 	size_t paramIndex = 1;
 	size_t modeIndex = 0;
-	//int targetIndex = 0;
 	std::string modeFlags; 
 	char modeChar;
 	char sign;
@@ -291,8 +229,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 		if (modeIndex == 0){
 				sign = params[paramIndex][modeIndex]; // we take the + or -
 				modeFlags = params[paramIndex].substr(1);
-				modes += sign;
-				//modeIndex++; 
+				modes += sign; 
 			}
 		while (modeIndex < modeFlags.size())
 		{
@@ -336,9 +273,6 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode, const std::string& target) {
 	std::cout<<"SET CHANNEL MODE ACTIVATED -------------------------mode char = "<<modeChar<<"\n";
 
-
-  //  char modeChar = mode[1];
-    //bool enableMode = setModeBool(mode[0]);
 	std::vector<std::string> response;
 	bool modeChange = false;
 	Modes::ChannelMode cmodeType = Modes::NONE;
@@ -371,7 +305,6 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 			std::cout<<"should report activated ----\n";
 
 		response.push_back(std::string(1, modeChar)); // Mode char
-		//response.push_back(target);
 	}
  	switch (cmodeType) {
             case Modes::USER_LIMIT:
@@ -521,13 +454,13 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 bool Channel::canClientJoin(const std::string& nickname, const std::string& password ) {
     std::cout<<"handling can client join to client named = "<<nickname<<"\n";
 
-    std::string lower_nickname_param = nickname;
-    std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
-                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+    //std::string lower_nickname_param = nickname;
+    //std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
+    //               [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
 
     if(_ChannelModes.test(Modes::INVITE_ONLY)) {
         // Check if the lowercase nickname is in the invites list
-        auto it = std::find(_invites.begin(), _invites.end(), lower_nickname_param);
+        auto it = std::find(_invites.begin(), _invites.end(), nickname);//, lower_nickname_param);
         if (it != _invites.end()) {
             _invites.erase(it); // Remove name from invite list after successful join
             return true;
@@ -631,7 +564,7 @@ std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
                 return {MsgType::NOT_IN_CHANNEL, {ClientNickname, getName()}};
             }
             // Return RPL_CHANNELMODEIS with necessary parameters for MessageBuilder
-            return {MsgType::RPL_CHANNELMODEIS, {ClientNickname, getName(), getCurrentModes()}};
+            return {MsgType::RPL_CHANNELMODEIS, {ClientNickname, getName(), getCurrentModes(), ""}};
         }
         if (!isClientInChannel(ClientNickname)) {
             return {MsgType::NOT_IN_CHANNEL, {ClientNickname, getName()}};

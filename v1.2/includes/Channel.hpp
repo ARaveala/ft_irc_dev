@@ -121,11 +121,13 @@ class Channel {
         		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
             		return true;
         	}
-			return false;
-    }
+    	}
+		return false;
+
+	}
 	// we could substitute with a throw here
-    return {};  // return empty weak_ptr if no match is found
-		};
+    //return {};  // return empty weak_ptr if no match is found
+	//	};
 
 		std::pair<MsgType, std::vector<std::string>> initialModeValidation( const std::string& ClientNickname, size_t paramsSize);
 		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;
@@ -145,6 +147,8 @@ class Channel {
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};
+
+		void buildWhoReplyFor(std::shared_ptr<Client> requestingClient);
 
 };
 

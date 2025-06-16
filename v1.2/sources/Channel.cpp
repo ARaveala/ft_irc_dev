@@ -99,6 +99,24 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 	throw std::runtime_error("Client not found get client modes!");
 	//return ;  // return empty weak_ptr if no match is found
 }
+bool Channel::isValidChannelMode(char modeChar) const {
+    return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
+}
+bool Channel::isValidClientMode(char modeChar) const {
+    return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();
+}
+bool Channel::channelModeRequiresParameter(char modeChar) const {
+	return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');
+}
+
+bool Channel::isClientInChannel(const std::string& nickname) const {
+	for (const auto& entry : _ClientModes) {
+		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+    		return true;
+		}
+	}
+	return false;
+}
 // will add this back in a little later once my code is cleaner, incase debugging required
 /*std::bitset<config::CLIENT_NUM_MODES> Channel::getClientModes(const std::string nickname) const {
     std::string lower_nickname_param = nickname;

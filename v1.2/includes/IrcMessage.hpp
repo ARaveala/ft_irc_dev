@@ -49,9 +49,7 @@ class IrcMessage {
 	public:
     	IrcMessage();
     	~IrcMessage();
-    	// parse incoming
     	bool parse(const std::string& rawMessage);
-    	// parse outgoing
     	std::string toRawString() const;
     	void setPrefix(const std::string& prefix);
     	void setCommand(const std::string& command); 
@@ -67,6 +65,8 @@ class IrcMessage {
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string& getQueueMessage() { return _messageQue.front();}; //return _messageQue.empty() ? "" : _messageQue.front();
 		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
+		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
+		
 		void clearQue() {_messageQue.clear();};
 
 		const std::string getMsgParam(int index) const{ return _params[index]; };
@@ -89,29 +89,10 @@ class IrcMessage {
 			//_illegal_nicknames.clear()
 		};
 
-		void advanceCurrentMessageOffset(ssize_t bytes_sent) {
-			//std::cout << "DEBUG:WW: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
-		        _bytesSentForCurrentMessage += std::min(_bytesSentForCurrentMessage + bytes_sent, _messageQue.front().length());//bytes_sent;
-		    //std::cout << "DEBUG:WW: After advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
-			}
-		size_t getRemainingBytesInCurrentMessage() const {
-        		if (_messageQue.empty()) return 0;
-        	return  std::max((size_t)0, _messageQue.front().length() - _bytesSentForCurrentMessage); // prevent overflow and returning of neg values
-    	}
-		const char* getCurrentMessageCstrOffset() const {
-		       if (_messageQue.empty()) return nullptr;
-		        size_t safe_offset = std::min(_bytesSentForCurrentMessage, _messageQue.front().length());
-			    return _messageQue.front().c_str() + safe_offset;
-			  // return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
-		   }
+		void advanceCurrentMessageOffset(ssize_t bytes_sent);
+		size_t getRemainingBytesInCurrentMessage() const;
+		const char* getCurrentMessageCstrOffset() const;
 
-
-
-
-	bool isActive(MsgType type) {
-		    return _msgState.test(static_cast<size_t>(type));
-		}
-		MsgType getActiveMessageType() const {
-    		return _activeMsg;  // Returns the currently active message type
-		}
+		bool isActive(MsgType type);
+		MsgType getActiveMessageType() const;
 };

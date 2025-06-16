@@ -76,32 +76,17 @@ struct WeakPtrCompare {
 		bool removeClient(std::string nickname);
 
 
-		bool isValidChannelMode(char modeChar) const {
-		    return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
-		}
+		bool isValidChannelMode(char modeChar) const;
 
-		bool isValidClientMode(char modeChar) const {
-		    return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();
-		}
-
-		bool channelModeRequiresParameter(char modeChar) const {
-        	return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');
-    	}
-
-		bool isClientInChannel(const std::string& nickname) const {
-			for (const auto& entry : _ClientModes) {
-        		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
-            		return true;
-				}
-			}
-			return false;
-		}
+		bool isValidClientMode(char modeChar) const;
+		bool channelModeRequiresParameter(char modeChar) const;
+		bool isClientInChannel(const std::string& nickname) const;
 
 		std::pair<MsgType, std::vector<std::string>> initialModeValidation( const std::string& ClientNickname, size_t paramsSize);
 		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;
 		std::vector<std::string> applymodes(std::vector<std::string> params);
 
-		bool isOperator(Client* Client) const;
+		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 
 		void clearAllChannel() {

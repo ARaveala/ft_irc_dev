@@ -2,17 +2,17 @@ servers = (
   {
     address = "localhost";
     port = 6669;
-    nick = "anonthe_wildb";
-    user = "user_anonthe_wildb";
-    realname = "real_anonthe_wildb";
+    nick = "anonthe_evill";
+    user = "user_anonthe_evill";
+    realname = "real_anonthe_evill";
   }
 );
 
 settings = {
   core = {
-    real_name = "real_anonthe_wildb";
-    user_name = "user_anonthe_wildb";
-    nick = "anonthe_wildb";
+    real_name = "real_anonthe_evill";
+    user_name = "user_anonthe_evill";
+    nick = "anonthe_evill";
   };
 };
 

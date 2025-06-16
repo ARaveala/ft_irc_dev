@@ -1,12 +1,13 @@
 #pragma once
 
 #include <string>
-// https://modern.ircdocs.horse/#client-to-server-protocol-structure
-// Names of IRC entities (clients, servers, channels) are casemapped
-#include "IrcMessage.hpp"
 #include <memory>
+
+#include "IrcMessage.hpp"
+
 class Server;
 class Channel;
+
 class Client {
 	private:
 		int _fd;
@@ -16,7 +17,6 @@ class Client {
 		time_t signonTime;			// todo set on registration
 		time_t lastActivityTime;	// todo update when read data is processed from clients socket.
 
-		bool _invisable = false; // bitset using MODES:: to be swapped for this bool, used for registartion debuggging
 		std::bitset<config::CLIENT_PRIV_NUM_MODES> _ClientPrivModes;
 		bool _channelCreator = false;
 		bool _quit = false;
@@ -31,18 +31,12 @@ class Client {
 		std::string _username;
 		std::string _fullName;
 		std::string _hostname; // todo check this is set during connection
-		bool _isOperator;
+		bool _isOperator; // todo client can be many chanel operator
 
 		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
-		//std::deque<std::string> _welcome;
 		std::map<std::string, std::weak_ptr<Channel>> _joinedChannels; // list of joined channels
 
-		//std::deque<std::string> _messageQue;
-		//std::string _prefixes; // Client permissions 
-		//int ping_sent; // std::chrono::steady_clock
-		// pointer to current channel object ?
-		// list of channels Client is in 
 		bool _pendingAcknowledged = false;
 		bool _acknowledged = false;
 
@@ -56,10 +50,6 @@ class Client {
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
 		
-		//testing only 
-		void setInvis(bool onoff) {_invisable = onoff;};
-		bool getInvis() {return _invisable;};
-
 		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
 		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
 		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
@@ -109,9 +99,7 @@ class Client {
 		void setHostname(const std::string& hostname);
 		void setOperator(bool status);
 
-		//void addToMessageQue(std::string message) { _msg.queueMessage(message);};
 		bool addChannel(std::string channelName, std::shared_ptr<Channel> channel);
-		//void removeChannel(std::string channelName);
 		std::string getChannel(std::string channelName);
 		void sendPing();
 		void sendPong();
@@ -126,8 +114,6 @@ class Client {
 			return false;
 		};
 		int prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify);
-		//void dispatchCommand(const std::string message, Server& server);
-		// loops through to find which command fucntion to execute
 		void executeCommand(const std::string& command);
 		void setCommandMap(Server &server); // come back to this
 		
@@ -135,8 +121,6 @@ class Client {
 		bool extractAndParseNextCommand();
 
 		void updateLastActivityTime();
-    
-
 };
 
 

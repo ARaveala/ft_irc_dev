@@ -30,8 +30,8 @@ int setup_epoll(int epoll_fd, int fd, uint32_t events);
  */
 int make_socket_unblocking(int fd);
 
-int create_epollfd(Server &server);
-int createTimerFD(int timeout_seconds);
-void resetClientTimer(int timer_fd, int timeout_seconds);
-int setup_epoll_timer(int epoll_fd, int timeout_seconds);
-void readyEpollout(int client_fd, int epoll_fd);
+// int create_epollfd(Server &server);
+// int createTimerFD(int timeout_seconds);
+// void resetClientTimer(int timer_fd, int timeout_seconds);
+// int setup_epoll_timer(int epoll_fd, int timeout_seconds);
+// void readyEpollout(int client_fd, int epoll_fd);

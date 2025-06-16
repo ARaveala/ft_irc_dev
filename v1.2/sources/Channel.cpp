@@ -34,17 +34,6 @@ std::vector<int> Channel::getAllfds() {
 	return fds;
 }
 
-// rename to refer t getting a user list for channel gets all nickname sinto a lits, rename
-// const std::string Channel::getAllNicknames() {
-// 	std::string list;
-// 	for (const auto& entry : _ClientModes) {
-// 		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
-// 			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@localhost ";
-// 		}
-// 	}
-// 	return list;
-// }
-
 const std::string Channel::getAllNicknames() {
 	std::string list;
 	for (const auto& entry : _ClientModes) {

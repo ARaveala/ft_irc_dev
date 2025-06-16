@@ -1,7 +1,10 @@
 #pragma once
+
 #include <string>
-#include "Channel.hpp"
 #include <deque>
+
+#include "Channel.hpp"
+
 class Server;
 
 class CommandDispatcher {

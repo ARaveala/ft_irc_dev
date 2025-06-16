@@ -209,7 +209,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		}
 
 		client->setOldNick(client->getNickname()); // we might not need this anymore 
-		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
+		// asdf todo client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
 		return ; 
 	}

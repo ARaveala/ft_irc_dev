@@ -41,6 +41,10 @@ class IrcMessage {
 
 		std::vector<std::string> _paramsList;
 		std::vector<std::string> _params;
+		std::bitset<config::MSG_TYPE_NUM> _msgState;
+
+		MsgType _activeMsg = MsgType::NONE;
+
 
 	public:
     	IrcMessage();
@@ -100,4 +104,14 @@ class IrcMessage {
 			    return _messageQue.front().c_str() + safe_offset;
 			  // return _messageQue.front().c_str() + _bytesSentForCurrentMessage;
 		   }
+
+
+
+
+	bool isActive(MsgType type) {
+		    return _msgState.test(static_cast<size_t>(type));
+		}
+		MsgType getActiveMessageType() const {
+    		return _activeMsg;  // Returns the currently active message type
+		}
 };

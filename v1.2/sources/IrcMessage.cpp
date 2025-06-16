@@ -62,13 +62,7 @@ void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
 	_params = sendParams;
 }*/
 
-int IrcMessage::countOccurrences(const std::string& text, const std::string& pattern) {
-    std::regex regexPattern(pattern);  // Create regex from pattern
-    auto begin = std::sregex_iterator(text.begin(), text.end(), regexPattern);
-    auto end = std::sregex_iterator();
 
-    return std::distance(begin, end);  // Count matches
-}
 /*MsgType IrcMessage::getActiveMsgType() const {
     for (size_t i = 0; i < _msgState.size(); ++i) {
         if (_msgState.test(i)) {

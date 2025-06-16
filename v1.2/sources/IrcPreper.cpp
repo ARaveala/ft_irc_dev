@@ -30,18 +30,6 @@
 	removeClient(fd);
 }*/
 
-void IrcMessage::prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd)
-{	if (username.empty())
-		std::cout<<"asdasdasd\n";
-	if (check_and_set_nickname(getParam(0), client_fd, fd_to_nick, nick_to_fd))
-	{
-		std::string oldnick = nickname;
-		nickname.clear();
-		nickname = getParam(0);
-		setType(MsgType::RPL_NICK_CHANGE, {oldnick, username, nickname});
-		
-	} 
-}
 
 /*void IrcMessage::getDefinedMsg(MsgType activeMsg, std::deque<std::string>& messageQue) {
 	std::string theMessage = CALL_MSG_DYNAMIC(activeMsg, _params...);

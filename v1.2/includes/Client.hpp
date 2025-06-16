@@ -7,6 +7,7 @@
 
 class Server;
 class Channel;
+class IrcMessage;
 
 class Client {
 	private:

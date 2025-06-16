@@ -22,7 +22,6 @@ Client::Client(int fd, int timer_fd) :
 	_failed_response_counter(0),
 	signonTime(0),          // Initialize to 0, set on registration
 	lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
-	_invisable(false),
 	_channelCreator(false),
 	_quit(false),
 	_hasSentCap(false),

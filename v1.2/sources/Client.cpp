@@ -30,10 +30,10 @@ Client::Client(int fd, int timer_fd) :
 	// _hasSentUSer(false),
 	_registered(false),
 	_isOperator(false)      // Initialize to false
-  _ClientPrivModes.reset();
+  	
 {
 		lastActivityTime = time(NULL);
-
+		_ClientPrivModes.reset();
 }
 
 Client::~Client(){

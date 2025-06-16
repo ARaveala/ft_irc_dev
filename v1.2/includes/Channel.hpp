@@ -141,7 +141,7 @@ class Channel {
 		//void broadcastMessage(const std::string& message, Client* sender = nullptr) const;
 		//void setMode(const std::string& mode, Client* Client);
 		//void removeMode(const std::string& mode, Client* Client);
-
+ 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};

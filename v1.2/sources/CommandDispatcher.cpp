@@ -18,147 +18,8 @@ CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
 	// what if __server == null?
 }
 CommandDispatcher::~CommandDispatcher() {}
-/*void CommandDispatcher::handleChannelModes(std::shared_ptr<Channel> currentChannel, IrcMessage currentMsg, int fd)
-{
-
-}*/
-
-/*void CommandDispatcher::manageQuit(const std::string& quitMessage, std::deque<std::shared_ptr<Channel>> channelsToNotify)
-{
 
 
-
-}*/
-/*bool CommandDispatcher::initialModeValidation(std::shared_ptr<Client> client, const std::vector<std::string>& params, 	ModeCommandContext& context){
-	if (params.empty()) {
-    	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
-        return false;
-    }
-	context.target = params[0];
-    context.targetIsChannel = (context.target[0] == '#');
-
-// updatepoll, can do if returned false and check the mess
-    std::shared_ptr<Channel> channel;
-	std::string target = params[0];
-    bool targetIsChannel = (target[0] == '#'); 
-	if (params.size() == 1) {
-       	if (targetIsChannel) {
-	        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_CHANNELMODEIS, {channel->getName(), channel->getCurrentModes()}));
-	    } else {
-	        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_UMODEIS, {client->getNickname(), client->getCurrentModes()}));
-	    }
-	    return false;
-	} if (targetIsChannel) {
-        if (!_server->channelExists(params[0])) {
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {params[0]}));
-            return false;
-        }
-		context.channel = _server->get_Channel(context.target);
-        //channel = _server->get_Channel(params[0]);
-        if (!channel->isClientInChannel(client->getNickname())) {
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_IN_CHANNEL, {client->getNickname(), params[0]}));
-            return false;
-		} if (!channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
-			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}));
-			return false;
-		}
-	} else {
-		if (target != client->getNickname()) {
-			//client cant set private modes on other clients 
-			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::INVALID_TARGET, {target}));
-	    	return false;
-		}
-	}
-	return true;
-}*/
-
-/*bool CommandDispatcher::modeSyntaxValidator(std::shared_ptr<Client> client, const std::vector<std::string>& params, const ModeCommandContext& context) {
-	size_t currentIndex = 1; // skip channel
-
-	char currentSign = ' ';
-
-	while (currentIndex < params.size()) {
-		const std::string& currentToken = params[currentIndex];
-		bool isModeGroupToken = (currentToken.length() > 0 && (currentToken[0] == '+' || currentToken[0] == '-'));
-		if (currentIndex == 1 && isModeGroupToken == false) {
-			// abort first set must be mode flags or such alike
-			return false;
-		}
-		if (isModeGroupToken) {
-            // If it's a mode group token, set the sign and iterate through its characters
-            currentSign = currentToken[0];
-			 for (size_t i = 1; i < currentToken.length(); ++i) {
-                char modeChar = currentToken[i];
-				bool modeCharValid = false;
-                if (context.targetIsChannel) {
-                    modeCharValid = context.channel->isValidChannelMode(modeChar) || context.channel->isValidClientMode(modeChar);
-                } else { // Client private mode
-                    modeCharValid = client->isValidPrivClientMode(modeChar);
-				}
-			    if (!modeCharValid) {
-                    std::cout << "DEBUG: Syntax Error: Unknown mode char '" << modeChar << "'." << std::endl;
-                    client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::UNKNOWN_MODE, {std::string(1, modeChar), client->getNickname()}));
-                    return false; // Abort on first unknown mode
-                }
-				bool paramExpected = context.channel->channelModeRequiresParameter(modeChar);
-				if (paramExpected) {
-                	// Check for missing parameter
-
-                	if (currentIndex + 1 >= params.size()) {
-                	    std::cout << "DEBUG: Syntax Error: Mode '" << modeChar << "' requires a parameter but none found." << std::endl;
-                	    client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE", std::string(1, modeChar)}));
-                	    return false; // Abort on missing parameter
-                	}
-					currentIndex++;
-
-				}
-				const std::string& modeParam = params[currentIndex];
-
-                // --- 1c. Validate parameter content ---
-                if (context.targetIsChannel) {
-                    if (modeChar == 'o' || modeChar == 'v') { // Client modes within a channel (+o, +v)
-                        // Username must start with lowercase AND exist on server
-                        if (modeParam.empty() || !std::islower(modeParam[0]) || !_server->clientExists(modeParam)) { // this should be is on channel, we dont care if it exists
-                            std::cout << "DEBUG: Syntax Error: Invalid or non-existent user '" << modeParam << "' for mode '" << modeChar << "'." << std::endl;
-                            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_NICK, {client->getNickname(), modeParam}));
-                            return false; // Abort on invalid/non-existent user
-                        }
-                    } else if (modeChar == 'l' && currentSign == '+') { // Set user limit (+l)
-                        try {
-                            if (modeParam.empty()) throw std::invalid_argument("empty");
-                            std::stoul(modeParam); // Throws if not a valid unsigned long we will add a lmit max check here 
-                        } catch (const std::exception& e) {
-                            std::cout << "DEBUG: Syntax Error: Invalid numeric parameter '" << modeParam << "' for mode '" << modeChar << "'." << std::endl;
-                            // message here shouyld be limit too high or negative not allowed 
-							client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE", std::string(1, modeChar), "Invalid limit"}));
-                            return false; // Abort on invalid numeric
-                        }
-                    } else if (modeChar == 'k' && currentSign == '+') { // Set channel key/password (+k)
-                        if (modeParam.empty()) {
-                            std::cout << "DEBUG: Syntax Error: Empty password parameter for mode '" << modeChar << "'." << std::endl;
-                            // check password restrictions
-							client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE", std::string(1, modeChar), "Empty password"}));
-                            return false; // Abort on empty password
-                        }
-                    }
-                }
-                // If this `modeChar` required and consumed a parameter, we must advance the main `currentParamIndex` by 1
-                // more than the mode group token itself when we exit this `if (isModeGroupToken)` block.
-                // This will be handled by incrementing currentPa
-			}
-
-		}
-		else { // Current token is NOT a mode group (doesn't start with '+' or '-')
-                // This token must be an unexpected parameter or malformed command.
-                // This means the previous mode group didn't consume it, and it's not a new mode group.
-                std::cout << "DEBUG: Syntax Error: Unexpected token '" << currentToken << "'. Expected mode group or end of command." << std::endl;
-                client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE", currentToken}));
-                return false; // Abort the entire command
-            }
-        } // End while loop over params
-
-        return true; // A
-}*/
 
 #include <sys/socket.h>
 #include <iomanip>
@@ -171,81 +32,21 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
     }
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
+	const std::string& nickname = client->getNickname();
 	std::cout<<"handling cap with param = "<<params[1]<<"\n";
 	// this may not be needed but could be the soruce of inconsitent behaviour, it has not fixed it ;(
-	if (command == "CAP")
-	{
-		client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " LS :multi-prefix sasl\r\n");
-        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :multi-prefix\r\n");
-        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :END\r\n");
-		client->setHasSentCap();
-
-		/*if (params[0] == "LS")
-		{
-			client->getMsg().queueMessage(":localhost CAP * LS :multi-prefix sasl\r\n");
-
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		}
-			return;*/
-		/*if (params[0] == "END")
-		{
-			
-			//std::cout<<"handling cap end = \n";
-			client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :END\r\n");
-			
-			
-			
-			//client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " END\r\n");
-			client->getMsg().queueMessage(":localhost 322 " + client->getNickname() + " #testchannel 10 :Testing channel\r\n");
-			client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
-			client->getMsg().queueMessage(":localhost JOIN #testchannel\r\n");
-
-
-			//client->getMsg().queueMessage(":localhost 461 " + client->getNickname() + " :No enough parameters\r\n");
-			//client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :No active channels\r\n");
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			//return;
-			client->setHasSentCap();
-
-		}
-		else {
-			std::string msg = MessageBuilder::buildCapResponse(client->getNickname(), params[1]);
-			std::cout<<"TTTTTTTTTTTTTTTT ====== what we sending back for caps ["<<msg<<"]\n";
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			client->getMsg().queueMessage(msg);
-			
-		}*/
+	if (command == "CAP") {
+		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
-	if (command == "QUIT")
-	{
+	if (command == "QUIT") {
 		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		_server->handleQuit(client);
 		return ;
 	}
 
-	/*if (command == "WHOIS")
-	{
-		if (!params[0].empty() && params[0] != client->getClientUname())
-		{
-			client->setClientUname(params[0]);
-		}
-		//return;
-	}*/
 	if (command == "USER")
 	{
 		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
-		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
-		client->getMsg().queueMessage(msg);
-		// stating end of registartion 
-		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
-		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
-		//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
-		//client->getMsg().queueMessage(":localhost NOTICE server :User state finalized.\r\n");
-
-//		
-//		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
-		//client->getMsg().queueMessage(":localhost 005 " + client->getNickname() + " :NETWORK=YourIRC\r\n");
-		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 		client->setHasSentUser();
 		//return ;
 	}
@@ -253,62 +54,31 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		if (client->getHasSentNick() == false)
 		{
 			std::cout<<"@@@@@@@@@@{{{{{{{{7777777777777777777CLIENT NICKNAME IS BEING SENT 1ST TIME--------------------ooooooooommmmmmmmmmmmmmm--------------\n";
-			/*std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
-			
-			//client->getMsg().changeTokenParam(0, client->getNickname());
-			client->getMsg().queueMessage(":localhost 433 * "+ params[0] + " :Nickname is already in use.\r\n");
-			_server->updateEpollEvents(client_fd, EPOLLOUT, true);*/
-			//client->getMsg().queueMessage("NICK " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":server NOTICE * :Nickname processed\r\n");
-			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
-			//client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+			//std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
 
-			//client->getMsg().queueMessage(":server NOTICE * :User " + params[0] + " changed nickname to " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":server NOTICE * :Nickname processed\r\n");
-			//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
-			//client->getMsg().queueMessage(":server NICK " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":server 311 " + client->getNickname() + " " + client->getNickname() + " localhost * :Real Name\r\n");
-			//client->getMsg().queueMessage("MODE " + client->getNickname() + " +i\r\n");
-			//client->getMsg().queueMessage("WHOIS " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
+			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
 			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 			client->setHasSentNick();
 			return;
-			//std::cout<<"CHECKING PARAM AAAFTER WE HAVE CHANGING"<<client->getMsg().getParam(0)<<"\n";
-
 		}
 
-		//illegal????
-		//std::string test = "PING :server\r\n";//":" + params[0] + " NICK " +  client->getNickname() + "\r\n";
-		//send(client->getFd(), test.c_str(), test.length(), MSG_NOSIGNAL);
-
-		client->setOldNick(client->getNickname()); // we might not need this anymore 
 		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
-		
-		//client->getMsg().queueMessage("PING :server\r\n");
-		//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
-		//sendToClient(client.fd, forcePing);
-		//std::string message = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(), client->getMsg().getMsgParams());;
-		//send(client->getFd(), message.c_str(), message.size(), 0);
-		//client->safeSend(client->getFd(), "PONG :server/r/n");
-		//shutDown(client->getFd(), SHUT_WR); 
 		return ; 
 	}
-	/*if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
+	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
 		client->setHasRegistered();
-		//usleep(5000);
-		//client->getMsg().queueMessage(":server 001 " + client->getNickname() + " :Welcome to IRC!\r\n");
 		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
 		client->getMsg().queueMessage(msg);
+		// stating end of registartion 
+		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
+		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+
+		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 		
 
-	}*/
+	}
 	if (command == "PING"){
-		
-//		client->sendPong();
 		std::cout<<"sending pong back "<<std::endl;
 		client->getMsg().queueMessage("PONG :localhost/r/n");
 		client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
@@ -319,10 +89,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "PONG"){
 		std::cout<<"sending ping back "<<std::endl;
-		
-		client->getMsg().queueMessage("PING :localhost/r/n");
-		
-		
+		client->getMsg().queueMessage("PING :localhost/r/n");		
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
 
@@ -335,40 +102,12 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		{
 			// HANDLE HERE 
 			_server->handleJoinChannel(client, params[0], params[1]);
-			//client->getMsg().queueMessage("WHO " + client->getNickname() + "\r\n");
-			//client->getMsg().queueMessage(":localhost NOTICE * :Processing update...\r\n");
 			
-			// handle join
-			// ischannel
 			// if (!ischannel) , createChannel(), setChannelDefaults() updateChannalconts()?, confirmOperator()
 			// else if (ischannel), isinvite(), hasinvite(), ChannelhasPaswd(), clientHasPasswd()/passwrdMatch(),
 			// hasBan(), joinChannel() updateChannalconts()
 			//		
-			/**
-			 * @brief checks
-			 * look through list of channel names to see if channel exists // std::map<std::string, Channel*> channels
-			 * 	if doesnt exist - create it with default settings // what are default settings?
-			 * set max size? // is the is default channel std::int _maxSize also flag -n 
-			 * set current number of clients in side the channel // channel std::int _nClients
-			 * add channel to vector of channels client has joined //  <Client> _joinedchannels
-			 * add current client to channel operator // channel std::string _operator OR
-			 * adjust bitset map
-			 * 
-			 * if does exist - loop through and find if channel is invite only // channel std::bool _inviteOnly channel std::set _currentUsers, _invitedUsers
-			 * if it is invite only, does client have invite isnide channel.
-			 * 
-			 * is it password protected.
-			 * if it is password protected, did user provide password. if not then user can not enter
-			 * if yes, does password match
-			 * 
-			 *  is client banned from channel.
-			 * 
-			 * assuming checks passed, client can now join channel
-			 * add client to list of clients on channel // channel > list of clients
-			 *  if this clients is first on the channel, set the flag to -o // channel > who is -o? can be only one.
 
-			 * 
-			 */
 	    /*if (getCommand() == "KICK") {
 			
 	    }
@@ -383,15 +122,9 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		
 */
 		}
-		else// if(client->getHasSentCap() == true) 
+		else
 		{
 			
-			//client->getMsg().queueMessage(":localhost 461 " + client->getNickname() + " JOIN :Not enough parameters\r\n");
-			// client->getMsg().queueMessage(":server 451 " + client->getNickname() + " :You have not registered\r\n");
-			// client->getMsg().queueMessage(":localhost 331 " + client->getNickname() + " :No channel specified\r\n");
-			// client->getMsg().queueMessage(":localhost NOTICE server :JOIN request received but ignored.\r\n");
-			//client->getMsg().queueMessage(":localhost 366 " + client->getNickname() + " :End of channel list\r\n");
-			// client->getMsg().queueMessage(":localhost 403 " + client->getNickname() + " :No default channel available\r\n");
 			if (client->getHasSentCap() == true)
 			{
 				std::cout<<"hhhhhhhhhhhhhh    ENTERING join on first HANDLING \n";
@@ -415,199 +148,16 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	 */
 	if (command == "MODE")
 	{
-		/*ModeCommandContext context; // this is just holding some parameters we want access too later 
 
-		if (initialModeValidation(client, params, context) == false) // this could prob be just params[0]
-			return;*/
+
 		_server->handleModeCommand(client, params);
 
-
-		/*std::cout<<"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&ENTERING MODE HANDLING \n";
-		std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<params.size()<<"\n";
-		if (params.size() == 2)
-		{
-			if (params[0] != client->getNickname())
-			{
-				std::cout<<"client can only change own modes, unless in channel\n";
-			}
-			// temporary for registartion debugging
-			// should do sign var, and mode var
-			if (params[1] == "+i")
-			{
-				client->setMode(clientPrivModes::INVISABLE);
-				client->getMsg().queueMessage(":**:" + params[0] + " MODE " + params[0] +" :+i\r\n**");
-				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
-			}
-			return;
-		}*/
-
-		/*std::cout<<"WE ARE HANDLING CHANNEL MODES NOW FOR SOME REASON HELOOOOOOOOOOOOO ?????\n";
-		std::shared_ptr <Channel> currentChannel = _server->get_Channel(params[0]);
-		std::string mode = params[1];
-		//std::string test = "+abc";
-		std::string name;
-		size_t ClientModeCount = 0;
-		std::string validClientPattern = R"([+-][o]+)"; // once this is done it should be easy to add more
-
-		 if (params.size() == 1) {
-        	std::string channel_name = params[0];
-        	std::shared_ptr<Channel> channel = _server->get_Channel(channel_name); // Assuming _server->get_Channel is valid
-
- 	       if (!channel) {
-    	        // Channel does not exist
-        	    //client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "403", client->getNickname(), channel_name, "No such channel"));
-            	return;
-		   }
-		//	if (channel->getTopic().empty()) { // Assuming Channel has getTopic()
-	    //        client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "331", client->getNickname(), channel_name, "No topic is set"));
-	    //    } else {
-	    //        client->getMsg().queueMessage(MessageBuilder::buildNumericReply(_serverName, "332", client->getNickname(), channel_name, ":" + channel->getTopic()));
-	    //    }
-	    //    return; // Important: Exit after handling the query!
-			std::string modeResponse = ":localhost MODE " + channel->getName() + " " + channel->getCurrentModes() + "\r\n";
-			
-			std::string modes =  ":localhost 324 " + client->getNickname() + " #bbq +nt\r\n";
-			std::string checktopic = channel->getTopic();
-			std::cout<<"checking the topic is set to what "<<checktopic<<" \n";
-		   	std::string topic = ":localhost 332 " + client->getNickname() + " #bbq :Welcome to #bbq!\r\n";
-			
-		   	client->getMsg().queueMessage(modeResponse);
-		   	//client->getMsg().queueMessage(topic);
-			_server->updateEpollEvents(client->getFd(), EPOLLOUT,true);
-			return;
-		}
-
-		if ((ClientModeCount = client->getMsg().countOccurrences(mode, "o")) != paramSize - 2) // bbq and the flags
-		{
-			std::cout<<"TELL ME THE SIZE OF PARAMSLIST = "<<paramSize - 2<<"\n";
-			std::cout<<"TELL ME THE CLIENTMODECOUNT = "<<ClientModeCount<<"\n";
-			std::cout<<" WE do not have an equal number of client modes to params \n";
-			return;
-		}
-		std::string validPattern = R"([+-][ioklt]+)";
-		if ((mode[0] == '-' || mode[0] == '+') && std::regex_match(mode, std::regex(validPattern))) // regex for specifci letters only ? 
-		{
-			// parsing to check that flags are valid +o +oop 
-			size_t i = 1;
-			size_t ret = 0;
-			size_t ret2 = 0;
-			//size_t clientsHandled = 0;
-			size_t total = 2;
-			std::string names;
-			std::string pass = "";
-			while (i < mode.length())
-			{	
-				//asuming regex confimed everything 
-				std::string newmode = std::string(1, mode[0]) + mode[i]; //mode[0] + mode[i + 1 ];
-				//std::cout<<"getting mode "<<newmode<<"\n";
-				//std::cout<<"getting total now "<<total<<"\n";
-				//std::cout<<"getting Clientmodecount "<<ClientModeCount<<"\n";
-//wrong total too big
-				//if (ClientModeCount == 0)
-				//{
-					//std::cout<<"empty name being added \n";
-				//	name = "";
-				//}
-				// check to see if we are dealing with a client mode or not 
-				if (ClientModeCount > 0 && std::regex_match(newmode, std::regex(validClientPattern)))
-				{
-					name = params[total];
-					if (name == "")
-						std::cout<<"getParam went out of bounds here !!!!!!! fix it \n";
-					try
-					{
-						ret = currentChannel->setClientMode(newmode, name, client->getNickname());
-						
-					}
-					catch(const std::exception& e)
-					{
-						std::cerr << e.what() << '\n';
-					}					
-					if (ret == 2)
-					{
-						//setMsgtype
-						client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + params[0] + " :"+ client->getNickname() +", You're not channel operator\r\n");
-						break;// :Permission denied—operator privileges required
-					}
-					total += ret;
-					if (ret == 1) // client mode done
-					{
-						names += name + " ";
-						ClientModeCount =- 1;
-						//std::cout<<"ret was 1 name being added to list = "<<names<<"\n";
-					}
-					//std::cout<<"this name now being added = "<<name<<"\n";
-
-				}
-				//if (client->getMsg().getParams().size())
-				else
-				{
-					// if mode == o take a parameter , otherwise its a channel mode
-					try
-					{
-						// this could be even further out perhaps? 
-						//ret = currentChannel->setClientMode(newmode, name, _nickName);
-						pass = params[total];
-						if (pass == "")
-							std::cout<<"getParam went out of bounds here !!!!!!! fix it although in this instance we handle it inside setchannelmode \n";
-						//onst std::string pass, std::map<std::string, int> listOfClients,  FuncType::setMsgRef setMsgType
-						ret2 = currentChannel->setChannelMode(newmode, name, client->getNickname(), params[0], pass, _server->get_nickname_to_fd(), [&](MsgType msg, std::vector<std::string>& params) {
-																															client->getMsg().setType(msg, params);
-																															});
-						//std::cout<<"ret is now = "<<ret <<"\n";
-						if (ret2 == 2)
-						{
-							//setMsgtype
-							client->getMsg().queueMessage(":localhost 482 " + client->getNickname() + " " + params[0] + " :"+ client->getNickname() +", You're not channel operator\r\n");
-							break;// :Permission denied—operator privileges required
-						}
-					}
-					catch(const std::exception& e)
-					{
-						//std::cout<<"exception caught brekaing \n";
-
-						std::cerr << e.what() << '\n';
-						break;
-					}
-				}
-				i++;
-			
-			}
-			std::cout<<"list of names = "<<names<<"\n";
-			
-			if (ret != 2 || ret2 != 2)
-			{
-				_server->getChannelsToNotify().push_back(_server->get_Channel(params[0]));
-				 std::deque<std::shared_ptr<Channel>> channels_to_process = _server->getChannelsToNotify();
-			    // 2. Iterate directly over the shared_ptr<Channel> objects in the deque
-			    for (const auto& channel_ptr : channels_to_process) {
-			        // Always check if the shared_ptr is valid (not null)
-			        if (channel_ptr) {
-			            std::cout << "Processing channel: " << channel_ptr->getName() << std::endl;
-			            // Now you can perform operations on 'channel_ptr'
-			            // For example, if this were handleQuit context:
-			            // channel_ptr->removeClient(quitting_client_nickname);
-			             _server->broadcastMessageToChannel(channel_ptr, ":" + client->getNickname() +"!ident@localhost" +" MODE " + params[0] + " " + params[1] + " " + names + "\r\n", client);
-			        } else {
-			            std::cout << "Skipping null channel pointer in deque." << std::endl;
-			    	}
-				}
-			//	_server->getChannelBroadcastQue().push_back(":" + client->getNickname() +"!ident@localhost" +" MODE " + params[0] + " " + params[1] + " " + names + "\r\n");
-			}
-				
-			//_server.getChannelBroadcastQue()->
-			//setmsg channel broadcast this client + modes + string of names 
-			// setdefinedmsg
-			// do messages need to be built here 
-
-		}
 		// · i: Set/remove Invite-only channel
         //· t: Set/remove the restrictions of the TOPIC command to channel operators
         //· k: Set/remove the channel key (password)
 		//· o: Give/take channel operator privilege
 		//· l: Set/remove the user limit to channel
-	}*/
+
 	}
 	if (client->getMsg().getCommand() == "PRIVMSG") 
 	{
@@ -643,10 +193,11 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 					std::cout<<"no user here by that name \n"; 
 					return ;
 				}
-				if (_server->get_Client(fd)->isMsgEmpty()) {
+				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " " + params[1] + "\r\n");
+				if (!_server->get_Client(fd)->isMsgEmpty()) {
 					_server->updateEpollEvents(fd, EPOLLOUT, true);
 				}
-				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " " + params[1] + "\r\n");
+				
 			}
 		}
 		if (!params[0].empty())
@@ -661,5 +212,4 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		//client->getMsg().queueMessage("RECONNECT\r\n");
 
 	}
-	//client->getMsg().printMessage(client->getMsg());
 }

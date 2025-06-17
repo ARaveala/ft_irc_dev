@@ -52,51 +52,29 @@ void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
 	_params = sendParams;
 }
 
-/*void IrcMessage::setWelcomeType(std::vector<std::string> sendParams) {
-    _msgState.reset();  // empty all messages before setting a new one
-    _msgState.set(static_cast<size_t>(MsgType::WELCOME));
-	_msgState.set(static_cast<size_t>(MsgType::HOST_INFO));
-	_msgState.set(static_cast<size_t>(MsgType::SERVER_CREATION));
-	_msgState.set(static_cast<size_t>(MsgType::SERVER_INFO));
-	_params.clear();
-	_params = sendParams;
-}*/
-
-int IrcMessage::countOccurrences(const std::string& text, const std::string& pattern) {
-    std::regex regexPattern(pattern);  // Create regex from pattern
-    auto begin = std::sregex_iterator(text.begin(), text.end(), regexPattern);
-    auto end = std::sregex_iterator();
-
-    return std::distance(begin, end);  // Count matches
+void IrcMessage::advanceCurrentMessageOffset(ssize_t bytes_sent) {
+        _bytesSentForCurrentMessage += std::min(_bytesSentForCurrentMessage + bytes_sent, _messageQue.front().length());//bytes_sent;
 }
-/*MsgType IrcMessage::getActiveMsgType() const {
-    for (size_t i = 0; i < _msgState.size(); ++i) {
-        if (_msgState.test(i)) {
-            return static_cast<MsgType>(i);
-        }
-    }
-    return MsgType::NONE;
-}*/
-/*void IrcMessage::callDefinedBroadcastMsg(std::deque<std::string>& channelbroadcast)
-{
-	for (size_t i = 0; i < _msgState.size(); ++i) {
-        if (_msgState.test(i)) {
-			MsgType msgType = static_cast<MsgType>(i);
-			std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
-			channelbroadcast.push_back(TheMessage);
-        }
-    }	
-}*/
-/*void IrcMessage::callDefinedMsg()//(MsgType msgType)//, const std::vector<std::string>& params)
-{
-	for (size_t i = 0; i < _msgState.size(); ++i) {
-        if (_msgState.test(i)) {
-			MsgType msgType = static_cast<MsgType>(i);
-			std::string TheMessage = RESOLVE_MESSAGE(msgType, _params);
-			_messageQue.push_back(TheMessage);
-        }
-    }
-}*/
+
+size_t IrcMessage::getRemainingBytesInCurrentMessage() const {
+      		if (_messageQue.empty()) return 0;
+      	return  std::max((size_t)0, _messageQue.front().length() - _bytesSentForCurrentMessage); // prevent overflow and returning of neg values
+}
+
+const char* IrcMessage::getCurrentMessageCstrOffset() const {
+       if (_messageQue.empty()) return nullptr;
+        size_t safe_offset = std::min(_bytesSentForCurrentMessage, _messageQue.front().length());
+	    return _messageQue.front().c_str() + safe_offset;
+}
+
+bool IrcMessage::isActive(MsgType type) {
+	    return _msgState.test(static_cast<size_t>(type));
+}
+
+MsgType IrcMessage::getActiveMessageType() const {
+   		return _activeMsg;  // Returns the currently active message type
+}
+
 // we should enum values or alike or we can just send the correct error message straight from here ?
 // check_and_set_nickname definition, std::string& nickref
 bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {

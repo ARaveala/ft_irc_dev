@@ -15,6 +15,7 @@ namespace MessageBuilder {
 
     // Welcome Package
 	std::string generatewelcome(const std::string& nickname);
+	std::string generateInitMsg();
     std::string buildWelcome(const std::string& nickname);
     std::string buildHostInfo(const std::string& nickname);
     std::string buildServerCreation(const std::string& nickname);

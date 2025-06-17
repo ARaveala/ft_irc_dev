@@ -1,9 +1,10 @@
 #pragma once
+
 #include <exception>
 #include <string>
 #include <sys/socket.h>
-#include "config.h"
 
+#include "config.h"
 
 /**
  * @brief copy paste previouse and make a new error you can throw, remeber to catch the damn thing

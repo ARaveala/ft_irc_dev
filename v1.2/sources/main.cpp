@@ -12,7 +12,6 @@
 //#include <string.h>
 
 #include "ServerError.hpp"
-#include "epoll_utils.hpp"
 #include <sys/epoll.h>
 #include "signal_handler.h"
 #include <sys/signalfd.h>
@@ -26,7 +25,6 @@
 // /help
 // /raw open `/file of choice
 // open fileofchoice
-#include "ChannelManager.hpp"
 void debug_helper_print_events(struct epoll_event* events)
 {
 	std::cout << "EPOLL event for FD " << events->data.fd << ": "
@@ -105,11 +103,7 @@ int loop(Server &server)
 					if (read_to_buffer == true)
 					{
 						try {
-							//std::cout<<" reciveing message\n";
 							server.handleReadEvent(fd);
-							//server.get_Client(fd)->receive_message(fd, server);
-							//std::cout<<" message recived\n";
-							//debug_helper_print_events(&events[i]);
 						} catch(const ServerException& e) {
 							if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
 								server.remove_Client(fd);

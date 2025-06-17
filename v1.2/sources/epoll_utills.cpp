@@ -1,5 +1,5 @@
 
-#include "epoll_utils.hpp"
+
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <stdio.h> //perror
@@ -11,24 +11,15 @@
 #include <sys/timerfd.h>
 #include <map>
 #include <string.h>
-/**
- * @brief void Server::modifyEpollEvent(int client_fd, uint32_t newEvents) {
-    if (epollEventMap.find(client_fd) != epollEventMap.end()) {
-        epollEventMap[client_fd].events |= newEvents;  // ✅ Modify existing flags
-        epoll_ctl(epoll_fd, EPOLL_CTL_MOD, client_fd, &epollEventMap[client_fd]);
-    } else {
-        std::cerr << "err FD " << client_fd << " not found in epoll map!" << std::endl;
-    }
-}
- * 
- */
-
-
 
 /**
  * @brief Creates a struct for epoll events such as EPOLLIN
  * for monitoring and adds the created struct to a kernel-managed data structure,
  * this is then monitored by epoll_wait()
+ * 
+ * @param epollfd instance of epoll created by epoll_create1()
+ * @param fd the file descriptor related to the socket
+ * @param events event for epoll_wait to follow such as EPOLLIN
  * 
  * @note other events could potentially be added 
  */
@@ -61,6 +52,7 @@ int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
 	_epollEventMap[timer_fd] = timer_event;
 	return timer_fd;
 }
+
 /**
  * @brief We set socket to nonblocking so that recv() dosnt wait for data,
  * if it where to wait for data it would freeze our programe and potentailly stop 
@@ -71,7 +63,7 @@ int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
  * can catch to tell it to continue that is relevant to not reciveing data yet.
  * 
  */
-int make_socket_unblocking(int fd)
+int Server::make_socket_unblocking(int fd)
 {
 	
 	int flags = fcntl(fd, F_GETFL, 0);

@@ -135,31 +135,135 @@ void Server::create_Client(int epollfd) {
  * @note we are calling get client multple times here , we could try to work past that 
  * by just sending in the client once as a param
  */
+// void Server::remove_Client(int client_fd) {
+// 	// get clients shared pointer
+// 	auto client_to_remove = get_Client(client_fd);
+// 	if (!client_to_remove) {
+//         std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
+//         return;
+//     }
+
+// 	// iterate through channels that client_to_remove was part of
+// 	// client should know what channels they were in std::map<std::string, std::weak_ptr<Channel>>
+// 	// call Channel::removeClient() for each channel
+// 	// channel_ptr->removeClient(client_to_remove->getNickname())
+// 	// return a bool if the channel is empty after client departed
+// 	// Boadcast QUIT for each channel.
+// 	// :<nickname>!<username>@<hostname> QUIT :<reason>
+// 	// if the boolean return says channel is empty, then remove that channel from server map.
+
+
+
+	
+// 	// epoll something
+// 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
+// 	close(client_to_remove->get_timer_fd());
+	
+// 	// epoll something
+// 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
+// 	close(client_fd);
+	
+// 	// channel.getClient().erase();
+// 	_Clients.erase(client_fd);  // why capital C? We have a map of clients
+// 	_epollEventMap.erase(client_fd);
+	
+// 	//std::map<int, struct epoll_event> _epollEventMap;
+// 	_client_count--;
+
+// 	// erase both from the fd and from the nickname - now we don't have a record of the user in the server
+// 	_nickname_to_fd.erase(client_to_remove->getNickname());
+// 	_fd_to_nickname.erase(client_fd);	
+
+// 	std::cout<<"client has been removed"<<std::endl;
+// }
+
+
 void Server::remove_Client(int client_fd) {
-	auto client_to_remove = get_Client(client_fd);
-	if (!client_to_remove) {
+    // 1. Get the shared pointer to the client. This client object holds all its state,
+    //    including which channels it joined.
+    std::shared_ptr<Client> client_to_remove = get_Client(client_fd);
+    if (!client_to_remove) {
         std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
         return;
     }
-	_nickname_to_fd.erase(client_to_remove->getNickname());
-	_fd_to_nickname.erase(client_fd);	
 
-	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
-	close(client_to_remove->get_timer_fd());
-	
-	
-	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-	close(client_fd);
-	
-	// channel.getClient().erase();
-	_Clients.erase(client_fd);
-	_epollEventMap.erase(client_fd);
-	
+    // --- Step 2: Handle channel disassociation and notification ---
+    // IRC protocol requires informing channels when a client leaves, even due to disconnect.
+    // Create a copy of channel names to iterate safely, as modifying a map while iterating can invalidate iterators.
+    std::vector<std::string> joined_channel_names;
+    for (const auto& pair : client_to_remove->getJoinedChannels()) {
+        if (pair.second.lock()) { // Ensure the weak_ptr is still valid and the channel object exists
+            joined_channel_names.push_back(pair.first);
+        }
+    }
 
-	//_epollEventMap.erase(client_fd);
-	//std::map<int, struct epoll_event> _epollEventMap;
-	_client_count--;
-	std::cout<<"client has been removed"<<std::endl;
+    // Loop through each channel the client was a member of
+    for (const std::string& channel_name : joined_channel_names) {
+        std::shared_ptr<Channel> channel_ptr;
+        try {
+            channel_ptr = get_Channel(channel_name);
+        } catch (const ServerException& e) {
+            if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
+                // This means the channel was already cleaned up by another client's action (e.g., last PART/QUIT).
+                std::cerr << "WARNING: Client " << client_to_remove->getNickname() << " was in channel "
+                          << channel_name << ", but it no longer exists on server. Skipping channel cleanup for this client.\n";
+                continue;
+            }
+            throw; // Re-throw other unexpected exceptions
+        }
+
+        if (channel_ptr) { // Ensure the channel pointer is valid
+            std::cout << "SERVER: Notifying and removing client " << client_to_remove->getNickname()
+                      << " from channel " << channel_name << " due to disconnect.\n";
+
+            // A) Build the QUIT message to broadcast to remaining channel members.
+            // This is equivalent to an implicit QUIT command from the client.
+            std::string client_prefix = ":" + client_to_remove->getNickname() + "!" +
+                                       client_to_remove->getUsername() + "@" + // Make sure Client has getUsername() and getHostname()
+                                       client_to_remove->getHostname();
+            std::string quit_message = client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
+
+            // B) Broadcast the QUIT message to other clients in this specific channel.
+            // Your `broadcastMessageToChannel` skips the sender, which is correct here.
+            broadcastMessageToChannel(channel_ptr, quit_message, client_to_remove);
+
+            // C) Remove the client from the channel's internal member list.
+            // Channel::removeClient should also update client_to_remove's _joinedChannels list.
+            bool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
+
+            // D) If the channel became empty after this client left, remove it from the server's map.
+            if (channel_became_empty) {
+                std::cout << "SERVER: Channel '" << channel_name << "' is now empty. Deleting from server's master list.\n";
+                _channels.erase(channel_name); // Assuming _channels is the correct map name.
+            }
+        }
+    }
+    // After iterating through all channels, clear the client's internal list of joined channels.
+    client_to_remove->clearJoinedChannels();
+
+
+    // --- Step 3: Perform server-wide cleanup ---
+    // Remove client's nickname to FD and FD to nickname mappings.
+    _nickname_to_fd.erase(client_to_remove->getNickname());
+    _fd_to_nickname.erase(client_fd);
+
+    // Remove timer FD from epoll and close it.
+    epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
+    close(client_to_remove->get_timer_fd());
+
+    // Remove client FD from epoll and close it.
+    epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
+    close(client_fd);
+    
+    // Remove the client's shared_ptr from the server's main client map.
+    // Assuming `_Clients` (capital C) is the correct member variable name for your map of shared_ptrs.
+    _Clients.erase(client_fd);
+    // Remove the epoll event structure associated with this client FD.
+    _epollEventMap.erase(client_fd);
+    
+    // Decrement the active client count.
+    _client_count--;
+    std::cout << "Client has been completely removed. Total clients: " << _client_count << std::endl;
 }
 
 

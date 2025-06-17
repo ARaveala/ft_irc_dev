@@ -91,6 +91,13 @@ class Client {
 		std::string& getNicknameRef();
 		std::string getClientUname();
 		std::string getfullName();
+
+//todo pop these in cpp
+		const std::string& getUsername() const {
+			return _username;
+		}
+// end todo
+
 		const std::string& getHostname() const;
 		bool isOperator() const;
 

@@ -38,12 +38,12 @@ class Server {
 		int _signal_fd;
 		int _epoll_fd;
 		int _private_fd = 0;
+
 		std::string _server_name;
-		
 		std::string _password;
 
 		std::map<const std::string, std::shared_ptr<Channel>> _channels;
-		std::map<int, std::shared_ptr<Client>> _Clients;
+		std::map<int, std::shared_ptr<Client>> _Clients; //shared pointer to identify client, also fds, nicknames? can there be unique indentifier?
 		std::map<int, int> _timer_map;
 
 		std::map<int, struct epoll_event> _epollEventMap;

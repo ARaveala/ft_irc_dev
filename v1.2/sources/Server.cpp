@@ -393,6 +393,7 @@ bool Server::channelExists(const std::string& channelName) const {
 void Server::createChannel(const std::string& channelName) {
     if (_channels.count(channelName) == 0){
 		_channels.emplace(channelName, std::make_shared<Channel>(channelName));
+
         std::cout << "Channel '" << channelName << "' created." << std::endl;
 		// fill clientsend buffer 
 		return ;
@@ -408,55 +409,42 @@ std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
 	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
 }
 
-void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password)
+void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password) // password here change to target, can also be limit ammount
 {
-	// HANDLE HERE 
-	// channel modes and client modes need to be seperate 
 
-	if (!password.empty())
-		std::cout<<"attempting tooooooo!--------------------------------------";
-
-	std::cout<<"attempting tooooooo!--------------------------------------";
-	// check there is a param 0
-	if (channelName == "")
-	{
-		std::cout<<"no channel name provided handle error\n";
-		//return ;
-	}
-	if (channelExists(channelName) < 1) //bool
-	{
-		std::cout<<"creating channel now!--------------------------------------";
-		// create a channel object into a server map
-		createChannel(channelName);
-		// add channel to client list		
-		client->setChannelCreator(true);
-		// set defaults what are they 
-	}
-	std::shared_ptr <Channel> currentChannel = get_Channel(channelName);
-	//std::string pass = "";
-	//if (client->getMsg().getParams().size() == 2) // biger than 2 ?
-	//pass = client->getMsg().getParam(1); 
-	
-	// HANDLE HERE must check!!
-	if (!currentChannel->canClientJoin(client->getNickname(), password))
-	{
-		std::cout<<"client is denied join rights !--------------------------------------";
-		// this must bve handled 
+	if (channelName == "") {
+		client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "JOIN"}));
 		return ;
 	}
-		// set msg
-		//return
-	client->addChannel(channelName, get_Channel(channelName));
+	// to do
+	// vliadate channel name 
+	// no sepcial characters, only lowercase , length 20 chars , starting character, 
+	// error bad chan mask
+
+	if (channelExists(channelName) < 1) {//bool 
+		std::cout<<"creating channel now!--------------------------------------";
+		createChannel(channelName);
+		client->setChannelCreator(true);
+	}
+	std::shared_ptr <Channel> currentChannel = get_Channel(channelName);
+	if (currentChannel->isClientInChannel(client->getNickname())) {
+	    return;
+	}
+	auto validationResult = currentChannel->canClientJoin(client->getNickname(), password);
+	if (validationResult) {
+		client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult->first, validationResult->second));
+		updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return ;
+	}
+	client->addChannel(channelName, currentChannel);
 	currentChannel->addClient(client);
 	std::string ClientList = currentChannel->getAllNicknames();
 	if (ClientList.empty())
 		std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-	
-	if (client->isMsgEmpty() == true)
-		updateEpollEvents(client->getFd(), EPOLLOUT, true);
-	std::cout<<"channel should allow join !--------------------------------------";
-	client->getMsg().prep_join_channel(channelName, client->getNickname(),  client->getMsg().getQue(),ClientList);
+	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::JOIN, {client->getNickname(), channelName, ClientList, currentChannel->getTopic()}));
+	updateEpollEvents(client->getFd(), EPOLLOUT, true);
 }
+
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
 	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
  
@@ -594,7 +582,6 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
  	if (params.empty()) {
         client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
 		return;
     }
     std::string target = params[0];
@@ -615,14 +602,13 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 				return; // Abort: Channel does not exist
             }
 		}
+		//set msg type
 		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
 		if (validationResult.first != MsgType::NONE) {
             // If validation resulted in an error or a listing reply (like RPL_CHANNELMODEIS),
             // send the appropriate message and return.
             client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
-
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
 			return; // Abort: Validation failed or command was for listing
         }
 		validationResult = channel->modeSyntaxValidator(client->getNickname(), params);

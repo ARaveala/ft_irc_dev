@@ -24,8 +24,9 @@ namespace MessageBuilder {
 	std::string buildCapResponse(const std::string& clientNickname, const std::string& requestedCaps);
 
     // Channel related messages
-    std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);
-    std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList);
+    //std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);
+    std::string buildJoinChannel(const std::string& nickname, const std::string& channelName, const std::string& clientList, const std::string& topic);
+	std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList);
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName);
     // Note: CHANNEL_TOPIC macro is missing a 'topic' parameter. This will be added correctly.
     std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
@@ -46,6 +47,10 @@ namespace MessageBuilder {
 	std::string buildChannelModeChange(const std::string& nickname, const std::string& username, const std::string channelname, const std::string& modes, const std::string& targets);
 
 	std::string buildClientModeChange(const std::string channelname, const std::string& modes);
-    // You can add more specific builders as needed, like:
+   
+	std::string buildInviteOnlyChannel(const std::string& clientNickname, const std::string& channelName);
+	std::string buildNeedMoreParams(const std::string& clientNickname, const std::string& commandName);
+	std::string buildIncorrectPasswordMessage(const std::string& clientNickname, const std::string& channelName);
+	// You can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

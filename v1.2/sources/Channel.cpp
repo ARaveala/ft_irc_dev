@@ -456,48 +456,33 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
     }
     return 0; // Invalid mode
 }*/
-
-
-bool Channel::canClientJoin(const std::string& nickname, const std::string& password ) {
-    std::cout<<"handling can client join to client named = "<<nickname<<"\n";
-
-    //std::string lower_nickname_param = nickname;
-    //std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
-    //               [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-    if(_ChannelModes.test(Modes::INVITE_ONLY)) {
-        // Check if the lowercase nickname is in the invites list
-        auto it = std::find(_invites.begin(), _invites.end(), nickname);//, lower_nickname_param);
+// using optional here instead as we can just retun nullptr 
+std::optional<std::pair<MsgType, std::vector<std::string>>>
+Channel::canClientJoin(const std::string& nickname, const std::string& password) {
+    if (_ChannelModes.test(Modes::INVITE_ONLY)) {
+        auto it = std::find(_invites.begin(), _invites.end(), nickname);
         if (it != _invites.end()) {
-            _invites.erase(it); // Remove name from invite list after successful join
-            return true;
+            _invites.erase(it);
+        } else {
+            return std::make_pair(MsgType::INVITE_ONLY,
+                                  std::vector<std::string>{nickname, getName()});
         }
-        // setmsg invite only (You'll need to pass a way to send messages back to the client here)
-        return false;
     }
-    
     if (_ChannelModes.test(Modes::PASSWORD)) {
-        if (password == "") {
-            // set msg no password provided
-            return false;
+        if (password.empty()) {
+            return std::make_pair(MsgType::NEED_MORE_PARAMS,
+                                  std::vector<std::string>{nickname, "JOIN"});
         }
         if (password != _password) {
-            //set msg password mismatch
-            return false;
+            return std::make_pair(MsgType::INVALID_PASSWORD,
+                                  std::vector<std::string>{nickname, getName()});
         }
     }
-
-    /*if (_clientCount >= _ClientLimit)
-    {
-        // setmsg client limit reached
-        return false;
-    }
-    if (nickname found in ban list ) // This would also need case-insensitivity
-    {
-        //setmsg banned
-        return false;
-    }*/
-    return true;
+    // Placeholder for future checks:
+    // - client limit/ user limit exceeded
+    // - ban list ??
+	// - is memeber already joined ??
+    return std::nullopt;
 }
 
 bool Channel::addClient(std::shared_ptr <Client> client) {
@@ -560,7 +545,7 @@ bool Channel::removeClient(std::string nickname) {
     return removed_count > 0;
 }
 
-
+// refactor looking at can client join
 std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
         const std::string& ClientNickname,
         size_t paramsSize)  {

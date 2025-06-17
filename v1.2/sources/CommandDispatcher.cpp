@@ -151,7 +151,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 
 		_server->handleModeCommand(client, params);
-
 		// · i: Set/remove Invite-only channel
         //· t: Set/remove the restrictions of the TOPIC command to channel operators
         //· k: Set/remove the channel key (password)

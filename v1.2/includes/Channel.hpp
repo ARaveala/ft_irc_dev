@@ -7,10 +7,11 @@
 #include <bitset>
 #include <map>
 #include <algorithm>
+#include <optional>
+
 
 #include "config.h"
 #include "Client.hpp"
-
 /**
  * @brief a custome comparator, since we use weak_ptrs as keys and they do not 
  * have comparison operators defined, a map can not order the keys, this comparitor
@@ -69,8 +70,8 @@ struct WeakPtrCompare {
 		Modes::ClientMode charToClientMode(const char& modeChar);
 		Modes::ChannelMode charToChannelMode(const char& modeChar); 
 		bool setModeBool(char onoff);
-		bool canClientJoin(const std::string& nickname, const std::string& password );
-
+		//bool canClientJoin(const std::string& nickname, const std::string& password );
+		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(std::string nickname);

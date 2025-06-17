@@ -43,7 +43,8 @@ namespace MessageBuilder {
 
 	        case MsgType::WELCOME:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::generatewelcome), params);
-
+			case MsgType::JOIN:
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildJoinChannel), params);
 	       /* case MsgType::HOST_INFO:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildHostInfo), params);
 
@@ -84,7 +85,6 @@ namespace MessageBuilder {
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildClientQuit), params);
 
 	        
-
 	        case MsgType::RPL_TOPIC:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelTopic), params);
 			
@@ -102,7 +102,14 @@ namespace MessageBuilder {
 
 	        case MsgType::CAP_RESPONSE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildCapResponse), params);*/
-		    default:
+			case MsgType::INVITE_ONLY:
+			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInviteOnlyChannel), params);
+					
+			case MsgType::INVALID_PASSWORD:
+			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildIncorrectPasswordMessage), params);
+
+	        // Add more cases here...
+			default:
 		        return "Error: Unknown message type";
 		}
 	}
@@ -135,19 +142,9 @@ namespace MessageBuilder {
         return sender_prefix + " " + reply_code + " " + recipient_nickname + " :" + message_text + "\r\n";
     }
 
-    /*std::string buildNotOperator(const std::string& nickname, const std::string& channelName) {
-        // Your original macro used "localhost" as prefix, then used "nickname" in the message.
-        // Let's use the standard error reply for consistency.
-        return SERVER_PREFIX + " 482 " + nickname + " " + channelName + " :You're not channel operator\r\n";
-    }*/
-
     std::string buildNoSuchNickOrChannel(const std::string& nickname, const std::string& target) {
         return SERVER_PREFIX + " 401 " + nickname + " " + target + " :No such nick/channel\r\n";
     }
-
-    /*std::string buildNeedMoreParams(const std::string& nickname, const std::string& command) {
-        return SERVER_PREFIX + " 461 " + nickname + " " + command + " :Not enough parameters\r\n";
-    }*/
 
     // Welcome Package
     std::string buildWelcome(const std::string& nickname) {
@@ -187,9 +184,14 @@ namespace MessageBuilder {
     return SERVER_PREFIX + " CAP " + clientNickname + " ACK :" + acknowledgedCaps + "\r\n";
 	}
 		//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
-    std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName) {
-        return nickname_prefix + " JOIN :" + channelName + "\r\n"; // Channel names are sometimes prefixed with ':'
-    }
+	std::string buildJoinChannel(const std::string& nickname, const std::string& channelName, const std::string& clientList, const std::string& topic) {
+		(void) topic;
+		std::string joinLine = ":" + nickname + " JOIN " + channelName + "\r\n";
+    	std::string namesReply = SERVER_PREFIX + " 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
+    	std::string endOfNames = SERVER_PREFIX + " 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
+    	std::string topicReply = SERVER_PREFIX + " 332 " + nickname + " " + channelName + " :Welcome to " + channelName + "!\r\n";;
+	    return joinLine + topicReply + namesReply + endOfNames ;
+	}
 
     std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList) {
         return ":localhost 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
@@ -223,19 +225,19 @@ namespace MessageBuilder {
     }
 // MODE MESSAGES
    std::string buildNeedMoreParams(const std::string& clientNickname, const std::string& command) {
-        return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::NEED_MORE_PARAMS)) + " " + clientNickname + " " + command + " :Not enough parameters\r\n";
+        return  SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::NEED_MORE_PARAMS)) + " " + clientNickname + " " + command + " :Not enough parameters\r\n";
     }
 
     // 403 ERR_NOSUCHCHANNEL
     // Format: :<server> 403 <client> <channel name> :No such channel
     std::string buildNoSuchChannel(const std::string& clientNickname, const std::string& channelName) {
-        return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::NO_SUCH_CHANNEL)) + " " + clientNickname + " " + channelName + " :No such channel\r\n";
+        return  SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::NO_SUCH_CHANNEL)) + " " + clientNickname + " " + channelName + " :No such channel\r\n";
     }
 
     // 442 ERR_NOTONCHANNEL
     // Format: :<server> 442 <client> <channel name> :You're not on that channel
     std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName) {
-        return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::NOT_IN_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
+        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_IN_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
     }
 
     // 482 ERR_CHANOPRIVSNEEDED
@@ -272,6 +274,28 @@ namespace MessageBuilder {
 
 	std::string buildClientModeChange(const std::string channelname, const std::string& modes) {
         return  ":**:" + channelname +" MODE " + channelname  + " :" + modes + "\r\n**";
-    }  
+    } 
+
+	std::string buildInviteOnlyChannel(const std::string& clientNickname, const std::string& channelName) {
+	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVITE_ONLY)) +
+	           " " + clientNickname + " " + channelName + " :Cannot join channel (+i)\r\n";
+	}
+
+	std::string buildIncorrectPasswordMessage(const std::string& clientNickname, const std::string& channelName) {
+	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVALID_PASSWORD)) +
+	           " " + clientNickname + " " + channelName + " :Cannot join channel (+k)\r\n";
+	}
+
+	/*std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName) {
+	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_CHANNELISFULL)) +
+	           " " + clientNickname + " " + channelName + " :Cannot join channel (+l)\r\n";
+	}
+
+	std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
+	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
+	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";
+	}*/
+
+
 }
  // namespace MessageBuilder

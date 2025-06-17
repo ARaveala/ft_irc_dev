@@ -64,6 +64,10 @@ class Client {
 		void setHasSentUser() {_hasSentUser = true;};
 		void setHasRegistered();
 
+		void setNickname(const std::string& nickname);
+		void setUsername(const std::string& username);
+
+
 		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
 		
 		const std::string& getOldNick() {  return _oldNick; };
@@ -93,9 +97,7 @@ class Client {
 		std::string getfullName();
 
 //todo pop these in cpp
-		const std::string& getUsername() const {
-			return _username;
-		}
+		const std::string& getUsername() const { return _username;}
 // end todo
 
 		const std::string& getHostname() const;
@@ -129,6 +131,19 @@ class Client {
 		bool extractAndParseNextCommand();
 
 		void updateLastActivityTime();
+
+    // Removes a channel from the client's internal list of joined channels.
+    // Assumes channel_name is already lowercase.
+    void removeJoinedChannel(const std::string& channel_name);
+
+    // You'll also need a way to add channels to this map (e.g., in Server::handleJoinCommand)
+    // Assumes channel_name is already lowercase.
+    void addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr);
+
+    // For QUITTING, you might need a getter for all joined channels
+    // const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
+
+
 };
 
 

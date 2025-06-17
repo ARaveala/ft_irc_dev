@@ -283,3 +283,26 @@ void Client::updateLastActivityTime() {
    lastActivityTime = time(NULL);
    // This might reside in server's main event loop when handling EPOLLIN events for clients
 }
+
+
+void Client::removeJoinedChannel(const std::string& channel_name) {
+    // Assuming 'channel_name' is already in lowercase, consistent with storage.
+    size_t removed_count = _joinedChannels.erase(channel_name);
+    if (removed_count > 0) {
+        std::cout << "CLIENT: " << _nickName << " removed from its _joinedChannels list for channel '" << channel_name << "'.\n";
+    } else {
+        std::cerr << "CLIENT ERROR: " << _nickName << " not found in its _joinedChannels for channel '" << channel_name << "' during removal attempt.\n";
+    }
+}
+
+// === Example for addJoinedChannel (you'll call this when a client successfully JOINs) ===
+void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr) {
+    // Assuming 'channel_name' is already in lowercase.
+    _joinedChannels[channel_name] = channel_ptr; // Store a weak_ptr to the channel
+    std::cout << "CLIENT: " << _nickName << " added channel '" << channel_name << "' to its _joinedChannels list.\n";
+}
+
+// // === Example for getJoinedChannels (useful for QUIT command processing) ===
+// const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
+//     return _joinedChannels;
+// }

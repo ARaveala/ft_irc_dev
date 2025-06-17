@@ -1,11 +1,12 @@
-#include "Channel.hpp"
 #include <iostream>
 #include <bitset>
 #include <config.h>
-#include "IrcResources.hpp"
-
 #include <algorithm>
 #include <cctype>
+
+#include "IrcResources.hpp"
+#include "Channel.hpp"
+#include "Client.hpp"
 
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
@@ -66,24 +67,62 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
 }
 
 //make this fucntion clean up any wekptr that no longer refrences
+// std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
+//     std::string lower_nickname_param = nickname;
+//     std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
+//                    [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+
+//     for (const auto& entry : _ClientModes) {
+//         if (auto clientPtr = entry.first.lock()) {
+//             std::string stored_lower_nickname = clientPtr->getNickname();
+//             std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
+//                            [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+
+//             if (stored_lower_nickname == lower_nickname_param) {
+//                 return entry.first; // return the matching weak_ptr
+//             }
+//         }
+//     }
+//     return {}; // return empty weak_ptr if no match is found
+// }
+
+// This function now correctly cleans up expired weak_ptrs,
+// assuming all incoming 'nickname' parameters and stored client nicknames are ALREADY in lowercase.
 std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
-    std::string lower_nickname_param = nickname;
-    std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
-                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+    // We assume 'nickname' is already in lowercase as per the program's invariant.
+    // No need for std::transform here.
+    const std::string& target_nickname = nickname; // Use a const reference for clarity
 
-    for (const auto& entry : _ClientModes) {
-        if (auto clientPtr = entry.first.lock()) {
-            std::string stored_lower_nickname = clientPtr->getNickname();
-            std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
-                           [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
+    std::weak_ptr<Client> found_weak_ptr; // To store the weak_ptr of the client we're looking for
 
-            if (stored_lower_nickname == lower_nickname_param) {
-                return entry.first; // return the matching weak_ptr
+    // Use a non-const iterator so we can modify the map (erase elements)
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
+        if (auto clientPtr = it->first.lock()) {
+            // Client is still active.
+            // We assume clientPtr->getNickname() also returns a lowercase string.
+            if (clientPtr->getNickname() == target_nickname) {
+                // Found a direct match (case-sensitive due to invariant).
+                found_weak_ptr = it->first; // Get the actual weak_ptr key from the map
+                ++it; // Move to the next element
+                // We've found our match, but we continue iterating to clean up any *other*
+                // expired entries in the rest of the map. If we only cared about finding the first
+                // and leaving, we could 'break' here. For cleanup, full iteration is good.
+            } else {
+                // Not the client we're looking for, just move to the next element.
+                ++it;
             }
+        } else {
+            // Found an expired weak_ptr! Clean it up.
+            std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
+                      << "' during nickname lookup. Removing stale entry.\n";
+            it = _ClientModes.erase(it); // Erase stale element and advance iterator
+            // No need to increment 'it' here, as erase already advanced it.
         }
     }
-    return {}; // return empty weak_ptr if no match is found
+    return found_weak_ptr; // Will be empty if no active client with the given nickname was found
 }
+
+
 
 std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string nickname)
 {
@@ -102,9 +141,11 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 bool Channel::isValidChannelMode(char modeChar) const {
     return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
 }
+
 bool Channel::isValidClientMode(char modeChar) const {
     return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();
 }
+
 bool Channel::channelModeRequiresParameter(char modeChar) const {
 	return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');
 }
@@ -117,7 +158,8 @@ bool Channel::isClientInChannel(const std::string& nickname) const {
 	}
 	return false;
 }
-// will add this back in a little later once my code is cleaner, incase debugging required
+
+// will add this back in a little later once my code is cleaner and my comments are greener, incase debugging required
 /*std::bitset<config::CLIENT_NUM_MODES> Channel::getClientModes(const std::string nickname) const {
     std::string lower_nickname_param = nickname;
     std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
@@ -189,8 +231,6 @@ std::string Channel::getCurrentModes() const {
     return activeModes;
 }
 
-
-
 void Channel::setTopic(const std::string& newTopic) {
     _topic = newTopic;
 }
@@ -204,6 +244,7 @@ Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
 	}
 
 }
+
 Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
 	switch (modeChar) {
 		case 'i': return Modes::INVITE_ONLY;
@@ -212,14 +253,13 @@ Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
 		case 't': return Modes::TOPIC;
 		default : return Modes::NONE;
 	}
-
 }
+
 bool Channel::setModeBool(char onoff) {
 	return onoff == '+'; 
 }
 
-
-std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
+std::vector<std::string> Channel::applymodes(std::vector<std::string> params) // applyModes?
 {
 	std::string modes;
 	std::string targets;
@@ -243,8 +283,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 			std::cout<<"steping into the damn setmodechannel checkl moder flags "<<modeFlags<<"---\n";
 			
 			modeChar = modeFlags[modeIndex];//params[paramIndex][modeIndex];
-			if (channelModeRequiresParameter(modeChar))
-			{
+			if (channelModeRequiresParameter(modeChar)) {
 				paramIndex++;
 			}
 			std::cout<<"steping into the damn setmodechannel checkl moder char "<<modeChar<<"---\n";
@@ -252,8 +291,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 			messageData = setChannelMode(modeChar , setModeBool(sign), params[paramIndex]);
 			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";
 			
-			if (!messageData.empty())
-			{
+			if (!messageData.empty()) {
 				modes += messageData[0] + " ";
 				if (messageData.size() > 1)
 					targets += messageData[1] + " ";
@@ -266,11 +304,9 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 		std::cout<<"outerloop----\n";
 
 		paramIndex++;
-
 	}
 	std::cout<<"ending to change the mode----\n";
-	if (modes.size() > 1) // not only sign but also mode flag
-	{
+	if (modes.size() > 1) { // not only sign but also mode flag
 		messageData.push_back(modes); 
 		messageData.push_back(targets); 
 	}
@@ -284,20 +320,25 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 	bool modeChange = false;
 	Modes::ChannelMode cmodeType = Modes::NONE;
 	Modes::ClientMode modeType = Modes::CLIENT_NONE;
-    if (isValidChannelMode(modeChar)){
+
+	if (isValidChannelMode(modeChar)){
 		cmodeType = charToChannelMode(modeChar);
 		std::cout<<"is mode not changing here "<< static_cast<int>(cmodeType) << std::endl;
 	}
-    if (isValidClientMode(modeChar))
-		modeType = charToClientMode(modeChar);
     
+	if (isValidClientMode(modeChar)) {
+		modeType = charToClientMode(modeChar);
+	}
+
 	if (cmodeType == Modes::NONE && modeType == Modes::CLIENT_NONE) {
         return {};
     }
-	if(_ChannelModes.test(cmodeType) == true )
+
+	if(_ChannelModes.test(cmodeType) == true ) {
 		std::cout<<"mode already set----\n";
-	else
+	} else {
 		std::cout<<"mode is false----\n";
+	}
 
 	if (cmodeType!= Modes::NONE) {
 		if(_ChannelModes.test(cmodeType) != enableMode) {
@@ -306,32 +347,31 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 			modeChange = true;
 		}
 	}
+
 	//bool shouldReport = !(modeChange && !enableMode) && (cmodeType != Modes::NONE); // || modeType != Modes::CLIENT_NONE);
 	bool shouldReport = modeChange || enableMode;
+
 	if (shouldReport) {
 			std::cout<<"should report activated ----\n";
-
-		response.push_back(std::string(1, modeChar)); // Mode char
+			response.push_back(std::string(1, modeChar)); // Mode char
 	}
+
  	switch (cmodeType) {
             case Modes::USER_LIMIT:
                 if (enableMode) {
 					_ulimit = std::stoul(target);
 				} else {
 					_ulimit = 0;
-				} if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
+				}
+				if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
                     response.push_back(target);
 				}
 				break;
             
             case Modes::PASSWORD:
-                if (enableMode)
-				{
-
+                if (enableMode) {
 					_password = target;
-				}
-				else
-				{
+				} else {
 					_password.clear();
 				}
 				if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
@@ -349,8 +389,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
                 break;
     }
 	 if (modeType != Modes::CLIENT_NONE) {
-		if(getClientModes(target).test(modeType) != enableMode)
-		{
+		if(getClientModes(target).test(modeType) != enableMode) {
 			getClientModes(target).set(modeType, enableMode);
 		}
 		response.push_back(std::string(1, modeChar)); // Mode char
@@ -456,6 +495,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
     }
     return 0; // Invalid mode
 }*/
+
 // using optional here instead as we can just retun nullptr 
 std::optional<std::pair<MsgType, std::vector<std::string>>>
 Channel::canClientJoin(const std::string& nickname, const std::string& password) {
@@ -532,18 +572,76 @@ bool Channel::addClient(std::shared_ptr <Client> client) {
  * @return true
  * @return false
  */
-bool Channel::removeClient(std::string nickname) {
-    // We already use getWeakPtrByNickname which handles case-insensitivity
-    size_t removed_count = _ClientModes.erase(getWeakPtrByNickname(nickname));
-    if (removed_count > 0) {
-        // Also remove from operators if they were an operator
-        //operators.erase(Client); // This comment refers to an old structure
+// bool Channel::removeClient(const std::string& nickname) {
+//     // We already use getWeakPtrByNickname which handles case-insensitivity
+//     size_t removed_count = _ClientModes.erase(getWeakPtrByNickname(nickname));
+//     if (removed_count > 0) {
+//         // Also remove from operators if they were an operator
+//         //operators.erase(Client); // This comment refers to an old structure
 
-        std::cout << nickname << " left channel " << _name << std::endl;
-        _clientCount -= 1; // Decrement client count
+//         std::cout << nickname << " left channel " << _name << std::endl;
+//         _clientCount -= 1; // Decrement client count
+//     }
+//     return removed_count > 0;
+// }
+
+
+// In sources/Channel.cpp
+
+// Make sure your Channel class has a _ClientModes member like:
+// std::map<std::weak_ptr<Client>, int, std::owner_less<std::weak_ptr<Client>>> _ClientModes;
+// And that you have a private helper function:
+// std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+// (Or a client pointer, or an iterator to the map entry)
+
+bool Channel::removeClient(const std::string& nickname) {
+    // We assume 'nickname' is already in lowercase as per the program's invariant.
+    std::cout << "CHANNEL: Attempting to remove client '" << nickname << "' from channel '" << _name << "'\n";
+
+    // 1. Get the weak_ptr for the client from our internal map using the helper.
+    //    This helper *must* handle finding the exact (lowercase) nickname and cleaning up expired weak_ptrs.
+    std::weak_ptr<Client> client_weak_ptr_to_remove = getWeakPtrByNickname(nickname);
+
+    // 2. Check if the weak_ptr obtained is valid (i.e., not empty).
+    if (client_weak_ptr_to_remove.expired()) {
+        std::cerr << "CHANNEL ERROR: Client '" << nickname << "' not found or already disconnected from channel '" << _name << "' for removal.\n";
+        // Client not found or already gone, return current emptiness status.
+        return _ClientModes.empty();
     }
-    return removed_count > 0;
+
+    // 3. Attempt to erase the client's entry using the obtained weak_ptr.
+    //    std::map::erase(key) should work correctly with std::weak_ptr keys and std::owner_less.
+    size_t removed_count = _ClientModes.erase(client_weak_ptr_to_remove);
+
+    if (removed_count > 0) {
+        // Successfully removed the client from _ClientModes.
+        std::cout << "CHANNEL: Client '" << nickname << "' successfully removed from channel '" << _name << "'.\n";
+
+        // IMPORTANT: If you have any other channel-specific lists (e.g., separate operator set)
+        // that are keyed by weak_ptr, you'd remove the client_weak_ptr_to_remove from those here too.
+        // For example:
+        // if (_operators.erase(client_weak_ptr_to_remove)) {
+        //     std::cout << "CHANNEL: Client was also an operator, removed from _operators list.\n";
+        // }
+    } else {
+        // This case indicates that getWeakPtrByNickname found a valid weak_ptr,
+        // but erase() didn't remove anything. This could point to a subtle issue with
+        // how weak_ptr equality is handled by map::erase or if the map was modified
+        // by another thread (unlikely in a single-threaded epoll loop).
+        // Or perhaps a transient state where the weak_ptr became expired *between*
+        // getWeakPtrByNickname returning and erase being called.
+        std::cerr << "CHANNEL ERROR: Failed to erase client '" << nickname << "' from channel '" << _name << "' "
+                  << "(getWeakPtrByNickname returned valid but erase failed).\n";
+    }
+
+    // 4. Return true if the channel's member list is now empty.
+    return _ClientModes.empty();
 }
+
+
+
+
+
 
 // refactor looking at can client join
 std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
@@ -553,13 +651,13 @@ std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
         if (paramsSize == 1) {
             // Client must be in the channel to list its modes.
             if (!isClientInChannel(ClientNickname)) {
-                return {MsgType::NOT_IN_CHANNEL, {ClientNickname, getName()}};
+                return {MsgType::NOT_ON_CHANNEL, {ClientNickname, getName()}};
             }
             // Return RPL_CHANNELMODEIS with necessary parameters for MessageBuilder
             return {MsgType::RPL_CHANNELMODEIS, {ClientNickname, getName(), getCurrentModes(), ""}};
         }
         if (!isClientInChannel(ClientNickname)) {
-            return {MsgType::NOT_IN_CHANNEL, {ClientNickname, getName()}};
+            return {MsgType::NOT_ON_CHANNEL, {ClientNickname, getName()}};
         }
 
         // Client must be an operator in the channel to set its modes.

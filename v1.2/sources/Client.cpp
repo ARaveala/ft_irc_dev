@@ -7,7 +7,6 @@
 //#include "config.h"
 #include "ServerError.hpp"
 #include "SendException.hpp"
-#include "epoll_utils.hpp" // reset client timer
 #include "IrcMessage.hpp"
 //#include <string>
 #include "CommandDispatcher.hpp"

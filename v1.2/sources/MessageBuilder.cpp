@@ -112,11 +112,17 @@ namespace MessageBuilder {
 	std::string generatewelcome(const std::string& nickname) {
 		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname);
 	}
+
+	
+
     // Helper for common server prefix (you can make this a constant or pass it)
     const std::string SERVER_PREFIX = ":localhost"; // Or ":localhost" as used in some of your macros
 	const std::string SERVER_AT = "@localhost";
 	const std::string QUIT_MSG = "Client disconnected";
-
+	
+	std::string generateInitMsg() {
+		return ":" + SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n" + ":"+ SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\n";
+	}
 
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick) {

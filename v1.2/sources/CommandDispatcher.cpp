@@ -32,17 +32,13 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
     }
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
+	const std::string& nickname = client->getNickname();
 	std::cout<<"handling cap with param = "<<params[1]<<"\n";
 	// this may not be needed but could be the soruce of inconsitent behaviour, it has not fixed it ;(
-	if (command == "CAP")
-	{
-		client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " LS :multi-prefix sasl\r\n");
-        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :multi-prefix\r\n");
-        client->getMsg().queueMessage(":localhost CAP " + client->getNickname() + " ACK :END\r\n");
-		client->setHasSentCap();
+	if (command == "CAP") {
+		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
-	if (command == "QUIT")
-	{
+	if (command == "QUIT") {
 		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		_server->handleQuit(client);
 		return ;
@@ -61,15 +57,11 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			//std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
 
 			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
-
 			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 			client->setHasSentNick();
 			return;
-			//std::cout<<"CHECKING PARAM AAAFTER WE HAVE CHANGING"<<client->getMsg().getParam(0)<<"\n";
-
 		}
 
-		client->setOldNick(client->getNickname()); // we might not need this anymore 
 		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
 		_server->handleNickCommand(client);
 		return ; 
@@ -97,10 +89,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "PONG"){
 		std::cout<<"sending ping back "<<std::endl;
-		
-		client->getMsg().queueMessage("PING :localhost/r/n");
-		
-		
+		client->getMsg().queueMessage("PING :localhost/r/n");		
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
 
@@ -133,7 +122,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		
 */
 		}
-		else// if(client->getHasSentCap() == true) 
+		else
 		{
 			
 			if (client->getHasSentCap() == true)

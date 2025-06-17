@@ -12,7 +12,6 @@
 //#include <string.h>
 
 #include "ServerError.hpp"
-#include "epoll_utils.hpp"
 #include <sys/epoll.h>
 #include "signal_handler.h"
 #include <sys/signalfd.h>

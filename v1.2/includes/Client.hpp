@@ -68,7 +68,7 @@ class Client {
 		
 		const std::string& getOldNick() {  return _oldNick; };
 
-		bool getHasSentCap() {return _hasSentCap;};
+		bool& getHasSentCap() {return _hasSentCap;};
 		bool getHasSentNick() {return _hasSentNick;};
 		bool getHasSentUser() {return _hasSentUser;};
 		bool getHasRegistered() {return _registered;};

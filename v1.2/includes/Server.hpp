@@ -58,12 +58,15 @@ class Server {
 		
 	public:
 		Server();
-		Server(int port, std::string password);
+		Server(int port, const std::string& password);
 		~Server();
-
+	// create things
 		void create_Client(int epollfd);
+		void createChannel(const std::string& channelName);
+
 		void remove_Client(int client_fd);
-		void removeClientFromChannels(int fd);
+		// todo we need a remove channel, when last client leaves channel?
+		//void removeClientFromChannels(int fd);
 	
 		// SETTERS
 		void setFd(int fd);
@@ -82,18 +85,21 @@ class Server {
 		int get_client_count() const;
 		int get_event_pollfd() const;
 		int get_current_client_in_progress() const;
+
+		std::string get_password() const;
+		
+		std::shared_ptr<Client> get_Client(int fd);
+		std::shared_ptr<Channel> get_Channel(const std::string& channelName);
 		
 		std::map<int, struct epoll_event> get_struct_map() {return _epollEventMap; };
-		std::string get_password() const;
-		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
-		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
-		std::shared_ptr<Client> get_Client(int fd);
-		std::map<int, std::shared_ptr<Client>> get_Clients() {return _Clients;};
-		std::shared_ptr<Channel> get_Channel(std::string channelName);
-		
+		std::map<int, std::shared_ptr<Client>> get_Clients() {return _Clients;};		
 		std::map<int, std::string>& get_fd_to_nickname();
 		std::map<std::string, int>& get_nickname_to_fd();
 		std::map<int, std::shared_ptr<Client>>& get_map();
+
+		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
+		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
+
 		void handle_client_connection_error(ErrorType err_type);
 		void shutDown();
 		bool checkTimers(int fd);
@@ -108,14 +114,13 @@ class Server {
 		int create_epollfd();
 		int createTimerFD(int timeout_seconds);
 		void resetClientTimer(int timer_fd, int timeout_seconds);
-		void send_message(std::shared_ptr<Client> client);
-		void send_server_broadcast();
-		void sendChannelBroadcast();
+		int make_socket_unblocking(int fd);
+		void send_message(const std::shared_ptr<Client>& client);
+		//void send_server_broadcast();
+		//void sendChannelBroadcast();
 
 		// channel related 
 		bool channelExists(const std::string& channelName) const;
-		void createChannel(const std::string& channelName);//, Client& client
-		Channel* getChannel(const std::string& channelName);
 		void handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password);
 		void handleReadEvent(int client_fd);
 		void handleQuit(std::shared_ptr<Client> client);
@@ -123,6 +128,7 @@ class Server {
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleNickCommand(std::shared_ptr<Client> client);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
 		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
 
 

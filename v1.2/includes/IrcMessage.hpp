@@ -59,7 +59,7 @@ class IrcMessage {
 		const std::string getParam(unsigned long index) const ;
 		void printMessage(const IrcMessage& msg);
 
-		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
+		void queueMessage(const std::string& msg) { std::cout<< "[QUEUE] To: \n"; _messageQue.push_back(msg);};
 		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
 		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };

@@ -32,7 +32,7 @@ void IrcMessage::prep_nickname(const std::string& username, std::string& nicknam
 		
 	} 
 }
-void IrcMessage::prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList)
+/*void IrcMessage::prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList)
 {
 	
 	std::string whoJoins = ":" + nickname + " JOIN " + channleName + "\r\n";
@@ -44,6 +44,6 @@ void IrcMessage::prep_join_channel(std::string channleName, std::string nickname
 	messageQue.push_back(test3);
 	messageQue.push_back(test1);
 	messageQue.push_back(test2);
-}
+}*/
 
 // the alternative to macros

@@ -34,7 +34,7 @@ std::vector<int> Channel::getAllfds() {
 	}
 	return fds;
 }
-
+// get end list of nicknames
 const std::string Channel::getAllNicknames() {
 	std::string list;
 	for (const auto& entry : _ClientModes) {

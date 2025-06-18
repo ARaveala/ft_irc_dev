@@ -139,7 +139,10 @@ class Server {
 
 		//whois
 		std::shared_ptr<Client> findClientByNickname(const std::string& nickname);
-
+	// if these work we will swap for broadcasttochannel, breoadcasttoclients
+		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
+		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);
+		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);
 };
 
 std::string generateUniqueNickname();

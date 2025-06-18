@@ -11,7 +11,8 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}IrcPreper.cpp \
 			${SOURCES}Channel.cpp \
 			${SOURCES}CommandDispatcher.cpp \
-			${SOURCES}MessageBuilder.cpp
+			${SOURCES}MessageBuilder.cpp \
+			${SOURCES}test.cpp
 			
 INCLUDES = -I ./includes
 CPP = c++

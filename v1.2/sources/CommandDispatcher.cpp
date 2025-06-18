@@ -142,7 +142,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         //· k: Set/remove the channel key (password)
 		//· o: Give/take channel operator privilege
 		//· l: Set/remove the user limit to channel
-
 	}
 	if (client->getMsg().getCommand() == "PRIVMSG")  {
 		if (!params[0].empty())
@@ -152,9 +151,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				if (_server->channelExists(params[0]) == true) {
 					// MessageBuilder 
 					// is client in channel 
-					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n", client, true);
+					std::string contents = ":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+					_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), false, nullptr);
+					//_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n", client, true);
 				}
-
 			}
 			else
 			{
@@ -166,11 +166,13 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 					std::cout<<"no user here by that name \n"; 
 					return ;
 				}
+				std::string contents =  ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " :" + params[1] + "\r\n";
+				_server->broadcastMessage(contents, client, nullptr, false, _server->get_Client(fd));
 				// query username on first contact, not needed , can be manually written when opened, im getting tired of this project now
-				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " :" + params[1] + "\r\n");
-				if (!_server->get_Client(fd)->isMsgEmpty()) {
-					_server->updateEpollEvents(fd, EPOLLOUT, true);
-				}
+				//_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " :" + params[1] + "\r\n");
+				//if (!_server->get_Client(fd)->isMsgEmpty()) {
+				//	_server->updateEpollEvents(fd, EPOLLOUT, true);
+				//}
 				
 			}
 		}

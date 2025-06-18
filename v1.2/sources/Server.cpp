@@ -551,18 +551,19 @@ void Server::handleNickCommand(std::shared_ptr<Client> client) {
     std::cout << "DEBUG NICK Self-Message: Before queuing, client->isMsgEmpty() is " 
               << (client->isMsgEmpty() ? "true" : "false") << " for FD " << client->getFd() << "\n";
 
-	if (client->isMsgEmpty() == true)
-	{
+	//if (client->isMsgEmpty() == true)
+	//{
 		 std::cout << "DEBUG NICK Self-Message: Queue WAS empty for Client " << client->getNickname() 
                   << ", enabling EPOLLOUT for FD " << client->getFd() << ".\n";
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
-	}
-	else {
+	//}
+	//else {
         std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
                   << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
-    }
+    //}
 	client->getMsg().queueMessage(msg);
+	//broadcastMessageToChannel();
 	std::cout << "DEBUG NICK Self-Message: Message QUEUED for Client " << client->getNickname() 
               << " (FD: " << client->getFd() << "). Current queue size after: " << client->getMsg().getQue().size() << "\n";
 }
@@ -1134,7 +1135,7 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         // The sender_to_exclude parameter in broadcastMessageToChannel is for PRIVMSG/NOTICE,
         // for PART, everyone gets it. So, pass nullptr to include everyone.
         std::string part_full_message = client_prefix + " PART " + ch_name + " :" + part_reason + "\r\n";
-        broadcastMessageToChannel(channel_ptr, part_full_message, nullptr);
+        broadcastMessageToChannel(channel_ptr, part_full_message, client, false);
 
         // 5. Remove client from channel's internal list
         // This calls the Channel::removeClient we refined.

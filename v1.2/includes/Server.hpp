@@ -124,7 +124,7 @@ class Server {
 		void handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password);
 		void handleReadEvent(int client_fd);
 		void handleQuit(std::shared_ptr<Client> client);
-		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender);
+		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip);
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleNickCommand(std::shared_ptr<Client> client);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);

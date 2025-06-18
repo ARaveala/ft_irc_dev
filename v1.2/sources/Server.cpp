@@ -5,21 +5,22 @@
 #include <iostream> // testing with cout
 #include <sys/socket.h>
 #include <sys/epoll.h>
-#include "Client.hpp"
 #include <map>
 #include <memory> // shared pointers
+
+//#include "SendException.hpp"
+#include <algorithm> // find_if
+#include <unordered_set>
+#include <cctype>    // Required for std::tolower (character conversion)
+
+#include "Client.hpp"
+
 #include "config.h"
 #include "ServerError.hpp"
 #include "Channel.hpp"
-//#include "SendException.hpp"
-#include <algorithm> // find_if
-//#include <optional> // nullopt , signifies absence
-class ServerException;
-#include <unordered_set>
 #include "MessageBuilder.hpp"
 
-//#include <algorithm> // Required for std::transform
-#include <cctype>    // Required for std::tolower (character conversion)
+class ServerException;
 
 
 Server::Server(){
@@ -87,8 +88,7 @@ int Server::get_current_client_in_progress() const{
  * the client fd is added to the epoll and then added to the Client map. a welcome message
  * is sent as an acknowlegement message back to irssi.
  */
-//#include <sys/types.h>
-//#include <sys/socket.h>
+
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 
@@ -225,7 +225,7 @@ void Server::remove_Client(int client_fd) {
 
             // B) Broadcast the QUIT message to other clients in this specific channel.
             // Your `broadcastMessageToChannel` skips the sender, which is correct here.
-            broadcastMessageToChannel(channel_ptr, quit_message, client_to_remove);
+            broadcastMessageToChannel(channel_ptr, quit_message, client_to_remove, true);
 
             // C) Remove the client from the channel's internal member list.
             // Channel::removeClient should also update client_to_remove's _joinedChannels list.
@@ -240,8 +240,6 @@ void Server::remove_Client(int client_fd) {
     }
     // After iterating through all channels, clear the client's internal list of joined channels.
     client_to_remove->clearJoinedChannels();
-
-
     // --- Step 3: Perform server-wide cleanup ---
     // Remove client's nickname to FD and FD to nickname mappings.
     _nickname_to_fd.erase(client_to_remove->getNickname());
@@ -441,7 +439,7 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 	int fd;
 	fd = client->getFd();
 	
-	while (!client->isMsgEmpty()) { // && client->getMsg().getQueueMessage() != ""	
+	while (!client->isMsgEmpty()) {	
 		std::string msg = client->getMsg().getQueueMessage();
 		size_t remaining_bytes_to_send = client->getMsg().getRemainingBytesInCurrentMessage();
         std::string send_buffer_ptr = client->getMsg().getCurrentMessageCstrOffset();
@@ -452,7 +450,7 @@ void Server::send_message(const std::shared_ptr<Client>& client)
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 // Socket buffer is full. Cannot send more right now.
                 std::cout << "DEBUG::DEBUG send() returned EAGAIN/EWOULDBLOCK for FD " << fd << ". Pausing write.\n";
-                return; // <<< EXIT send_message. Epoll will re-trigger.
+                return;
             } 
             // Fatal error (e.g., connection reset, broken pipe).
             perror("send error");
@@ -469,12 +467,7 @@ void Server::send_message(const std::shared_ptr<Client>& client)
             // The outer 'while' loop will now check for the next message in the queue.
 	        } else {
 	            // Partial send of the current message.
-	            // Still more bytes to send for *this* message.
-	            // Leave EPOLLOUT enabled. The next time send_message is called,
-	            // it will automatically pick up from the new offset.
-	            //std::cout << "ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖDEBUG: Partial send for FD " << fd << ". Sent " << bytes_sent
-	            //          << " bytes. Remaining: " << client->getMsg().getRemainingBytesInCurrentMessage() << ".\n";
-	            return; // Exit send_message. Epoll will re-trigger for remaining bytes.
+	            return;
 			}
 		}
 	}
@@ -581,10 +574,6 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
     }
 
     std::cout << "SERVER: Handling QUIT for client " << client->getNickname() << " (FD: " << client->getFd() << ")\n";
-	
-    // Step 1: Prepare the list of channels the client was in.
-    // We get the map of weak_ptrs from the client.
-    // Create a temporary vector of channel names to iterate over safely.
     // This avoids iterator invalidation if _joinedChannels were modified during the loop.
     std::vector<std::string> channels_to_process;
     for (const auto& pair : client->getJoinedChannels()) {
@@ -592,25 +581,18 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
             channels_to_process.push_back(pair.first); // pair.first is the channel name (std::string)
         }
     }
-
     // Step 2: Loop through each channel the client was in (SINGLE loop).
     // For each channel, remove the client and broadcast the PART message.
     for (const std::string& channel_name : channels_to_process) {
-        // Use getChannel to get the shared_ptr<Channel> from the server's master list
         auto channel_ptr = get_Channel(channel_name); 
-
         if (channel_ptr) { // Always check if the channel still exists on the server
             std::cout << "SERVER: Removing client " << client->getNickname() << " from channel " << channel_name << "\n";
 
-            // A) Channel removes the client from its internal list.
-            channel_ptr->removeClient(client->getNickname());
-
-            // B) Build the PART message for *this specific channel context*.
-           	//client->getMsg().setType(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
 			std::string part_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
-
-            broadcastMessageToChannel(channel_ptr, part_message, client); // 'client' is the sender to be excluded from broadcast
-        } else {
+			std::cout<<"show me the list of members = "<< channel_ptr->getAllNicknames()<<"\n";
+            broadcastMessageToChannel(channel_ptr, part_message, client, false); // 'client' is the sender to be excluded from broadcast
+ 			//channel_ptr->removeClient(client->getNickname());
+		} else {
             std::cerr << "WARNING: Client " << client->getNickname() << " was in channel "
                       << channel_name << " but channel no longer exists on server.\n";
         }
@@ -634,6 +616,7 @@ if (!client) {
     std::set<std::shared_ptr<Client>> recipients;
 	std::map<std::string, std::weak_ptr<Channel>> client_joined_channels_copy = client->getJoinedChannels();
 	std::vector<std::string> channels_to_process;
+
     for (const auto& pair : client_joined_channels_copy) {
         std::cout<<"handling pairs and geting joined channles\n";
 		if (std::shared_ptr<Channel> channel_sptr = pair.second.lock()) {
@@ -677,7 +660,29 @@ if (!client) {
     }
 	if (quit == true) {
 		client->clearJoinedChannels();
+		client->setQuit();
+		
 	}
+	/*auto channels = client->getJoinedChannels();
+	for (const auto& [channel_name, weak_channel] : channels) {
+	    auto channel = weak_channel.lock();
+	    if (!channel) {
+	        std::cerr << "WARNING: weak_ptr to channel '" << channel_name << "' expired in client's joined list.\n";
+	        continue;
+	    }
+
+	    // Broadcast quit message to channel (excluding the quitting client)
+	    broadcastMessageToChannel(channel, msg, client, true);
+
+	    if (quit) {
+	        channel->removeClient(client->getNickname());
+	    }
+	}
+
+	if (quit) {
+	    client->clearJoinedChannels();
+	}*/
+
 
 }
 
@@ -736,9 +741,9 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 				messageParams.push_back(modeparams[1]);
 			else
 				messageParams.push_back("");
-			broadcastMessageToChannel(channel, MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client);
-			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams));
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			broadcastMessageToChannel(channel, MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client, false);
+			//client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams));
+			//updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
 		}
 		
@@ -779,7 +784,8 @@ void Server::handleCapCommand(const std::string& nickname, std::deque<std::strin
 		//client->setHasSentCap();
 }
 
-void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender) {
+// flag for skip sender or not . 
+void Server::broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip) {
     if (!channel) {
         std::cerr << "Error: Attempted to broadcast to a null channel pointer.\n";
         return;
@@ -788,30 +794,19 @@ void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const 
         // No message to send, or error in message creation
         return;
     }
-
-    // Get the map of weak_ptr<Client> from the Channel object
     const auto& client_modes_map = channel->getAllClients();
-
-    // Iterate through all clients in this channel
     for (const auto& pair : client_modes_map) {
-        // Try to obtain a shared_ptr from the weak_ptr.
-        // If .lock() returns a valid shared_ptr, the client is still connected.
         if (auto current_client_ptr = pair.first.lock()) {
-            // Check if the current client in the channel is the sender of the message.
-            // If so, we typically don't send the broadcast back to the sender to avoid echo.
-            if (sender && current_client_ptr->getFd() == sender->getFd()) {
+			std::cout<<"DEBUGus::::: who we dealing with "<<current_client_ptr->getNickname()<<".\n";
+
+            if (sender && current_client_ptr->getFd() == sender->getFd() && skip) {
                 continue; // Skip the sender
             }
 			current_client_ptr->getMsg().queueMessage (message_content);
 			if (!current_client_ptr->isMsgEmpty() == true) {
 				updateEpollEvents(current_client_ptr->getFd(), EPOLLOUT, true);
 			}
-
-
         } else {
-            // This case means the weak_ptr is expired. The Client object no longer exists.
-            // This is a sign that the client disconnected, and the channel's map
-            // might need cleaning up (e.g., during periodic channel maintenance or on client disconnect).
             std::cerr << "WARNING: Expired weak_ptr to client found in channel "
                       << channel->getName() << " member list. Client likely disconnected.\n";
 
@@ -821,7 +816,8 @@ void Server::broadcastMessageToChannel( std::shared_ptr<Channel> channel, const 
 #include<chrono>
 // could we add if msg empty check here , then all cases where we call updatepoll must be called before message qued
 void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
-    auto it = _epollEventMap.find(fd);
+    std::cout << "DEBUG: inbetween these 2?????.\n";
+	auto it = _epollEventMap.find(fd);
     if (it == _epollEventMap.end()) {
         std::cerr << "ERROR: setEpollFlagStatus: FD " << fd << " not found in _epollEventMap. Cannot modify events. This might indicate a missing client cleanup.\n";
         return; // Exit immediately if FD is not tracked

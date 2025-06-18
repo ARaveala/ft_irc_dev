@@ -3,15 +3,7 @@
 #include <tuple>
 #include <functional>
 #include <string>
-/*template <typename Func>
-std::string callBuilder(Func&& func, const std::vector<std::string>& params) {
-    switch (params.size()) {
-        case 1: return func(params[0]);
-        case 2: return func(params[0], params[1]);
-        case 3: return func(params[0], params[1], params[2]);
-        default: return "Error: Unsupported number of parameters!";
-    }
-}*/
+
 // Makes a sequence of numbers matching indexes, expands to individual arguments , calls fucn with those argumenst. 
 template <typename Func, size_t... Indices>
 std::string invokeWithVector(Func&& func, const std::vector<std::string>& params, std::index_sequence<Indices...>) {

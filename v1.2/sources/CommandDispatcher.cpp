@@ -33,86 +33,16 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
-	std::cout<<"handling cap with param = "<<params[1]<<"\n";
-	// this may not be needed but could be the soruce of inconsitent behaviour, it has not fixed it ;(
 	if (command == "CAP") {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
 	if (command == "QUIT") {
-		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
+//		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		_server->handleQuit(client);
 		return ;
 	}
-
-	if (command == "USER")
-	{
-		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
-		client->setHasSentUser();
-		//return ;
-	}
-	if (command == "NICK") {
-		if (client->getHasSentNick() == false)
-		{
-			std::cout<<"@@@@@@@@@@{{{{{{{{7777777777777777777CLIENT NICKNAME IS BEING SENT 1ST TIME--------------------ooooooooommmmmmmmmmmmmmm--------------\n";
-			//std::cout<<"CHECKING PARAM WE ARE CHANGING"<<client->getMsg().getParam(0)<<"\n";
-
-			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
-			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
-			client->setHasSentNick();
-			return;
-		}
-
-		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
-		_server->handleNickCommand(client);
-		return ; 
-	}
-	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-		client->setHasRegistered();
-		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
-		client->getMsg().queueMessage(msg);
-		// stating end of registartion 
-		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
-		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
-
-		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
-		
-
-	}
-	if (command == "PING"){
-		std::cout<<"sending pong back "<<std::endl;
-		client->getMsg().queueMessage("PONG :localhost/r/n");
-		client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
-		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		return;
-		//Client->set_failed_response_counter(-1);
-		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
-	}
-	if (command == "PONG"){
-		std::cout<<"sending ping back "<<std::endl;
-		client->getMsg().queueMessage("PING :localhost/r/n");		
-		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		return;
-
-	}
-
-    if (command == "JOIN"){
-
-		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
-		if (!params[0].empty())
-		{
-			// HANDLE HERE 
-			_server->handleJoinChannel(client, params[0], params[1]);
-			
-			// if (!ischannel) , createChannel(), setChannelDefaults() updateChannalconts()?, confirmOperator()
-			// else if (ischannel), isinvite(), hasinvite(), ChannelhasPaswd(), clientHasPasswd()/passwrdMatch(),
-			// hasBan(), joinChannel() updateChannalconts()
-			//		
-
-	    /*if (getCommand() == "KICK") {
-			
-	    }
-
-	    PART
+	
+	/*	    PART
 	    LEAVE
 	    TOPIC
 	    NAMES
@@ -121,10 +51,72 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	    PARAMETER NICKNAME
 		
 */
+	/*if (command == "KICK") {
+			
+	}
+	if (command == "INVITE") {
+			
+	}*/
+	
+	if (command == "LEAVE" || command == "PART") {
+			
+	}
+
+	if (command == "USER") {
+		// if (params.size() == 1/2)
+		// 	chnage username to param, follow same logic as nickname? 
+		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
+		client->setHasSentUser();
+	}
+	if (command == "NICK") {
+		if (client->getHasSentNick() == false)
+		{
+			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
+			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+			client->setHasSentNick();
+			return;
+		}
+		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
+		_server->handleNickCommand(client);
+		return ; 
+	}
+	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
+		client->setHasRegistered();
+		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
+		client->getMsg().queueMessage(msg);
+		// araveal will fix this into less line of code 
+		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
+		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+	}
+	if (command == "PING"){
+		std::cout<<"sending pong back "<<std::endl;
+		client->getMsg().queueMessage("PONG :localhost\r\n");
+		//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
+		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return;
+		//Client->set_failed_response_counter(-1);
+		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
+	}
+	if (command == "PONG"){
+		std::cout<<"sending ping back "<<std::endl;
+		client->getMsg().queueMessage("PING :localhost\r\n");		
+		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return;
+
+	}
+    if (command == "JOIN"){
+
+		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
+		if (!params[0].empty())
+		{
+			_server->handleJoinChannel(client, params[0], params[1]);
+
+
+
 		}
 		else
 		{
-			
 			if (client->getHasSentCap() == true)
 			{
 				std::cout<<"hhhhhhhhhhhhhh    ENTERING join on first HANDLING \n";
@@ -146,10 +138,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	 * so no option but to not allow that format !
 	 * 
 	 */
-	if (command == "MODE")
-	{
-
-
+	if (command == "MODE") {
 		_server->handleModeCommand(client, params);
 		// · i: Set/remove Invite-only channel
         //· t: Set/remove the restrictions of the TOPIC command to channel operators
@@ -158,57 +147,42 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		//· l: Set/remove the user limit to channel
 
 	}
-	if (client->getMsg().getCommand() == "PRIVMSG") 
-	{
+	if (client->getMsg().getCommand() == "PRIVMSG")  {
 		if (!params[0].empty())
 		{
 			if (params[0][0] == '#')
 			{
-				std::cout<<"stepping into priv message handling \n";
-				std::string buildMessage;
-				// right now we loop through all params, do we need to check for symbols ? like# or modes
-				// we need to adjust the space handling in the message class as righ tnow we loose all spaces 
-				for (size_t i = 1; i < params.size(); i++)
-				{
-					buildMessage += params[i];
-				}
-				// eed to check does channel exist
 				if (_server->channelExists(params[0]) == true) {
 					// MessageBuilder 
-					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + buildMessage + "\r\n", client);
+					// is client in channel 
+					_server->broadcastMessageToChannel(_server->get_Channel(params[0]),":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n", client, true);
 				}
-				// check is it a channel name , starts with #, collect to _serverchannelbroadcast
-				// is it just a nickname , collect to messageQue, send to only that fd of
-	
+
 			}
 			else
 			{
 				int fd = _server->get_nickname_to_fd().find(params[0])->second;
 				// check against end()
-				if (fd < 0)
-				{
+				if (fd < 0) {
 					// no user found by name
 					// no username provided
 					std::cout<<"no user here by that name \n"; 
 					return ;
 				}
-				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " " + params[1] + "\r\n");
+				// query username on first contact, not needed , can be manually written when opened, im getting tired of this project now
+				_server->get_Client(fd)->getMsg().queueMessage( ":" + client->getNickname() + " PRIVMSG "  + params[0]  + " :" + params[1] + "\r\n");
 				if (!_server->get_Client(fd)->isMsgEmpty()) {
 					_server->updateEpollEvents(fd, EPOLLOUT, true);
 				}
 				
 			}
 		}
-		if (!params[0].empty())
-		{
+		if (!params[0].empty()) {
 			// handle error or does irssi handle
 		}
 		
 	}
-	if (command == "WHOIS")
-	{
+	if (command == "WHOIS") {
 		_server->handleWhoIs(client, params[0]);
-		//client->getMsg().queueMessage("RECONNECT\r\n");
-
 	}
 }

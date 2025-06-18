@@ -67,8 +67,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "NICK") {
 		if (client->getHasSentNick() == false)
 		{
-			client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
-			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+			//client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
+			//_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 			client->setHasSentNick();
 			return;
 		}
@@ -108,9 +108,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		if (!params[0].empty())
 		{
 			_server->handleJoinChannel(client, params[0], params[1]);
-
-
-
 		}
 		else
 		{

@@ -545,36 +545,20 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 }
 
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
+	
+	if (check_and_set_nickname(getParam(0), client_fd, fd_to_nick, nick_to_fd))
+	{
+		std::string oldnick = nickname;
+		nickname.clear();
+		nickname = getParam(0);
+		setType(MsgType::RPL_NICK_CHANGE, {oldnick, username, nickname});
+		
+	} 
 	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
 	broadcastMessage(msg, nullptr, nullptr, false, client);
 	broadcastMessage(msg, client, nullptr, true, nullptr);
 
 }
-/*void Server::handleNickCommand(std::shared_ptr<Client> client) {
-	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
- 
-	broadcastMessageToClients(client, msg, false);
-	 std::cout << "DEBUG NICK Self-Message: Processing NICK for Client " << client->getNickname() 
-              << " (FD: " << client->getFd() << ")\n";
-    std::cout << "DEBUG NICK Self-Message: Before queuing, client->isMsgEmpty() is " 
-              << (client->isMsgEmpty() ? "true" : "false") << " for FD " << client->getFd() << "\n";
-
-	//if (client->isMsgEmpty() == true)
-	//{
-		 std::cout << "DEBUG NICK Self-Message: Queue WAS empty for Client " << client->getNickname() 
-                  << ", enabling EPOLLOUT for FD " << client->getFd() << ".\n";
-		updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
-	//}
-	//else {
-        std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
-                  << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
-    //}
-	client->getMsg().queueMessage(msg);
-	//broadcastMessageToChannel();
-	std::cout << "DEBUG NICK Self-Message: Message QUEUED for Client " << client->getNickname() 
-              << " (FD: " << client->getFd() << "). Current queue size after: " << client->getMsg().getQue().size() << "\n";
-}*/
 
 void Server::handleQuit(std::shared_ptr<Client> client) {
 	if (!client) {
@@ -584,37 +568,9 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
 	std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
 	broadcastMessage(quit_message, client, nullptr, true, nullptr);
 	updateEpollEvents(client->getFd(), EPOLLOUT, true);
-    /*std::cout << "SERVER: Handling QUIT for client " << client->getNickname() << " (FD: " << client->getFd() << ")\n";
-    // This avoids iterator invalidation if _joinedChannels were modified during the loop.
-    std::vector<std::string> channels_to_process;
-    for (const auto& pair : client->getJoinedChannels()) {
-        if (pair.second.lock()) { // Ensure the weak_ptr is still valid
-            channels_to_process.push_back(pair.first); // pair.first is the channel name (std::string)
-        }
-    }
-    // Step 2: Loop through each channel the client was in (SINGLE loop).
-    // For each channel, remove the client and broadcast the PART message.
-    for (const std::string& channel_name : channels_to_process) {
-        auto channel_ptr = get_Channel(channel_name); 
-        if (channel_ptr) { // Always check if the channel still exists on the server
-            std::cout << "SERVER: Removing client " << client->getNickname() << " from channel " << channel_name << "\n";
-
-			std::string part_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});
-			std::cout<<"show me the list of members = "<< channel_ptr->getAllNicknames()<<"\n";
-            broadcastMessageToChannel(channel_ptr, part_message, client, false); // 'client' is the sender to be excluded from broadcast
- 			//channel_ptr->removeClient(client->getNickname());
-		} else {
-            std::cerr << "WARNING: Client " << client->getNickname() << " was in channel "
-                      << channel_name << " but channel no longer exists on server.\n";
-        }
-    }
-    client->clearJoinedChannels();*/
-
-    // mark the client for final server-level disconnection.
     client->setQuit();
-
     // Step 5: Send a final server-generated message *only to the quitting client*.
-    std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection. Cleanup complete.\n";
+    std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection.\n";
     // closure of the socket will happen in your main epoll loop's cleanup phase.
 }
 

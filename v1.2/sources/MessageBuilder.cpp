@@ -109,7 +109,7 @@ namespace MessageBuilder {
 
 
 	std::string generatewelcome(const std::string& nickname) {
-		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname);
+		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname) + buildRegistartionEnd(nickname);
 	}
 
 	
@@ -120,12 +120,15 @@ namespace MessageBuilder {
 	const std::string QUIT_MSG = "Client disconnected";
 	
 	std::string generateInitMsg() {
-		return ":" + SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n" + ":"+ SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\n";
+		return SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n" + ":"+ SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\n";
 	}
 
+	std::string buildRegistartionEnd(const std::string& nickname) {
+		return SERVER_PREFIX + " 375 " + nickname + " :You are now active.\r\n" + SERVER_PREFIX + " 376 " + nickname + " :End of MOTD\r\n";
+	}
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick) {
-        return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n"; // Changed first nick to '*' as per RFC
+        return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n";
     }
 
     // A more generic error builder, useful for 401, 461 etc.

@@ -33,7 +33,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
-	if (command == "CAP") {
+	if (command == "CAP" && !client->getHasSentCap()) {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
 	if (command == "QUIT") {
@@ -62,7 +62,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			
 	}
 
-	if (command == "USER") {
+	if (command == "USER" && !client->getHasSentUser()) {
 		// if (params.size() == 1/2)
 		// 	chnage username to param, follow same logic as nickname? 
 		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
@@ -82,24 +82,17 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
 		client->setHasRegistered();
-		std::string msg = MessageBuilder::generatewelcome(client->getNickname());
-		client->getMsg().queueMessage(msg);
-		// araveal will fix this into less line of code 
-		client->getMsg().queueMessage(":localhost 375 " + client->getNickname() + " :You are now active.\r\n");
-		client->getMsg().queueMessage(":localhost 376 " + client->getNickname() + " :End of MOTD\r\n");
+		client->getMsg().queueMessage(MessageBuilder::generatewelcome(client->getNickname()));
 		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
 	if (command == "PING"){
-		std::cout<<"sending pong back "<<std::endl;
 		client->getMsg().queueMessage("PONG :localhost\r\n");
-		//client->getMsg().queueMessage(":localhost NICK " + client->getNickname() + "\r\n");
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
 		//Client->set_failed_response_counter(-1);
 		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
 	}
 	if (command == "PONG"){
-		std::cout<<"sending ping back "<<std::endl;
 		client->getMsg().queueMessage("PING :localhost\r\n");		
 		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;

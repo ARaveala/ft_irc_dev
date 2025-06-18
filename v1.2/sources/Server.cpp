@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <string.h> //strlen
 #include <iostream> // testing with cout
+#include <sstream>  // for passing parameters
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <map>
@@ -544,6 +545,8 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	broadcastMessage(quicki, client, currentChannel, true, nullptr);
 }
 
+
+// todo be very sure this is handling property fd_to_nick and nick_to_fd. I am skipping over this and adding notes below...
 void Server::handleNickCommand(std::shared_ptr<Client> client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param) {
 	if (client->getHasSentNick() == false) {
 		client->setHasSentNick();
@@ -556,9 +559,71 @@ void Server::handleNickCommand(std::shared_ptr<Client> client, std::map<int, std
 	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
 	broadcastMessage(msg, nullptr, nullptr, false, client);
 	broadcastMessage(msg, client, nullptr, true, nullptr);
-
 }
 
+// AI suggested imporovement to Server::handleNickCommand
+// // Assuming client->getMsg().check_and_set_nickname does the following internally:
+// // 1. Checks if new_nick is valid and not in use.
+// // 2. If valid and new:
+// //    a. Removes old_nick from _nickname_to_fd (if old_nick existed).
+// //    b. Inserts new_nick with client->getFd() into _nickname_to_fd.
+// //    c. Updates client->setNickname(new_nick).
+// // 3. Returns true if nickname was successfully set/changed, false otherwise.
+
+// void Server::handleNickCommand(std::shared_ptr<Client> client, const std::string& param) { // Removed map parameters, as these should be member variables
+//     // No explicit fd_to_nick and nick_to_fd parameters needed here if they are Server member variables.
+//     // The Client's Msg object, or the Client itself, would then access these maps via reference/pointer
+//     // passed in during initialization, or the Server would manage the maps directly.
+
+//     // First NICK: If this is the client's initial NICK command (before full registration)
+//     // You might set a flag like client->isAuthenticated() or client->getHasNickname()
+//     // and process differently than a NICK change for an already registered user.
+//     // The `client->getHasSentNick()` seems to handle this.
+//     // If it's the *first* NICK, no old nickname to erase from maps.
+//     // If it's a *change*, then handle old/new nicks.
+
+//     std::string oldnick = client->getNickname(); // Get existing nickname (might be empty if initial NICK)
+//     bool is_initial_nick = oldnick.empty(); // Simple check for initial NICK
+
+//     // Assuming check_and_set_nickname handles the map updates:
+//     // It should check param against existing _nickname_to_fd
+//     // If new nickname is taken, it should return false.
+//     // If valid and not taken:
+//     //    If !is_initial_nick, it should erase oldnick from _nickname_to_fd.
+//     //    It should insert param into _nickname_to_fd with client->getFd().
+//     //    It should call client->setNickname(param).
+//     if (client->getMsg().check_and_set_nickname(param, client->getFd(), _nickname_to_fd)) { // Pass Server's _nickname_to_fd
+//         // If nickname changed successfully, and it was a change (not initial set)
+//         // the client->setNickname(param) would have happened inside check_and_set_nickname.
+//         // We now generate the NICK change message
+//         std::string nick_change_msg;
+//         if (is_initial_nick) {
+//             // For initial NICK, typically no prefix or just server prefix is sent to client
+//             // and the client is then prompted for USER if not sent yet.
+//             // This part depends on your registration flow.
+//             // For now, let's assume it proceeds to registration.
+//             nick_change_msg = MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {client->getNickname()}); // Simpler for initial nick
+//         } else {
+//             // For a NICK change for an already registered user, include old nick prefix.
+//             std::string old_prefix = ":" + oldnick + "!" + client->getUsername() + "@" + client->getHostname();
+//             nick_change_msg = old_prefix + " NICK :" + client->getNickname() + "\r\n"; // Manual building for NICK message
+//         }
+
+//         // Broadcast the NICK change message
+//         // All clients (except the changing client) get the prefix with the old nick
+//         // The changing client gets it too (or just their own NICK command back)
+//         // Your broadcastMessage might need adjustments to handle NICK changes correctly
+//         broadcastMessage(nick_change_msg, nullptr, nullptr, false, client); // All clients in same channels as 'client' + client itself
+//         // A direct NICK message is usually broadcast to all channels the client is in.
+//         // If your broadcastMessage handles that via client->getJoinedChannels(), then it's fine.
+//     }
+//     // else { // If check_and_set_nickname returned false, it handles sending ERR_NICKNAMEINUSE etc.
+//     //    // So no explicit action here, just return.
+//     // }
+// }
+
+
+// todo be very sure this is handling property fd_to_nick and nick_to_fd. I am skipping over this and adding notes below...
 void Server::handleQuit(std::shared_ptr<Client> client) {
 	if (!client) {
         std::cerr << "Server::handleQuit: Received null client pointer.\n";
@@ -572,6 +637,57 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
     std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection.\n";
     // closure of the socket will happen in your main epoll loop's cleanup phase.
 }
+
+
+
+// AI suggested imporovement to Server::handleQuit
+// void Server::handleQuit(std::shared_ptr<Client> client) {
+//     if (!client) {
+//         std::cerr << "Server::handleQuit: Received null client pointer.\n";
+//         return;
+//     }
+
+//     std::string client_nickname = client->getNickname(); // Get nickname *before* any potential cleanup/setting to empty
+
+//     // 1. Broadcast the QUIT message to all relevant channels/clients
+//     // This message needs the full prefix of the quitting client.
+//     // Example: :anonthe_luckyn!user@host QUIT :Client disconnected\r\n
+//     std::string client_prefix = ":" + client_nickname + "!" + client->getUsername() + "@" + client->getHostname();
+//     std::string quit_message = client_prefix + " QUIT :Client disconnected\r\n"; // This is the standard format
+
+//     // You might want to get the specific quit reason if provided by the client, otherwise use a default.
+//     // For now, "Client disconnected" is fine.
+
+//     // Broadcast to relevant channels (channels the client was in)
+//     // Your broadcastMessage might iterate through client->getJoinedChannels()
+//     broadcastMessage(quit_message, client, nullptr, true, nullptr); // Assuming this broadcasts to channels client was in.
+
+//     // 2. Remove client from _nickname_to_fd map
+//     // This is the crucial step for consistency
+//     _nickname_to_fd.erase(client_nickname); // Remove the nickname -> fd mapping
+
+//     // 3. Remove client from all channels they were in
+//     // You have client->getJoinedChannels(). Iterate through it and call channel->removeClient().
+//     // You need to lock the weak_ptr<Channel> to get a shared_ptr to the Channel.
+//     for (const auto& entry : client->getJoinedChannels()) {
+//         if (std::shared_ptr<Channel> channel_sptr = entry.second.lock()) {
+//             channel_sptr->removeClient(client_nickname); // Assuming removeClient takes nickname
+//             // Check if channel is now empty and delete if needed
+//             if (channel_sptr->isEmpty()) { // You'll need a Channel::isEmpty() method
+//                 _channels.erase(channel_sptr->getName()); // Remove from Server's channel list
+//                 std::cout << "SERVER: Channel " << channel_sptr->getName() << " is now empty and removed.\n";
+//             }
+//         }
+//     }
+
+//     // 4. Mark client for disconnection and send any final queued messages
+//     updateEpollEvents(client->getFd(), EPOLLOUT, true); // Ensure all pending messages are sent
+//     client->setQuit(); // Mark for removal in main loop
+
+//     std::cout << "SERVER: Client " << client_nickname << " fully processed for disconnection.\n";
+//     // Actual socket closure and removal from _Clients map happens in your main epoll loop after send/cleanup.
+// }
+
 
 void Server::broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit) {
 if (!client) {
@@ -648,9 +764,9 @@ if (!client) {
 	if (quit) {
 	    client->clearJoinedChannels();
 	}*/
-
-
 }
+
+
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
  // --- 1. Basic Parameter Count Check (Always first) ---
@@ -1118,4 +1234,145 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
             _channels.erase(it);
         }
     }
+}
+
+void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+	std::cout << "SERVER: handleKickCommand entered for " << client->getNickname() << std::endl;
+    if (!client) {
+        std::cerr << "SERVER ERROR: handleKickCommand called with null client.\n";
+        return;
+    }
+
+    const std::string& kicker_nickname = client->getNickname(); // The client sending the KICK command
+    std::string client_prefix = ":" + kicker_nickname + "!" + client->getUsername() + "@" + client->getHostname();
+
+    // 1. Parameter Check: KICK requires at least 2 parameters (channel, target_nick)
+    // Format: KICK <channel> <user> [<reason>]
+    if (params.size() < 2) {
+		std::cout << "SERVER: KICK - Not enough params from " << kicker_nickname << std::endl;
+        // ERR_NEEDMOREPARAMS (461)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {kicker_nickname, "KICK"}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming this updates client's socket for sending
+        return;
+    }
+
+    std::string channel_name = params[0];
+    std::string target_nickname = params[1];
+    std::string kick_reason = (params.size() > 2) ? params[2] : kicker_nickname; // Default reason is kicker's nick
+
+    // Ensure channel_name is in the correct case for lookup (your server's invariant)
+    // If your server assumes ALL channel names are stored and processed lowercase:
+    // std::transform(channel_name.begin(), channel_name.end(), channel_name.begin(), ::tolower); // Uncomment if needed
+
+    // Ensure target_nickname is in the correct case for lookup (your server's invariant)
+    // std::transform(target_nickname.begin(), target_nickname.end(), target_nickname.begin(), ::tolower); // Uncomment if needed
+
+
+    // 2. Channel Existence Check
+    auto channel_it = _channels.find(channel_name); // Assuming channel_name is already canonical (e.g., lowercase)
+    if (channel_it == _channels.end()) {
+        // ERR_NOSUCHCHANNEL (403)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        return;
+    }
+
+    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+
+    // 3. Is the kicker (client) on the channel? (ERR_NOTONCHANNEL)
+    if (!channel_ptr->isClientInChannel(kicker_nickname)) {
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: KICK - Kicker '" << kicker_nickname << "' not on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // 4. Does the kicker have operator privileges on the channel? (ERR_CHANOPRIVSNEEDED)
+    // You'll need to implement this function in your Channel class.
+    // Example: bool Channel::isClientOperator(const std::string& nickname);
+    if (!channel_ptr->isClientOperator(kicker_nickname)) {
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {kicker_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: KICK - Kicker '" << kicker_nickname << "' not operator on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // 5. Get shared_ptr to target client & check if target is in channel.
+    // First, find the target client's shared_ptr from the server's global client list.
+    // You will need a method in Server to get a client by nickname.
+    // Example: std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname);
+    std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
+
+    if (!target_client_ptr) { // Target client not even connected to the server
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {kicker_nickname, target_nickname}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: KICK - Target '" << target_nickname << "' not found on server.\n";
+        return;
+    }
+
+    // Check if the target is on the specified channel (ERR_USERNOTINCHANNEL)
+    if (!channel_ptr->isClientInChannel(target_nickname)) {
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_USERNOTINCHANNEL, {kicker_nickname, target_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: KICK - Target '" << target_nickname << "' not on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // --- If we reach here, all validations have passed! ---
+    // Now proceed to actual kicking logic (Phase 3)
+
+	// 7. Construct and Send KICK message to all relevant parties.
+    // Format: :<kicker_nick>!<kicker_user>@<kicker_host> KICK <channel> <target_nick> :<reason>
+    std::string kicker_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
+    std::string kick_message = kicker_prefix + " KICK " + channel_name + " " + target_nickname + " :" + kick_reason + "\r\n";
+
+    // Broadcast the message to all clients in the channel (including the kicker, and the kicked client before removal)
+    channel_ptr->broadcast(kick_message, nullptr); // Pass nullptr if broadcast should send to all members
+
+    // 8. Remove target client from channel's internal data structures (e.g., _ClientModes map)
+    channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
+
+    // 9. Remove channel from target client's _joinedChannels list
+    target_client_ptr->removeJoinedChannel(channel_name); // Needs to be implemented in Client
+
+    // 10. Check if channel is empty, delete if so.
+    if (channel_ptr->isEmpty()) { // Needs to be implemented in Channel
+        _channels.erase(channel_name); // Remove the channel from Server's map
+        std::cout << "SERVER: Channel '" << channel_name << "' is now empty and has been removed.\n";
+    }
+
+    std::cout << "SERVER: KICK command successful. '" << target_nickname
+              << "' kicked from '" << channel_name << "' by '" << client->getNickname()
+              << "' with reason: '" << kick_reason << "'\n";
+}
+
+
+std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname){
+    // std::cout << "SERVER: Looking up FD for nickname: '" << nickname << "' (case-sensitive) in _nickname_to_fd map\n"; // Uncomment for debugging
+
+    // Step 1: Look up the file descriptor using the nickname
+    auto fd_it = _nickname_to_fd.find(nickname);
+
+    if (fd_it == _nickname_to_fd.end()) {
+        // std::cout << "SERVER: Nickname '" << nickname << "' not found in _nickname_to_fd.\n"; // Uncomment for debugging
+        return nullptr; // Nickname not found, so no such client
+    }
+
+    int client_fd = fd_it->second; // Get the file descriptor
+
+    // Step 2: Use the file descriptor to get the shared_ptr<Client> from _Clients
+    // std::cout << "SERVER: Found FD " << client_fd << " for nickname '" << nickname << "'. Now looking up in _Clients.\n"; // Uncomment for debugging
+
+    auto client_it = _Clients.find(client_fd);
+
+    if (client_it == _Clients.end()) {
+        // This case should ideally not happen if _nickname_to_fd is kept consistent with _Clients.
+        // It indicates an inconsistency if a FD is in _nickname_to_fd but not in _Clients.
+        std::cerr << "SERVER ERROR: Found FD " << client_fd << " for nickname '" << nickname
+                  << "' in _nickname_to_fd, but no client found in _Clients map for this FD.\n";
+        return nullptr;
+    }
+
+    // std::cout << "SERVER: Client shared_ptr found for nickname '" << nickname << "'.\n"; // Uncomment for debugging
+    return client_it->second; // Return the shared_ptr to the Client
 }

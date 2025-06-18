@@ -17,9 +17,8 @@ CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
     }
 	// what if __server == null?
 }
+
 CommandDispatcher::~CommandDispatcher() {}
-
-
 
 #include <sys/socket.h>
 #include <iomanip>
@@ -87,11 +86,16 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	}
 
+	if (command == "KICK"){
+		std::cout << "COMMAND DISPATCHER: " << command << " command recieved. Calling Server::handleKickCommand." << std::endl;
+		_server->handleKickCommand(client, params);
+		return;
+	}
 
 	if (command == "LEAVE" || command == "PART"){
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handlePartCommand.\n";
         _server->handlePartCommand(client, params);
-        return; // Important: return after handling a command
+        return;
 	}
 
     if (command == "JOIN"){

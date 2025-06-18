@@ -306,3 +306,5 @@ void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<C
 // const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
 //     return _joinedChannels;
 // }
+
+

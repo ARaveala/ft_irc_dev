@@ -815,3 +815,109 @@ std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(
     }
     return ""; // Client not found in this channel
 }
+
+
+/* Impact and Important Reminder for Case-Sensitivity:
+
+If you are strictly case-sensitive for nicknames and channel names:
+
+Consistency is paramount: Every single place where a nickname or channel name is stored, retrieved, or compared must use the exact same casing.
+
+When a client sets their NICK or USER.
+When a client JOINs a channel.
+When you look up clients in Server::_clients.
+When you look up channels in Server::_channels.
+When you store client nicknames within Channel structures (e.g., for isClientInChannel, isClientOperator, removeClient).
+When you process commands like PRIVMSG, NOTICE, WHOIS, MODE, KICK, PART, QUIT, TOPIC, etc.
+User Experience: Be aware that most IRC clients and many servers are case-insensitive for nicknames and channel names (or at least provide some normalization). Your server will behave differently, and users might find it less intuitive if "Nick" and "nick" are treated as two different users, or "#Channel" and "#channel" as two different channels. However, if this is a project constraint, then it's a known trade-off.
+
+Proceed with this version of isClientOperator. It will correctly implement the logic given your team's chosen approach to case sensitivity.
+
+*/
+
+
+bool Channel::isClientOperator(const std::string& nickname) {
+    std::cout << "CHANNEL: Checking if '" << nickname << "' is operator in '" << _name << "' (case-sensitive)\n";
+
+    // No std::tolower / std::transform here.
+    // The 'nickname' parameter is used as-is for comparison.
+    // This implies that client->getNickname() and all other nickname strings
+    // used for comparison must also maintain their exact original casing.
+
+    // Iterate through the _ClientModes map to find the Client by nickname
+    for (const auto& entry : _ClientModes) {
+        std::shared_ptr<Client> client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
+
+        if (client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
+            // Compare the nickname directly, strictly case-sensitive.
+            // client_sptr->getNickname() MUST return the nickname in its exact original casing.
+            if (client_sptr->getNickname() == nickname) { // DIRECT CASE-SENSITIVE COMPARISON
+                const std::bitset<config::CLIENT_NUM_MODES>& modes = entry.second.first; // The bitset of client modes
+
+                // Check if the OPERATOR bit is set
+                if (modes[Modes::OPERATOR]) {
+                    std::cout << "CHANNEL: '" << nickname << "' IS operator in '" << _name << "'.\n";
+                    return true;
+                } else {
+                    std::cout << "CHANNEL: '" << nickname << "' is in channel '" << _name << "' but is NOT an operator.\n";
+                    return false;
+                }
+            }
+        }
+    }
+
+    std::cout << "CHANNEL: '" << nickname << "' not found in channel members for '" << _name << "'. Not an operator.\n";
+    return false; // Client not found in this channel's members, so definitely not an operator
+}
+
+void Channel::removeClientByNickname(const std::string& nickname) {
+    std::cout << "CHANNEL: Attempting to remove client '" << nickname << "' from channel '" << _name << "' (case-sensitive).\n";
+
+    // Iterate through _ClientModes to find the client by nickname
+    // Remember, `_ClientModes` uses `weak_ptr<Client>` as keys, so we iterate and compare nicknames.
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
+        std::shared_ptr<Client> client_sptr = it->first.lock(); // Get shared_ptr from weak_ptr
+
+        // Check if the weak_ptr is still valid AND the nickname matches
+        if (client_sptr && client_sptr->getNickname() == nickname) {
+            _ClientModes.erase(it); // Remove the entry from the map
+            std::cout << "CHANNEL: Successfully removed '" << nickname << "' from channel '" << _name << "'.\n";
+            return; // Client found and removed, exit function
+        }
+    }
+    std::cout << "CHANNEL: Client '" << nickname << "' not found in channel '" << _name << "' for removal.\n";
+}
+
+// Helper function to check if the channel has any members left
+bool Channel::isEmpty() const {
+    return _ClientModes.empty();
+}
+
+
+void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
+    // For logging, just show the first part of the message to avoid super long console lines
+    std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
+
+    for (const auto& entry : _ClientModes) {
+        std::shared_ptr<Client> current_client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
+
+        if (current_client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
+            // If an exclude_client is provided, skip sending the message to them.
+            // We compare file descriptors (fds) as a robust way to identify shared_ptr<Client> instances.
+            if (exclude_client && current_client_sptr->getFd() == exclude_client->getFd()) {
+                continue; // Skip this client if they are the one to be excluded
+            }
+
+            // Queue the message for the current client to be sent later by the main loop
+            current_client_sptr->getMsg().queueMessage(message);
+
+            // Important: You might also need to signal your epoll loop that this client
+            // now has data to send (i.e., add EPOLLOUT to their monitored events).
+            // This is often done by a method in Server, like:
+            // server_instance->updateEpollEvents(current_client_sptr->getFd(), EPOLLOUT, true);
+            // If your server design doesn't easily allow Channel to call Server methods directly,
+            // then your main epoll loop will need to regularly check if any client has queued messages
+            // and update their EPOLLOUT events accordingly. For now, just queueing is the first step.
+        }
+    }
+}

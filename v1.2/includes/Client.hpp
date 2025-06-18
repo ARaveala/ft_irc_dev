@@ -28,7 +28,7 @@ class Client {
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _oldNick;
-		std::string _nickName;
+		std::string _nickName; // stupid Name, should be name
 		std::string _username;
 		std::string _fullName;
 		std::string _hostname; // todo check this is set during connection

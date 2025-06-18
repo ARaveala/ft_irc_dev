@@ -41,19 +41,25 @@ struct WeakPtrCompare {
 
  class Channel {
 	private:
-		std::string _name;
-		std::string _topic;
-		unsigned long _ulimit;
 		int _ClientLimit = 0;
 		int _clientCount = 0;
+
+		unsigned long _ulimit;
+
+		std::string _name;
+		std::string _topic;
 		std::string _password;
+
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+
 		std::bitset<config::CHANNEL_NUM_MODES> _ChannelModes;
+
 		std::deque<std::string> _invites;
 
 	public:
 		Channel(const std::string& channelName);
 		~Channel();
+
 		const std::string& getName() const;
 		const std::string& getTopic() const;
 		std::vector<int> getAllfds();
@@ -63,8 +69,9 @@ struct WeakPtrCompare {
 
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
 		std::string getCurrentModes() const;
-
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
+		std::vector<std::shared_ptr<Client>> getActiveClients() const;
+
 		std::vector<std::string> setChannelMode(char modeChar , bool enableMode, const std::string& target);
 		
 		Modes::ClientMode charToClientMode(const char& modeChar);
@@ -74,14 +81,12 @@ struct WeakPtrCompare {
 		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
-		bool removeClient(std::string nickname);
+		bool removeClient(const std::string& nickname);
 
-
+		bool isClientInChannel(const std::string& nickname) const;
 		bool isValidChannelMode(char modeChar) const;
-
 		bool isValidClientMode(char modeChar) const;
 		bool channelModeRequiresParameter(char modeChar) const;
-		bool isClientInChannel(const std::string& nickname) const;
 
 		std::pair<MsgType, std::vector<std::string>> initialModeValidation( const std::string& ClientNickname, size_t paramsSize);
 		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;

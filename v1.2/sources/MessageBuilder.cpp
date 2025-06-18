@@ -52,7 +52,7 @@ namespace MessageBuilder {
 	        case MsgType::NO_SUCH_CHANNEL:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchChannel), params);
 
-	        case MsgType::NOT_IN_CHANNEL:
+	        case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotInChannel), params);
 
 	        case MsgType::NOT_OPERATOR:
@@ -232,8 +232,8 @@ namespace MessageBuilder {
     // 442 ERR_NOTONCHANNEL
     // Format: :<server> 442 <client> <channel name> :You're not on that channel
     std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName) {
-        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_IN_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
-    }
+        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_ON_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
+    } // changed from NOT_IN_CHANNEL
 
     // 482 ERR_CHANOPRIVSNEEDED
     // Format: :<server> 482 <client> <channel name> :You're not channel operator

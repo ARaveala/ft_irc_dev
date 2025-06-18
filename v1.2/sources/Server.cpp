@@ -1066,3 +1066,90 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
     // 4. Update Epoll Events to send queued messages
     updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
 }
+
+void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+    if (!client) {
+        std::cerr << "SERVER ERROR: handlePartCommand called with null client.\n";
+        return;
+    }
+
+    const std::string& nickname = client->getNickname(); // Assumed to be lowercase
+    std::string client_prefix = ":" + nickname + "!" + client->getUsername() + "@" + client->getHostname();
+
+    // 1. Check for correct number of parameters
+    if (params.empty()) {
+        // ERR_NEEDMOREPARAMS (461)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming updateEpollEvents for client output
+        return;
+    }
+
+    // 2. Parse channel list (comma-separated)
+    std::string channel_names_str = params[0];
+    // Default part reason is the client's nickname if not provided.
+    // IRC convention: if no reason given, the reason defaults to the nickname.
+    // If you want it to be empty string, use "" instead of nickname.
+    std::string part_reason = (params.size() > 1 && !params[1].empty()) ? params[1] : nickname;
+
+    std::vector<std::string> channels_to_part;
+    std::stringstream ss(channel_names_str);
+    std::string channel_name_token;
+    while (std::getline(ss, channel_name_token, ',')) {
+        channels_to_part.push_back(channel_name_token);
+    }
+
+    // 3. Process each channel
+    for (const std::string& ch_name : channels_to_part) {
+        // As per our latest understanding, we assume channel names are already lowercase
+        // if your system mandates it for storage and lookups.
+        // If not, you'd need a tolower transform here too.
+        std::string lower_ch_name = ch_name; // Use this variable for map lookup if your map keys are lowercase.
+                                            // If your system ensures `ch_name` is already lowercase,
+                                            // then `std::string lower_ch_name = ch_name;` is fine.
+
+        auto it = _channels.find(lower_ch_name); // Lookup by lowercase name
+        if (it == _channels.end()) {
+            // ERR_NOSUCHCHANNEL (403)
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}));
+            updateEpollEvents(client->getFd(), EPOLLOUT, true);
+            continue; // Move to the next channel in the list
+        }
+
+        std::shared_ptr<Channel> channel_ptr = it->second;
+
+        // Check if the client is actually in the channel
+        // Your Channel::isClientInChannel *must* also rely on the assumption
+        // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
+        if (!channel_ptr->isClientInChannel(nickname)) {
+            // ERR_NOTONCHANNEL (442)
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, ch_name}));
+            updateEpollEvents(client->getFd(), EPOLLOUT, true);
+            continue; // Move to the next channel
+        }
+
+        // --- Client is in the channel and valid, proceed with PART logic ---
+
+        // 4. Send PART message to all relevant parties
+        // IRC protocol: The departing client and all remaining channel members receive the PART message.
+        // The sender_to_exclude parameter in broadcastMessageToChannel is for PRIVMSG/NOTICE,
+        // for PART, everyone gets it. So, pass nullptr to include everyone.
+        std::string part_full_message = client_prefix + " PART " + ch_name + " :" + part_reason + "\r\n";
+        broadcastMessageToChannel(channel_ptr, part_full_message, nullptr);
+
+        // 5. Remove client from channel's internal list
+        // This calls the Channel::removeClient we refined.
+        bool channel_is_empty = channel_ptr->removeClient(nickname);
+
+        // 6. Remove channel from client's own list of joined channels (essential Client object cleanup)
+        // This calls the Client::removeJoinedChannel we're about to define.
+        client->removeJoinedChannel(lower_ch_name);
+
+        // 7. If channel is now empty, delete the channel from the server's map
+        if (channel_is_empty) {
+            std::cout << "SERVER: Channel '" << lower_ch_name << "' is now empty. Deleting channel.\n";
+            // Erasing the shared_ptr from the map will cause the Channel object
+            // to be destructed (assuming no other shared_ptrs hold it).
+            _channels.erase(it);
+        }
+    }
+}

@@ -95,6 +95,12 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	}
 
+	if (command == "LEAVE" || command == "PART"){
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handlePartCommand.\n";
+        _server->handlePartCommand(client, params);
+        return; // Important: return after handling a command
+	}
+
     if (command == "JOIN"){
 
 		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";

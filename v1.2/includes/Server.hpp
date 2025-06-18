@@ -42,7 +42,7 @@ class Server {
 		std::string _server_name;
 		std::string _password;
 
-		std::map<const std::string, std::shared_ptr<Channel>> _channels;
+		std::map<std::string, std::shared_ptr<Channel>> _channels;
 		std::map<int, std::shared_ptr<Client>> _Clients; //shared pointer to identify client, also fds, nicknames? can there be unique indentifier?
 		std::map<int, int> _timer_map;
 
@@ -97,6 +97,10 @@ class Server {
 		std::map<std::string, int>& get_nickname_to_fd();
 		std::map<int, std::shared_ptr<Client>>& get_map();
 
+		std::map<std::string, std::shared_ptr<Channel>>& get_channels_map() { return _channels; }
+		const std::map<std::string, std::shared_ptr<Channel>>& get_channels_map() const { return _channels; }
+
+
 		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
 		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
 
@@ -129,6 +133,7 @@ class Server {
 		void handleNickCommand(std::shared_ptr<Client> client);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
+		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
 
 

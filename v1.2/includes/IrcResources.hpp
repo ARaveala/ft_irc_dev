@@ -24,9 +24,12 @@ enum class MsgType {
 	INVALID_PASSWORD = 475,
 	NEED_MORE_PARAMS =  461, // ERR_NEEDMOREPARAMS,
 	NO_SUCH_CHANNEL = 403,  // ERR_NOSUCHCHANNEL,
-	NOT_IN_CHANNEL  = 442,   // ERR_NOTONCHANNEL,
+    ERR_USERNOTINCHANNEL = 441, // Often used for INVITE/KICK targets
+    // ERR_NOTONCHANNEL = 442,     // for PART
+    ERR_USERONCHANNEL = 443,    // Often used for INVITE/KICK targets
 	INVALID_TARGET  = 502,   // ERR_USERSDONTMATCH (commonly used for this scenario),
 	NO_SUCH_NICK = 401,     // ERR_NOSUCHNICK
+	NOT_ON_CHANNEL = 442,
 	UNKNOWN_MODE  = 472,     // ERR_UNKNOWNMODE
 
 	 // Successful replies for mode listing

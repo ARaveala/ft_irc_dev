@@ -76,7 +76,7 @@ class Server {
 		void set_current_client_in_progress(int fd);
 		void set_private_fd(int fd) {_private_fd = fd;};
 		void set_nickname_in_map(std::string, int); 
-		
+
 		// GETTERS
 		int getPort() const;
 		int getFd() const;
@@ -130,7 +130,7 @@ class Server {
 		void handleQuit(std::shared_ptr<Client> client);
 		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip);
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
-		void handleNickCommand(std::shared_ptr<Client> client);
+		void handleNickCommand(std::shared_ptr<Client> client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);

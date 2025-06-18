@@ -124,9 +124,16 @@ namespace MessageBuilder {
 	}
 
 	std::string buildRegistartionEnd(const std::string& nickname) {
-		return SERVER_PREFIX + " 375 " + nickname + " :You are now active.\r\n" + SERVER_PREFIX + " 376 " + nickname + " :End of MOTD\r\n";
+		std::string fullhello = SERVER_PREFIX + " 375 " + nickname + " :- ~ Meowdy, traveler! ~\r\n"
+    	 + SERVER_PREFIX + " 372 " + nickname + " :- Here's your good-luck cat butt:\r\n"
+    	 + SERVER_PREFIX + " 372 " + nickname + " :-     /\\_/\\\r\n"
+    	 + SERVER_PREFIX + " 372 " + nickname + " :-    ( o.o )\r\n"
+    	 + SERVER_PREFIX + " 372 " + nickname + " :-     > ^ <    🍑\r\n"
+    	 + SERVER_PREFIX + " 372 " + nickname + " :-     Cat butt initialized.\r\n"
+    	 + SERVER_PREFIX + " 376 " + nickname + " :End of /MOTD\r\n";
+		return fullhello;
 	}
-    // General purpose error/reply messages
+    
     std::string buildNicknameInUse(const std::string& nick) {
         return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n";
     }

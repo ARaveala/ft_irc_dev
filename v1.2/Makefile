@@ -8,7 +8,6 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}Client.cpp \
 			${SOURCES}signal_handler.cpp \
 			${SOURCES}IrcMessage.cpp \
-			${SOURCES}IrcPreper.cpp \
 			${SOURCES}Channel.cpp \
 			${SOURCES}CommandDispatcher.cpp \
 			${SOURCES}MessageBuilder.cpp \

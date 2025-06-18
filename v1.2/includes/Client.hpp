@@ -50,7 +50,7 @@ class Client {
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
-		
+		void set_nickName(const std::string newname) {_nickName.clear(); _nickName = newname; };
 		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
 		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
 		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
@@ -64,7 +64,7 @@ class Client {
 		void setHasSentUser() {_hasSentUser = true;};
 		void setHasRegistered();
 
-		void setNickname(const std::string& nickname);
+		void setNickname(const std::string& nickname) { _nickName.clear(); _nickName = nickname;};
 		void setUsername(const std::string& username);
 
 

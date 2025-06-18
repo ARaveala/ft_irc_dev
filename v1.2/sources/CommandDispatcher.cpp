@@ -65,15 +65,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		client->setHasSentUser();
 	}
 	if (command == "NICK") {
-		if (client->getHasSentNick() == false)
-		{
-			//client->getMsg().queueMessage(":" + params[0]  + "!user@localhost"+ " NICK " +  client->getNickname() + "\r\n");
-			//_server->updateEpollEvents(client_fd, EPOLLOUT, true);
-			client->setHasSentNick();
-			return;
-		}
-		client->getMsg().prep_nickname(client->getClientUname(), client->getNicknameRef(), client_fd, _server->get_fd_to_nickname(), _server->get_nickname_to_fd()); // 
-		_server->handleNickCommand(client);
+		_server->handleNickCommand(client, _server->get_fd_to_nickname(), _server->get_nickname_to_fd(), params[0]);
 		return ; 
 	}
 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
@@ -113,8 +105,23 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		{
 			if (client->getHasSentCap() == true)
 			{
-				std::cout<<"hhhhhhhhhhhhhh    ENTERING join on first HANDLING \n";
-				client->getMsg().queueMessage(":localhost 322 " + client->getNickname() + " #dummychannel 0 :\r\n");
+				if (!_server->get_channels_map().empty())
+				{
+        			for (auto it = _server->get_channels_map().begin(); it != _server->get_channels_map().end(); ++it)
+        			{
+        			    auto channel = it->second;
+        			    std::string channelName = channel->getName();
+        			    std::string topic = channel->getTopic();
+        			    size_t userCount = channel->getClientCount(); // Or however you store this
+					
+        			    std::string listLine = ":localhost 322 " + client->getNickname() + " " +
+        			                           channelName + " " +
+        			                           std::to_string(userCount) + " :" +
+        			                           "topic for channel = " + topic + "\r\n";
+					
+        			    client->getMsg().queueMessage(listLine);
+        			}
+				}
 				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 

@@ -62,6 +62,7 @@ struct WeakPtrCompare {
 
 		const std::string& getName() const;
 		const std::string& getTopic() const;
+		const int& getClientCount() {return _clientCount;};
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);

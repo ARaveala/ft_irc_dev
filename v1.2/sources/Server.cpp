@@ -186,7 +186,9 @@ void Server::remove_Client(int client_fd) {
         std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
         return;
     }
-
+	 std::cout << "SERVER: REMOVAL OF CLIENT active message should be qued \n";
+    //std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client_to_remove->getNickname(), client_to_remove->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
+	//broadcastMessage(quit_message, client_to_remove, nullptr, true, nullptr);
     // --- Step 2: Handle channel disassociation and notification ---
     // IRC protocol requires informing channels when a client leaves, even due to disconnect.
     // Create a copy of channel names to iterate safely, as modifying a map while iterating can invalidate iterators.
@@ -218,15 +220,11 @@ void Server::remove_Client(int client_fd) {
 
             // A) Build the QUIT message to broadcast to remaining channel members.
             // This is equivalent to an implicit QUIT command from the client.
-            std::string client_prefix = ":" + client_to_remove->getNickname() + "!" +
-                                       client_to_remove->getUsername() + "@" + // Make sure Client has getUsername() and getHostname()
-                                       client_to_remove->getHostname();
-            std::string quit_message = client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
+            //std::string client_prefix = ":" + client_to_remove->getNickname() + "!" +
+            //                           client_to_remove->getUsername() + "@" + // Make sure Client has getUsername() and getHostname()
+            //                           client_to_remove->getHostname();
 
-            // B) Broadcast the QUIT message to other clients in this specific channel.
-            // Your `broadcastMessageToChannel` skips the sender, which is correct here.
-            broadcastMessageToChannel(channel_ptr, quit_message, client_to_remove, true);
-
+            // B) can not broadcast here !!! quitting client needs to have active fd for epollout, we end it here
             // C) Remove the client from the channel's internal member list.
             // Channel::removeClient should also update client_to_remove's _joinedChannels list.
             bool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
@@ -238,6 +236,8 @@ void Server::remove_Client(int client_fd) {
             }
         }
     }
+ 
+
     // After iterating through all channels, clear the client's internal list of joined channels.
     client_to_remove->clearJoinedChannels();
     // --- Step 3: Perform server-wide cleanup ---
@@ -540,9 +540,17 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 		std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
 	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::JOIN, {client->getNickname(), channelName, ClientList, currentChannel->getTopic()}));
 	updateEpollEvents(client->getFd(), EPOLLOUT, true);
+	std::string quicki = ":" + client->getNickname() + "!"+client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
+	broadcastMessage(quicki, client, currentChannel, true, nullptr);
 }
 
 void Server::handleNickCommand(std::shared_ptr<Client> client) {
+	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
+	broadcastMessage(msg, nullptr, nullptr, false, client);
+	broadcastMessage(msg, client, nullptr, true, nullptr);
+
+}
+/*void Server::handleNickCommand(std::shared_ptr<Client> client) {
 	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
  
 	broadcastMessageToClients(client, msg, false);
@@ -551,29 +559,32 @@ void Server::handleNickCommand(std::shared_ptr<Client> client) {
     std::cout << "DEBUG NICK Self-Message: Before queuing, client->isMsgEmpty() is " 
               << (client->isMsgEmpty() ? "true" : "false") << " for FD " << client->getFd() << "\n";
 
-	if (client->isMsgEmpty() == true)
-	{
+	//if (client->isMsgEmpty() == true)
+	//{
 		 std::cout << "DEBUG NICK Self-Message: Queue WAS empty for Client " << client->getNickname() 
                   << ", enabling EPOLLOUT for FD " << client->getFd() << ".\n";
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
 
-	}
-	else {
+	//}
+	//else {
         std::cout << "DEBUG NICK Self-Message: Queue was NOT empty for Client " << client->getNickname() 
                   << ", EPOLLOUT NOT enabled (already enabled or other messages pending) for FD " << client->getFd() << ".\n";
-    }
+    //}
 	client->getMsg().queueMessage(msg);
+	//broadcastMessageToChannel();
 	std::cout << "DEBUG NICK Self-Message: Message QUEUED for Client " << client->getNickname() 
               << " (FD: " << client->getFd() << "). Current queue size after: " << client->getMsg().getQue().size() << "\n";
-}
+}*/
 
 void Server::handleQuit(std::shared_ptr<Client> client) {
 	if (!client) {
         std::cerr << "Server::handleQuit: Received null client pointer.\n";
         return;
     }
-
-    std::cout << "SERVER: Handling QUIT for client " << client->getNickname() << " (FD: " << client->getFd() << ")\n";
+	std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
+	broadcastMessage(quit_message, client, nullptr, true, nullptr);
+	updateEpollEvents(client->getFd(), EPOLLOUT, true);
+    /*std::cout << "SERVER: Handling QUIT for client " << client->getNickname() << " (FD: " << client->getFd() << ")\n";
     // This avoids iterator invalidation if _joinedChannels were modified during the loop.
     std::vector<std::string> channels_to_process;
     for (const auto& pair : client->getJoinedChannels()) {
@@ -597,7 +608,7 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
                       << channel_name << " but channel no longer exists on server.\n";
         }
     }
-    client->clearJoinedChannels();
+    client->clearJoinedChannels();*/
 
     // mark the client for final server-level disconnection.
     client->setQuit();
@@ -1134,7 +1145,7 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         // The sender_to_exclude parameter in broadcastMessageToChannel is for PRIVMSG/NOTICE,
         // for PART, everyone gets it. So, pass nullptr to include everyone.
         std::string part_full_message = client_prefix + " PART " + ch_name + " :" + part_reason + "\r\n";
-        broadcastMessageToChannel(channel_ptr, part_full_message, nullptr);
+        broadcastMessageToChannel(channel_ptr, part_full_message, client, false);
 
         // 5. Remove client from channel's internal list
         // This calls the Channel::removeClient we refined.

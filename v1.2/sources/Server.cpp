@@ -507,7 +507,7 @@ std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
 	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
 }
 
-std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
+/*std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
 {
 	for (char c : channelName)
 	{
@@ -515,7 +515,7 @@ std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::stri
 	}
 	//:yourserver 479 <nick> <channel> :Illegal channel name
 	return {MsgType::INVALID_CHANNEL_NAME, {}};
-}
+}*/
 void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password) // password here change to target, can also be limit ammount
 {
 

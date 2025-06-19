@@ -280,14 +280,10 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params) //
 			}
 		while (modeIndex < modeFlags.size())
 		{
-			std::cout<<"steping into the damn setmodechannel checkl moder flags "<<modeFlags<<"---\n";
-			
 			modeChar = modeFlags[modeIndex];//params[paramIndex][modeIndex];
 			if (channelModeRequiresParameter(modeChar)) {
 				paramIndex++;
 			}
-			std::cout<<"steping into the damn setmodechannel checkl moder char "<<modeChar<<"---\n";
-
 			messageData = setChannelMode(modeChar , setModeBool(sign), params[paramIndex]);
 			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";
 			
@@ -298,14 +294,9 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params) //
 				messageData.clear();
 			}
 			modeIndex++; 
-			std::cout<<"innerloop ----\n";
-
 		}
-		std::cout<<"outerloop----\n";
-
 		paramIndex++;
 	}
-	std::cout<<"ending to change the mode----\n";
 	if (modes.size() > 1) { // not only sign but also mode flag
 		messageData.push_back(modes); 
 		messageData.push_back(targets); 
@@ -667,6 +658,89 @@ std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
         // If all channel-specific initial checks pass, return success.
         return {MsgType::NONE, {}};
 }
+
+
+MsgType Channel::checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const {
+	(void)nick;
+	if (mode == 'o') {
+        if (param.empty() || !isClientInChannel(param)) {
+            std::cout << "DEBUG: Invalid or missing client '" << param << "' for +o.\n";
+            return MsgType::NO_SUCH_NICK;
+        }
+    }
+    else if (mode == 'l' && sign == '+') {
+        try {
+            unsigned long limit = std::stoul(param);
+            if (limit > 100) {
+                std::cout << "DEBUG: Limit too high (" << limit << ")\n";
+            }
+        } catch (...) {
+            std::cout << "DEBUG: Invalid number: '" << param << "'\n";
+            return {MsgType::NEED_MORE_PARAMS};
+        }
+    }
+    else if (mode == 'k' && sign == '+') {
+        if (param.empty()) {
+            std::cout << "DEBUG: Empty password for +k\n";
+            return {MsgType::NEED_MORE_PARAMS};
+        }
+    }
+
+    return MsgType::NONE;
+}
+
+
+
+std::pair<MsgType, std::vector<std::string>>
+Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::string>& params) const {
+    size_t idx = 1;
+    char sign = ' ';
+
+    while (idx < params.size()) {
+        const std::string& token = params[idx];
+
+        if (token.empty() || (token[0] != '+' && token[0] != '-')) {
+            std::cout << "DEBUG: Syntax Error: Unexpected token '" << token << "'." << std::endl;
+            return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
+        }
+
+        sign = token[0];
+        for (size_t i = 1; i < token.size(); ++i) {
+            char mode = token[i];
+
+            if (!isValidChannelMode(mode) && !isValidClientMode(mode)) {
+                std::cout << "DEBUG: Unknown mode char '" << mode << "'." << std::endl;
+                return {MsgType::UNKNOWN_MODE, {std::string(1, mode), nick, getName()}};
+            }
+
+            if (!channelModeRequiresParameter(mode)) continue;
+
+            if (idx + 1 >= params.size()) {
+                std::cout << "DEBUG: Missing parameter for mode '" << mode << "'." << std::endl;
+                return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
+            }
+
+            const std::string& param = params[idx + 1];
+
+            MsgType checkResult = checkModeParameter(nick, mode, param, sign);
+            if (checkResult != MsgType::NONE) {
+                return {checkResult, {nick, "MODE", std::string(1, mode), param}};
+            }
+
+            ++idx; // consumed parameter
+        }
+        ++idx;
+    }
+
+    return {MsgType::NONE, {}};
+}
+
+
+
+
+
+
+
 /**
  * @brief +o-o user1 user2 is not standard protocol, you can not make me try to imitate libera chat at this 
  * stage of my education at this pace . 
@@ -675,12 +749,9 @@ std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
  * @param params 
  * @return std::pair<MsgType, std::vector<std::string>> 
  */
-std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(
-        const std::string& requestingClientNickname,
-        const std::vector<std::string>& params) const {
+/*std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(const std::string& requestingClientNickname, const std::vector<std::string>& params) const {
 
         size_t currentIndex = 1;
-
         char currentSign = ' '; // current mode operation ('+' or '-')
 
         // Loop through all tokens in `params` starting from the first mode/parameter token.
@@ -772,9 +843,6 @@ std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(
                         currentIndex++;
                     }
                 } // End inner loop over characters in currentToken
-                
-                // After processing all characters in this mode group token,
-                // advance currentIndex past the mode group token itself.
                 currentIndex++;
 
             } else { // Current token is NOT a mode group (doesn't start with '+' or '-')
@@ -787,7 +855,7 @@ std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(
 
         // If the loop completes without any errors, the syntax is valid.
         return {MsgType::NONE, {}};
-    }
+    }*/
 
 
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {

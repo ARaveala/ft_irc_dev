@@ -506,6 +506,15 @@ std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
 	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
 }
 
+std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
+{
+	for (char c : channelName)
+	{
+		if (c ==)
+	}
+	//:yourserver 479 <nick> <channel> :Illegal channel name
+	return {MsgType::INVALID_CHANNEL_NAME, {}};
+}
 void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password) // password here change to target, can also be limit ammount
 {
 
@@ -538,9 +547,10 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string
 	std::string ClientList = currentChannel->getAllNicknames();
 	if (ClientList.empty())
 		std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::JOIN, {client->getNickname(), channelName, ClientList, currentChannel->getTopic()}));
+	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::JOIN, {client->getNickname(), client->getUsername(), channelName, ClientList, currentChannel->getTopic()}));
 	updateEpollEvents(client->getFd(), EPOLLOUT, true);
-	std::string quicki = ":" + client->getNickname() + "!"+client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
+	//update join
+	std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
 	broadcastMessage(quicki, client, currentChannel, true, nullptr);
 }
 

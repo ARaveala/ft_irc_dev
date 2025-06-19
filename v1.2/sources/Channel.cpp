@@ -894,30 +894,30 @@ bool Channel::isEmpty() const {
 }
 
 
-void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
-    // For logging, just show the first part of the message to avoid super long console lines
-    std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
+// void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
+//     // For logging, just show the first part of the message to avoid super long console lines
+//     std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
 
-    for (const auto& entry : _ClientModes) {
-        std::shared_ptr<Client> current_client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
+//     for (const auto& entry : _ClientModes) {
+//         std::shared_ptr<Client> current_client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
 
-        if (current_client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
-            // If an exclude_client is provided, skip sending the message to them.
-            // We compare file descriptors (fds) as a robust way to identify shared_ptr<Client> instances.
-            if (exclude_client && current_client_sptr->getFd() == exclude_client->getFd()) {
-                continue; // Skip this client if they are the one to be excluded
-            }
+//         if (current_client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
+//             // If an exclude_client is provided, skip sending the message to them.
+//             // We compare file descriptors (fds) as a robust way to identify shared_ptr<Client> instances.
+//             if (exclude_client && current_client_sptr->getFd() == exclude_client->getFd()) {
+//                 continue; // Skip this client if they are the one to be excluded
+//             }
 
-            // Queue the message for the current client to be sent later by the main loop
-            current_client_sptr->getMsg().queueMessage(message);
+//             // Queue the message for the current client to be sent later by the main loop
+//             current_client_sptr->getMsg().queueMessage(message);
 
-            // Important: You might also need to signal your epoll loop that this client
-            // now has data to send (i.e., add EPOLLOUT to their monitored events).
-            // This is often done by a method in Server, like:
-            // server_instance->updateEpollEvents(current_client_sptr->getFd(), EPOLLOUT, true);
-            // If your server design doesn't easily allow Channel to call Server methods directly,
-            // then your main epoll loop will need to regularly check if any client has queued messages
-            // and update their EPOLLOUT events accordingly. For now, just queueing is the first step.
-        }
-    }
-}
+//             // Important: You might also need to signal your epoll loop that this client
+//             // now has data to send (i.e., add EPOLLOUT to their monitored events).
+//             // This is often done by a method in Server, like:
+//             // server_instance->updateEpollEvents(current_client_sptr->getFd(), EPOLLOUT, true);
+//             // If your server design doesn't easily allow Channel to call Server methods directly,
+//             // then your main epoll loop will need to regularly check if any client has queued messages
+//             // and update their EPOLLOUT events accordingly. For now, just queueing is the first step.
+//         }
+//     }
+// }

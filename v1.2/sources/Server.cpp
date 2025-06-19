@@ -1323,11 +1323,16 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
 	// 7. Construct and Send KICK message to all relevant parties.
     // Format: :<kicker_nick>!<kicker_user>@<kicker_host> KICK <channel> <target_nick> :<reason>
-    std::string kicker_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
+    std::string kicker_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost";
+    // std::string kicker_prefix = client->getNickname();
     std::string kick_message = kicker_prefix + " KICK " + channel_name + " " + target_nickname + " :" + kick_reason + "\r\n";
 
+	// old code
     // Broadcast the message to all clients in the channel (including the kicker, and the kicked client before removal)
-    channel_ptr->broadcast(kick_message, nullptr); // Pass nullptr if broadcast should send to all members
+    // channel_ptr->broadcast(kick_message, nullptr); // Pass nullptr if broadcast should send to all members
+	// broadcastMessage
+	broadcastMessage(kick_message, client, channel_ptr, false, nullptr);
+
 
     // 8. Remove target client from channel's internal data structures (e.g., _ClientModes map)
     channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel

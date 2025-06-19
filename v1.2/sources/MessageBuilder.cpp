@@ -37,6 +37,9 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 			// This assumes buildInviting takes (sender_nickname, target_nickname, channel_name)
 			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
 
+			case MsgType::ERR_USERONCHANNEL: // 443
+				// This assumes buildUserOnChannel takes (inviter_nickname, target_nickname, channel_name)
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildUserOnChannel), params);
 
 
 
@@ -304,6 +307,21 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
 std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name) {
     return SERVER_PREFIX + " 341 " + sender_nickname + " " + target_nickname + " :" + channel_name + "\r\n";
+	
+	}
+	 // namespace MessageBuilder
+	
+	 // New function for ERR_USERONCHANNEL (443)
+	// params: { inviter_nickname, target_nickname, channel_name }
+	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name) {
+		// According to RFC 2812, 443 format is:
+		// :<server> 443 <nick> <channel> :is already on channel
+		// However, common clients/servers often include the target nick for clarity.
+		// Let's use the RFC-compliant format which is slightly simpler for parameters
+		// If your current params are {inviter, target, channel}, you might pass target_nickname as params[0]
+		// and channel_name as params[1] to this function when calling from handleInviteCommand.
+		return SERVER_PREFIX + " 443 " + inviter_nickname + " " + target_nickname + " " + channel_name + " :is already on channel\r\n";
+	}
 }
 
 
@@ -316,7 +334,3 @@ std::string buildInviting(const std::string& sender_nickname, const std::string&
 	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";
 	}*/
-
-
-}
- // namespace MessageBuilder

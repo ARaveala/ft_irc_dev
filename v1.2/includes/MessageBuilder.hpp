@@ -54,6 +54,8 @@ namespace MessageBuilder {
 	std::string buildNeedMoreParams(const std::string& clientNickname, const std::string& commandName);
 	std::string buildIncorrectPasswordMessage(const std::string& clientNickname, const std::string& channelName);
 	std::string buildRegistartionEnd(const std::string& nickname);
+	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name);
+
 	// You can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

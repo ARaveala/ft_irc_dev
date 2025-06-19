@@ -84,11 +84,10 @@ namespace clientPrivModes{
 }
 
 
-struct ModeCommandContext {
-    std::string target;
-    bool targetIsChannel;
-    std::shared_ptr<Channel> channel; // Valid only if targetIsChannel is true
-};
+namespace IRCillegals
+{
+    inline constexpr const char* ForbiddenChannelChars = "!:@,";
+}
 // Function to determine mode type
 
 /**

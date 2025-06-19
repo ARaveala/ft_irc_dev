@@ -8,7 +8,7 @@
 #include <sys/epoll.h>
 #include <map>
 #include <memory> // shared pointers
-
+#include <cctype>
 //#include "SendException.hpp"
 #include <algorithm> // find_if
 #include <unordered_set>
@@ -105,7 +105,7 @@ void Server::create_Client(int epollfd) {
 	setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, optlen);
 	make_socket_unblocking(client_fd);
 	//setsockopt(client_fd, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)); 
-	setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET); //not a fan of epollet
+	setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET);
 	int timer_fd = setup_epoll_timer(epollfd, config::TIMEOUT_CLIENT);
 	// errro handling if timer_fd failed
 	// create an instance of new Client and add to server map
@@ -125,59 +125,6 @@ void Server::create_Client(int epollfd) {
 		set_client_count(1);		
 	}
 }
-
-/**
- * @brief removing a singular client
- * 
- * 
- * @param epollfd 
- * @param client_fd 
- * 
- * @note we are calling get client multple times here , we could try to work past that 
- * by just sending in the client once as a param
- */
-// void Server::remove_Client(int client_fd) {
-// 	// get clients shared pointer
-// 	auto client_to_remove = get_Client(client_fd);
-// 	if (!client_to_remove) {
-//         std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
-//         return;
-//     }
-
-// 	// iterate through channels that client_to_remove was part of
-// 	// client should know what channels they were in std::map<std::string, std::weak_ptr<Channel>>
-// 	// call Channel::removeClient() for each channel
-// 	// channel_ptr->removeClient(client_to_remove->getNickname())
-// 	// return a bool if the channel is empty after client departed
-// 	// Boadcast QUIT for each channel.
-// 	// :<nickname>!<username>@<hostname> QUIT :<reason>
-// 	// if the boolean return says channel is empty, then remove that channel from server map.
-
-
-
-	
-// 	// epoll something
-// 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
-// 	close(client_to_remove->get_timer_fd());
-	
-// 	// epoll something
-// 	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-// 	close(client_fd);
-	
-// 	// channel.getClient().erase();
-// 	_Clients.erase(client_fd);  // why capital C? We have a map of clients
-// 	_epollEventMap.erase(client_fd);
-	
-// 	//std::map<int, struct epoll_event> _epollEventMap;
-// 	_client_count--;
-
-// 	// erase both from the fd and from the nickname - now we don't have a record of the user in the server
-// 	_nickname_to_fd.erase(client_to_remove->getNickname());
-// 	_fd_to_nickname.erase(client_fd);	
-
-// 	std::cout<<"client has been removed"<<std::endl;
-// }
-
 
 void Server::remove_Client(int client_fd) {
     // 1. Get the shared pointer to the client. This client object holds all its state,
@@ -347,9 +294,7 @@ void Server::handleReadEvent(int client_fd) {
     }
     if (bytes_read == 0) {
         std::cout << "Client FD " << client_fd << " disconnected gracefully (recv returned 0).\n";
-        // consider sending a QUIT message here, if your protocol requires it.
-        // e.g. _commandDispatcher->handleQuitCommand(client, "Client disconnected");
-		remove_Client(client_fd);
+        handleQuit(client);
         return;
     }
     client->appendIncomingData(buffer, bytes_read);
@@ -358,7 +303,6 @@ void Server::handleReadEvent(int client_fd) {
         // This is the point where you know the client is active and sent a valid message.
         resetClientTimer(client_fd, config::TIMEOUT_CLIENT);
         client->set_failed_response_counter(-1);
-        // --- DELEGATE TO COMMANDDISPATCHER ---
         _commandDispatcher->dispatchCommand(client, client->getMsg().getParams());
     }
 }
@@ -481,21 +425,26 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 
 }
 
-
+std::string toLower(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return output;
+}
 //channel realted 
 
 bool Server::channelExists(const std::string& channelName) const {
     return _channels.count(channelName) > 0;
 }
-//
-void Server::createChannel(const std::string& channelName) {
-    if (_channels.count(channelName) == 0){
-		_channels.emplace(channelName, std::make_shared<Channel>(channelName));
 
+void Server::createChannel(const std::string& channelName) {
+    std::string lower =  toLower(channelName);
+	if (_channels.count(lower) == 0){
+		_channels.emplace(lower, std::make_shared<Channel>(channelName));
         std::cout << "Channel '" << channelName << "' created." << std::endl;
-		// fill clientsend buffer 
 		return ;
     }
+	// handle error
     std::cerr << "Error: Channel '" << channelName << "' already exists" << std::endl;
 }
 
@@ -507,52 +456,63 @@ std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
 	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
 }
 
-/*std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
+std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
 {
-	for (char c : channelName)
-	{
-		if (c ==)
+	if (channelName.empty()) {
+		return {MsgType::NEED_MORE_PARAMS, {clientNick, "JOIN"}};
 	}
-	//:yourserver 479 <nick> <channel> :Illegal channel name
-	return {MsgType::INVALID_CHANNEL_NAME, {}};
-}*/
-void Server::handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password) // password here change to target, can also be limit ammount
+	if (channelName.size() > 25) {
+		return{MsgType::INVALID_CHANNEL_NAME, {clientNick, channelName, ":to many characters limit 25"}};
+	}
+	size_t illegalPos = channelName.find_first_of(IRCillegals::ForbiddenChannelChars);
+    if (illegalPos != std::string::npos) {
+        char badChar = channelName[illegalPos];
+		return{MsgType::INVALID_CHANNEL_NAME, {clientNick, channelName, ":forbidden character = " + std::string(1, badChar)}};
+	}
+	return {MsgType::NONE, {}};
+
+}
+void Server::handleJoinChannel(std::shared_ptr<Client> client, std::vector<std::string> params)
 {
+	 if (!client || params.empty()) return;
+    const std::string& nickname = client->getNickname();
+    // Parse and match channel to key, i.e(channel to password)
+    std::stringstream chstream(params[0]);
+    std::stringstream keystream(params.size() > 1 ? params[1] : "");
+    std::vector<std::string> channels;
+    std::vector<std::string> keys;
+    std::string token;
+    while (std::getline(chstream, token, ',')) channels.push_back(token);
+    while (std::getline(keystream, token, ',')) keys.push_back(token);
 
-	if (channelName == "") {
-		client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "JOIN"}));
-		return ;
+    size_t keyIndex = 0;
+    for (const std::string& chanNameRaw : channels) {
+	    std::string key = (keyIndex < keys.size()) ? keys[keyIndex++] : "";
+	    std::string lower = toLower(chanNameRaw);
+		auto validation = validateChannelName(chanNameRaw, nickname);
+        if (validation.first != MsgType::NONE) {
+			broadcastMessage(MessageBuilder::generateMessage(validation.first, validation.second), client, nullptr, false, client);
+			continue;
+		}
+		if (!channelExists(lower)) { 
+			createChannel(chanNameRaw);
+			client->setChannelCreator(true);
+		}
+		auto channel = get_Channel(lower);
+		if (channel->isClientInChannel(nickname)) continue;
+		auto canJoin = channel->canClientJoin(nickname, key);
+		if (canJoin) {
+			broadcastMessage(MessageBuilder::generateMessage(canJoin->first, canJoin->second),  nullptr, nullptr, false, client);
+			return ;
+		}
+		client->addChannel(lower, channel);
+		channel->addClient(client);
+		std::string ClientList = channel->getAllNicknames();
+		std::vector<std::string> join = {client->getNickname(), client->getUsername(), channel->getName(), ClientList, channel->getTopic()};
+		std::vector<std::string> updateChannel = {client->getNickname(), client->getUsername(), channel->getName()};
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::JOIN, join), client, nullptr, false, client);
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::UPDATE_CHAN, updateChannel),client, channel, true, nullptr);
 	}
-	// to do
-	// vliadate channel name 
-	// no sepcial characters, only lowercase , length 20 chars , starting character, 
-	// error bad chan mask
-
-	if (channelExists(channelName) < 1) {//bool 
-		std::cout<<"creating channel now!--------------------------------------";
-		createChannel(channelName);
-		client->setChannelCreator(true);
-	}
-	std::shared_ptr <Channel> currentChannel = get_Channel(channelName);
-	if (currentChannel->isClientInChannel(client->getNickname())) {
-	    return;
-	}
-	auto validationResult = currentChannel->canClientJoin(client->getNickname(), password);
-	if (validationResult) {
-		client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult->first, validationResult->second));
-		updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		return ;
-	}
-	client->addChannel(channelName, currentChannel);
-	currentChannel->addClient(client);
-	std::string ClientList = currentChannel->getAllNicknames();
-	if (ClientList.empty())
-		std::cout<<"WE HAVE A WIERDS PROBLEM AND CLIENT LIST IS NULL FOR JOIN\n";
-	client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::JOIN, {client->getNickname(), client->getUsername(), channelName, ClientList, currentChannel->getTopic()}));
-	updateEpollEvents(client->getFd(), EPOLLOUT, true);
-	//update join
-	std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
-	broadcastMessage(quicki, client, currentChannel, true, nullptr);
 }
 
 
@@ -641,10 +601,8 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
     }
 	std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
 	broadcastMessage(quit_message, client, nullptr, true, nullptr);
-	updateEpollEvents(client->getFd(), EPOLLOUT, true);
     client->setQuit();
-    // Step 5: Send a final server-generated message *only to the quitting client*.
-    std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection.\n";
+    std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection, epollout will trigger removal.\n";
     // closure of the socket will happen in your main epoll loop's cleanup phase.
 }
 
@@ -699,87 +657,8 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
 // }
 
 
-void Server::broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit) {
-if (!client) {
-	    std::cerr << "Server::handleQuit: Received null client pointer.\n";
-	    return;
-	}
-    std::cout<<"the message built for sending "<< msg <<"\n";
-    std::set<std::shared_ptr<Client>> recipients;
-	std::map<std::string, std::weak_ptr<Channel>> client_joined_channels_copy = client->getJoinedChannels();
-	std::vector<std::string> channels_to_process;
-
-    for (const auto& pair : client_joined_channels_copy) {
-        std::cout<<"handling pairs and geting joined channles\n";
-		if (std::shared_ptr<Channel> channel_sptr = pair.second.lock()) {
-		    channels_to_process.push_back(pair.first);
-		} else {
-		    // This warning indicates a channel was removed from the server while still in client's list.
-		    std::cerr << "WARNING: weak_ptr to channel '" << pair.first << "' expired in client's joined list.\n";
-		}
-	}
-    for (const std::string& channel_name : channels_to_process) {
-        auto channel_ptr = get_Channel(channel_name); 
-        if (channel_ptr) {
-			if (quit == true)
-				 channel_ptr->removeClient(client->getNickname());
-
-			for (const auto& pairInChannelMap : channel_ptr->getAllClients()) { // Assuming Channel::getMembers() returns shared_ptrs
-                 std::shared_ptr<Client> memberClient = pairInChannelMap.first.lock();
-				if (memberClient->getFd() == client->getFd()) {
-                       // std::cout << "DEBUG: Skipping self (" << memberClient->getNickname() << ") in channel '" << pairInChannelMap.first << "' broadcast." << std::endl;
-                        continue;
-				}
-				else if (memberClient) {
-					recipients.insert(memberClient);
-
-				}
-				//elese handle wekptr expiration
-            }
-        } else {
-            std::cerr << "WARNING: Client " << client->getNickname() << " was in channel "
-                      << channel_name << " but channel no longer exists on server.\n";
-        }
-    }
-	for (const auto& recipientClient : recipients) {
-        bool wasEmpty = recipientClient->isMsgEmpty();
-        recipientClient->getMsg().queueMessage(msg);
-        if (wasEmpty) {
-			std::cout<<"it was empty yeah !!!!---------------\n";
-            updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
-        }
-        std::cout << "DEBUG: NICK message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
-    }
-	if (quit == true) {
-		client->clearJoinedChannels();
-		client->setQuit();
-		
-	}
-	/*auto channels = client->getJoinedChannels();
-	for (const auto& [channel_name, weak_channel] : channels) {
-	    auto channel = weak_channel.lock();
-	    if (!channel) {
-	        std::cerr << "WARNING: weak_ptr to channel '" << channel_name << "' expired in client's joined list.\n";
-	        continue;
-	    }
-
-	    // Broadcast quit message to channel (excluding the quitting client)
-	    broadcastMessageToChannel(channel, msg, client, true);
-
-	    if (quit) {
-	        channel->removeClient(client->getNickname());
-	    }
-	}
-
-	if (quit) {
-	    client->clearJoinedChannels();
-	}*/
-}
-
-
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
- // --- 1. Basic Parameter Count Check (Always first) ---
  	if (params.empty()) {
         client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
@@ -787,39 +666,27 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
     }
     std::string target = params[0];
     bool targetIsChannel = (target[0] == '#');
-
-    // --- 2. Handle Logic based on Target Type  ie channel or not---
     if (targetIsChannel) {
         std::shared_ptr<Channel> channel;
-        // Attempt to get the channel object, handling non-existent channels via exception.
         try {
-            channel = get_Channel(target); // This can throw ServerException(ErrorType::NO_CHANNEL_INMAP)
+            channel = get_Channel(toLower(target)); // This can throw ServerException(ErrorType::NO_CHANNEL_INMAP)
         } catch (const ServerException& e) {
-            // Catch the specific exception for non-existent channel
             if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
-                client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {target}));
-				updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
+                broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {target}), client, nullptr, false, client);
 				return; // Abort: Channel does not exist
             }
 		}
-		//set msg type
 		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
 		if (validationResult.first != MsgType::NONE) {
-            // If validation resulted in an error or a listing reply (like RPL_CHANNELMODEIS),
-            // send the appropriate message and return.
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+			broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second),client, channel, false, nullptr);
 			return; // Abort: Validation failed or command was for listing
         }
 		validationResult = channel->modeSyntaxValidator(client->getNickname(), params);
 		if (validationResult.first != MsgType::NONE) {
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second));
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
+           broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second), client, nullptr, false, client);
+			//updateEpollEvents(client->getFd(), EPOLLOUT, true);
 			return; // Abort: modeSyntaxValidator found an error and sent a message.
     	}
-
 		std::vector<std::string> modeparams = channel->applymodes(params);
 		std::vector<std::string> messageParams;
 		if (!modeparams.empty())
@@ -833,13 +700,8 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 				messageParams.push_back(modeparams[1]);
 			else
 				messageParams.push_back("");
-			broadcastMessageToChannel(channel, MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client, false);
-			//client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams));
-			//updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
+			broadcastMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client, channel, false, nullptr);
 		}
-		
-
 	}
 	else { // Target is a client (private mode)
         // A client can only set/list modes on themselves for private modes.
@@ -876,39 +738,20 @@ void Server::handleCapCommand(const std::string& nickname, std::deque<std::strin
 		//client->setHasSentCap();
 }
 
-// flag for skip sender or not . 
-void Server::broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip) {
-    if (!channel) {
-        std::cerr << "Error: Attempted to broadcast to a null channel pointer.\n";
-        return;
-    }
-    if (message_content.empty()) {
-        // No message to send, or error in message creation
-        return;
-    }
-    const auto& client_modes_map = channel->getAllClients();
-    for (const auto& pair : client_modes_map) {
-        if (auto current_client_ptr = pair.first.lock()) {
-			std::cout<<"DEBUGus::::: who we dealing with "<<current_client_ptr->getNickname()<<".\n";
+/**
+ * @brief Modifies the event flags associated with a file descriptor (FD) in the epoll instance.
+ * This function enables or disables a specific epoll event (e.g., EPOLLOUT) for a given FD without altering
+ * other active flags. It checks whether the desired state is already set and avoids redundant syscalls.
+ * The current event mask is preserved and updated in-place, toggling only the specified event.
+ * 
+ * @param fd The client’s file descriptor to update.
+ * @param flag_to_toggle The epoll event flag to enable or disable (so far only EPOLLOUT).
+ * @param enable Set to true to enable the flag; false to disable it.
+ * 
+ * @note Although currently used for EPOLLOUT, this function supports toggling any epoll event flag in epollEventMap.
+ */
 
-            if (sender && current_client_ptr->getFd() == sender->getFd() && skip) {
-                continue; // Skip the sender
-            }
-			current_client_ptr->getMsg().queueMessage (message_content);
-			if (!current_client_ptr->isMsgEmpty() == true) {
-				updateEpollEvents(current_client_ptr->getFd(), EPOLLOUT, true);
-			}
-        } else {
-            std::cerr << "WARNING: Expired weak_ptr to client found in channel "
-                      << channel->getName() << " member list. Client likely disconnected.\n";
-
-        }
-    }
-}
-#include<chrono>
-// could we add if msg empty check here , then all cases where we call updatepoll must be called before message qued
 void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
-    std::cout << "DEBUG: inbetween these 2?????.\n";
 	auto it = _epollEventMap.find(fd);
     if (it == _epollEventMap.end()) {
         std::cerr << "ERROR: setEpollFlagStatus: FD " << fd << " not found in _epollEventMap. Cannot modify events. This might indicate a missing client cleanup.\n";
@@ -916,37 +759,20 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
     }
     uint32_t current_mask = it->second.events; // Get the currently stored mask
     uint32_t new_mask;
-    // Calculate the new mask based on whether we're enabling or disabling the 'flag_to_toggle'
-    // alternative : uint32_t new_mask = enable ? (current_mask | flag_to_toggle) : (current_mask & ~flag_to_toggle);
-
 	if (enable) {
         new_mask = current_mask | flag_to_toggle; // Add the flag (turn it ON)
-        //std::cout << "DEBUG: Attempting to enable flag 0x" << std::hex << flag_to_toggle << std::dec << " for FD " << fd << "\n";
     } else {
         new_mask = current_mask & ~flag_to_toggle; // Remove the flag (turn it OFF)
-        //std::cout << "DEBUG: Attempting to disable flag 0x" << std::hex << flag_to_toggle << std::dec << " for FD " << fd << "\n";
     }
     // Optimization: Only call epoll_ctl if the mask has actually changed
     if (new_mask == current_mask) {
-        std::cout << "DEBUG: Epoll flag 0x" << std::hex << flag_to_toggle << std::dec << " for FD " << fd << " already in desired state. No epoll_ctl call.\n";
         return; // No change needed this checks if epollout was already triggered and avoids doing it again 
     }
     it->second.events = new_mask;
-
     // Now, tell the kernel about the updated event set, passing a pointer to the stored struct.
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &it->second) == -1) {
         perror("epoll_ctl EPOLL_CTL_MOD (setEpollFlagStatus) failed");
-    } else {
-        std::cout << "DEBUG: Epoll flag status updated for FD " << fd
-                  << ". New total mask: 0x" << std::hex << new_mask << std::dec << "\n";
     }
-
-	// debugging only 
-	if (it->second.events & EPOLLOUT) {
-		auto now = std::chrono::system_clock::now();
-		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-		std::cout << "DEBUG: EPOLLOUT triggered at " << ms << " ms for FD " << fd << std::endl;
-	}
 }
 
 
@@ -1025,30 +851,6 @@ std::string generateUniqueNickname() {
 
     return newNick;
 }
-/*std::string generateUniqueNickname() {
-    std::string newNick;
-    std::vector<std::string> adjectives = {"the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild", "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"};
-        newNick = "anon" + adjectives[ static_cast<size_t>(rand()) % adjectives.size()] + static_cast<char>('a' + rand() % 26);
-    std::ofstream configFile("config");  // ✅ Opens the file for writing
-    if (configFile.is_open()) {
-        configFile << "servers = (\n";
-        configFile << "  {\n";
-        configFile << "    address = \"localhost\";\n";
-        configFile << "    port = 6669;\n";
-        configFile << "    nick = \"" << newNick << "\";\n";  // ✅ Inserts generated name
-        configFile << "    username = \"user_" << "user_" + newNick << "\";\n";
-        configFile << "    realname = \"real_" << newNick + "\";\n";
-        configFile << "  }\n";
-        configFile << ");\n";
-
-        configFile.close();
-        std::cout << "Config updated! Generated nickname: " << newNick << std::endl;
-    } else {
-        std::cerr << "Error: Unable to write to config file." << std::endl;
-    }
-
-	return newNick;
-}*/
 
 void Server::set_nickname_in_map(std::string nickname, int fd) {
     std::string lower_nickname = nickname;
@@ -1093,9 +895,10 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
 
     // 2. Handle Nick Not Found (ERR_NOSUCHNICK)
     if (!target_client) {
-        std::string err_msg = ":" + _server_name + " 401 " + requester_client->getNickname() + " " + target_nick + " :No such nick/channel\r\n";
-        requester_client->getMsg().queueMessage(err_msg);
-        updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {requester_client->getNickname(), target_nick}), requester_client, nullptr, false, requester_client);
+ //       std::string err_msg = ":" + _server_name + " 401 " + requester_client->getNickname() + " " + target_nick + " :No such nick/channel\r\n";
+ //       requester_client->getMsg().queueMessage(err_msg);
+ //       updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
         return; // Important: stop here if nick not found
     }
 
@@ -1103,6 +906,7 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
 
     // RPL_WHOISUSER (311)
 	// Ensure target_client->getHostname() exists and returns the correct string
+	// arg again, messagebuilder!"!!!!"
     std::string user_info_msg = ":" + _server_name + " 311 " + requester_client->getNickname() + " "
                                 + target_client->getNickname() + " "
                                 + target_client->getClientUname() + " "
@@ -1165,19 +969,20 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         return;
     }
 
-    const std::string& nickname = client->getNickname(); // Assumed to be lowercase
-    std::string client_prefix = ":" + nickname + "!" + client->getUsername() + "@" + client->getHostname();
-
-    // 1. Check for correct number of parameters
+   	const std::string& nickname = client->getNickname();
     if (params.empty()) {
-        // ERR_NEEDMOREPARAMS (461)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming updateEpollEvents for client output
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}), client, nullptr, false, nullptr);
+        //updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming updateEpollEvents for client output
         return;
     }
+	
+	
+	 // Assumed to be lowercase
+    //std::string client_prefix = ":" + nickname + "!" + client->getUsername() + "@" + client->getHostname();
 
     // 2. Parse channel list (comma-separated)
-    std::string channel_names_str = params[0];
+	std::string channel_names_str;
+	channel_names_str = params[0];
     // Default part reason is the client's nickname if not provided.
     // IRC convention: if no reason given, the reason defaults to the nickname.
     // If you want it to be empty string, use "" instead of nickname.
@@ -1189,17 +994,15 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
     while (std::getline(ss, channel_name_token, ',')) {
         channels_to_part.push_back(channel_name_token);
     }
-
+// qhy are we looping through all channels, u only part from 1 channel 
     // 3. Process each channel
     for (const std::string& ch_name : channels_to_part) {
         // As per our latest understanding, we assume channel names are already lowercase
         // if your system mandates it for storage and lookups.
         // If not, you'd need a tolower transform here too.
-        std::string lower_ch_name = ch_name; // Use this variable for map lookup if your map keys are lowercase.
-                                            // If your system ensures `ch_name` is already lowercase,
-                                            // then `std::string lower_ch_name = ch_name;` is fine.
+        std::string lower_ch_name = toLower(ch_name); // Use this variable for map lookup if your map keys are lowercase.
 
-        auto it = _channels.find(lower_ch_name); // Lookup by lowercase name
+        auto it = _channels.find(lower_ch_name);
         if (it == _channels.end()) {
             // ERR_NOSUCHCHANNEL (403)
             client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}));
@@ -1213,23 +1016,15 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         // Your Channel::isClientInChannel *must* also rely on the assumption
         // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
         if (!channel_ptr->isClientInChannel(nickname)) {
-            // ERR_NOTONCHANNEL (442)
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, ch_name}));
-            updateEpollEvents(client->getFd(), EPOLLOUT, true);
+	       	broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, client->getUsername() ,channel_ptr->getName()}), client, nullptr, false, client);
+
+//			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, channel_ptr->getName()}));
+//            updateEpollEvents(client->getFd(), EPOLLOUT, true);
             continue; // Move to the next channel
         }
 
         // --- Client is in the channel and valid, proceed with PART logic ---
-
-        // 4. Send PART message to all relevant parties
-        // IRC protocol: The departing client and all remaining channel members receive the PART message.
-        // The sender_to_exclude parameter in broadcastMessageToChannel is for PRIVMSG/NOTICE,
-        // for PART, everyone gets it. So, pass nullptr to include everyone.
-        std::string part_full_message = client_prefix + " PART " + ch_name + " :" + part_reason + "\r\n";
-        broadcastMessageToChannel(channel_ptr, part_full_message, client, false);
-
-        // 5. Remove client from channel's internal list
-        // This calls the Channel::removeClient we refined.
+       	broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), client, channel_ptr, false, nullptr);
         bool channel_is_empty = channel_ptr->removeClient(nickname);
 
         // 6. Remove channel from client's own list of joined channels (essential Client object cleanup)
@@ -1260,13 +1055,12 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
     // Format: KICK <channel> <user> [<reason>]
     if (params.size() < 2) {
 		std::cout << "SERVER: KICK - Not enough params from " << kicker_nickname << std::endl;
-        // ERR_NEEDMOREPARAMS (461)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {kicker_nickname, "KICK"}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming this updates client's socket for sending
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {kicker_nickname, "KICK"}), client, nullptr, false, client);
         return;
     }
 
     std::string channel_name = params[0];
+	std::string channel_name_lower = toLower(channel_name);
     std::string target_nickname = params[1];
     std::string kick_reason = (params.size() > 2) ? params[2] : kicker_nickname; // Default reason is kicker's nick
 
@@ -1279,11 +1073,10 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
 
     // 2. Channel Existence Check
-    auto channel_it = _channels.find(channel_name); // Assuming channel_name is already canonical (e.g., lowercase)
+    auto channel_it = _channels.find(channel_name_lower); // Assuming channel_name is already canonical (e.g., lowercase)
     if (channel_it == _channels.end()) {
         // ERR_NOSUCHCHANNEL (403)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
 
@@ -1291,18 +1084,15 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
     // 3. Is the kicker (client) on the channel? (ERR_NOTONCHANNEL)
     if (!channel_ptr->isClientInChannel(kicker_nickname)) {
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
         std::cout << "SERVER: KICK - Kicker '" << kicker_nickname << "' not on channel '" << channel_name << "'.\n";
         return;
     }
 
     // 4. Does the kicker have operator privileges on the channel? (ERR_CHANOPRIVSNEEDED)
-    // You'll need to implement this function in your Channel class.
-    // Example: bool Channel::isClientOperator(const std::string& nickname);
-    if (!channel_ptr->isClientOperator(kicker_nickname)) {
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {kicker_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+    // You'll need to implement this function in your Channel class. //noit needed as shown by example below
+    if (!channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
         std::cout << "SERVER: KICK - Kicker '" << kicker_nickname << "' not operator on channel '" << channel_name << "'.\n";
         return;
     }
@@ -1314,9 +1104,7 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
 
     if (!target_client_ptr) { // Target client not even connected to the server
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {kicker_nickname, target_nickname}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: KICK - Target '" << target_nickname << "' not found on server.\n";
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {kicker_nickname, target_nickname}), client, nullptr, false, client);
         return;
     }
 
@@ -1330,29 +1118,16 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
     // --- If we reach here, all validations have passed! ---
     // Now proceed to actual kicking logic (Phase 3)
-
-	// 7. Construct and Send KICK message to all relevant parties.
-    // Format: :<kicker_nick>!<kicker_user>@<kicker_host> KICK <channel> <target_nick> :<reason>
-    std::string kicker_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@localhost";
-    // std::string kicker_prefix = client->getNickname();
-    std::string kick_message = kicker_prefix + " KICK " + channel_name + " " + target_nickname + " :" + kick_reason + "\r\n";
-
-	// old code
-    // Broadcast the message to all clients in the channel (including the kicker, and the kicked client before removal)
-    // channel_ptr->broadcast(kick_message, nullptr); // Pass nullptr if broadcast should send to all members
-	// broadcastMessage
-	broadcastMessage(kick_message, client, channel_ptr, false, nullptr);
-
-
+	broadcastMessage(MessageBuilder::generateMessage(MsgType::KICK, {client->getNickname(), client->getUsername(), channel_name, target_nickname, kick_reason}), client, channel_ptr, false, nullptr);
     // 8. Remove target client from channel's internal data structures (e.g., _ClientModes map)
     channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
 
     // 9. Remove channel from target client's _joinedChannels list
-    target_client_ptr->removeJoinedChannel(channel_name); // Needs to be implemented in Client
+    target_client_ptr->removeJoinedChannel(channel_name_lower); // Needs to be implemented in Client
 
     // 10. Check if channel is empty, delete if so.
     if (channel_ptr->isEmpty()) { // Needs to be implemented in Channel
-        _channels.erase(channel_name); // Remove the channel from Server's map
+        _channels.erase(channel_name_lower); // Remove the channel from Server's map
         std::cout << "SERVER: Channel '" << channel_name << "' is now empty and has been removed.\n";
     }
 

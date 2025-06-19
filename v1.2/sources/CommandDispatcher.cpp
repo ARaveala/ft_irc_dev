@@ -100,7 +100,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
 		if (!params[0].empty())
 		{
-			_server->handleJoinChannel(client, params[0], params[1]);
+			_server->handleJoinChannel(client, params);
 		}
 		else
 		{

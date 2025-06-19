@@ -20,6 +20,7 @@ std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std:
 
     return invokeWithVector(func, params, std::make_index_sequence<sizeof...(Args)>{});
 }
+
 #include <iostream> // debugging only 
 namespace MessageBuilder {
 
@@ -51,7 +52,7 @@ namespace MessageBuilder {
 
 	        case MsgType::NO_SUCH_CHANNEL:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchChannel), params);
-	        case MsgType::NO_SUCH_NICK:
+	        case MsgType::ERR_NOSUCHNICK:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchNick), params);
 	        case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotInChannel), params);
@@ -62,6 +63,8 @@ namespace MessageBuilder {
 	        case MsgType::INVALID_TARGET:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInvalidTarget), params);
 
+	        case MsgType::INVALID_CHANNEL_NAME:
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInvalidChannelName), params);
 	        case MsgType::RPL_CHANNELMODEIS:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelModeIs), params);
 
@@ -70,14 +73,12 @@ namespace MessageBuilder {
 
 	        case MsgType::CHANNEL_MODE_CHANGED:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelModeChange), params);
-
-	        case MsgType::USER_LIMIT_CHANGED:
+	        case MsgType::UPDATE_CHAN:
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChanUpdate), params);
+			case MsgType::USER_LIMIT_CHANGED:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildClientModeChange), params);
-
 	        case MsgType::CLIENT_QUIT:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildClientQuit), params);
-
-	        
 	        case MsgType::RPL_TOPIC:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelTopic), params);
 			
@@ -98,7 +99,10 @@ namespace MessageBuilder {
 					
 			case MsgType::INVALID_PASSWORD:
 			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildIncorrectPasswordMessage), params);
-
+	        case MsgType::PART:
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildPart), params);
+			case MsgType::KICK:
+			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildKick), params);
 	        // Add more cases here...
 			default:
 		        return "Error: Unknown message type";
@@ -106,7 +110,7 @@ namespace MessageBuilder {
 	}
 	
 
-
+	
 	std::string generatewelcome(const std::string& nickname) {
 		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname) + buildRegistartionEnd(nickname);
 	}
@@ -122,7 +126,9 @@ namespace MessageBuilder {
 	std::string generateInitMsg() {
 		return SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n" + ":"+ SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\n";
 	}
-
+	inline std::string prefix(const std::string& nick, const std::string& user) {
+	    return ":" + nick + "!" + user + SERVER_AT;
+	}
 	std::string buildRegistartionEnd(const std::string& nickname) {
 		std::string fullhello = SERVER_PREFIX + " 375 " + nickname + " :- ~ Meowdy, traveler! ~\r\n"
     	 + SERVER_PREFIX + " 372 " + nickname + " :- Here's your good-luck cat butt:\r\n"
@@ -145,7 +151,7 @@ namespace MessageBuilder {
     }
 
     std::string buildNoSuchNick(const std::string& nickname, const std::string& target) {
-        return SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::NO_SUCH_NICK)) + " " + nickname + " " + target + " :No such nick/channel\r\n";
+        return SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::ERR_NOSUCHNICK)) + " " + nickname + " " + target + " :No such nick/channel\r\n";
     }
 
     // Welcome Package
@@ -208,14 +214,9 @@ namespace MessageBuilder {
         return ":localhost 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
     }
 
-    // Client related messages
-    // Note: The RPL_NICK_CHANGE macro is for *broadcasting* a nick change.
-    // It takes oldnick as the prefix, and newnick as the argument.
-	/*std::string buildNickChange2(const std::string& oldnick, const std::string& newnick) {
-        return ":" + oldnick  + " NICK " +  newnick + "\r\n";
-    }*/
+
     std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick) {
-        return ":" + oldnick + "!" + username + "@localhost NICK " +  newnick + "\r\n";
+        return ":" + oldnick + "!" + username + SERVER_AT + " NICK " +  newnick + "\r\n";
     }
     std::string buildClientQuit(const std::string& nickname, const std::string& username) {
         return ":" + nickname +"!" + username + SERVER_AT + " QUIT :" + QUIT_MSG + "\r\n";
@@ -237,7 +238,9 @@ namespace MessageBuilder {
     std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName) {
         return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_ON_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
     } // changed from NOT_IN_CHANNEL
-
+    std::string buildInvalidChannelName(const std::string& clientNickname, const std::string& channelName, const std::string& msg) {
+        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::INVALID_CHANNEL_NAME)) + " " + clientNickname + " " + channelName + " " + msg + "\r\n";
+    }
     std::string buildNotOperator(const std::string& clientNickname, const std::string& channelName) {
         return  SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::NOT_OPERATOR)) + " " + clientNickname + " " + channelName + " :You're not channel operator\r\n";
     }
@@ -251,7 +254,10 @@ namespace MessageBuilder {
     std::string buildChannelModeIs(const std::string& clientNickname, const std::string& channelName, const std::string& modeString, const std::string& modeParams) {
         return  SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::RPL_CHANNELMODEIS)) + " " + clientNickname + " " + channelName + " " + modeString + (modeParams.empty() ? "" : " " + modeParams) + "\r\n";
     }
-
+   	std::string buildChanUpdate(const std::string& nickname, const std::string& username, const std::string& channelName) {
+        return ":" + nickname + "!" + username + SERVER_AT + " JOIN " +  channelName + "\r\n";
+    }
+	//std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
     std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString) {
         return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::RPL_UMODEIS)) + " " + clientNickname + " " + modeString + "\r\n";
     }
@@ -278,12 +284,22 @@ namespace MessageBuilder {
 	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVALID_CHANNEL_NAME)) +
 	           " " + clientNickname + " " + channelName + " :illegal channel name\r\n";
 	}
-	/*std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName) {
-	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_CHANNELISFULL)) +
+	// add to above
+	std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName) {
+	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::CHANNEL_FULL)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+l)\r\n";
 	}
 
-	std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
+
+	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason) {
+	    return ":" + clientNickname + "!" + username + SERVER_AT + " PART " + channelName + " :" + partReason + "\r\n";
+	}
+
+	std::string buildKick(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& target, const std::string& kickReason) {
+	    return prefix(clientNickname, username) + " KICK " + channelName + " " + target + " :" + kickReason + "\r\n";
+	}
+
+	/*std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
 	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";
 	}*/

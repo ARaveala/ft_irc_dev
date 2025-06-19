@@ -4,6 +4,7 @@
 #include "IrcResources.hpp"
 
 namespace MessageBuilder {
+	
 	std::string generateMessage(MsgType type, const std::vector<std::string>& params);
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick);
@@ -39,19 +40,25 @@ namespace MessageBuilder {
     // Server notices
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick);
 
-	 std::string buildNoSuchChannel(const std::string& clientNickname, const std::string& channelName);
+	std::string buildNoSuchChannel(const std::string& clientNickname, const std::string& channelName);
 	std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName);
 	std::string buildInvalidTarget(const std::string& clientNickname, const std::string& target);
+	std::string buildInvalidChannelName(const std::string& clientNickname, const std::string& channelName, const std::string& msg);
 	std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString);
 	std::string buildChannelModeIs(const std::string& clientNickname, const std::string& channelName, const std::string& modeString, const std::string& modeParams = "");
 	std::string buildChannelModeChange(const std::string& nickname, const std::string& username, const std::string channelname, const std::string& modes, const std::string& targets);
-
+	std::string buildChanUpdate(const std::string& nickname, const std::string& username, const std::string& channelName);
+	std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName);	
+	
 	std::string buildClientModeChange(const std::string channelname, const std::string& modes);
    
 	std::string buildInviteOnlyChannel(const std::string& clientNickname, const std::string& channelName);
 	std::string buildNeedMoreParams(const std::string& clientNickname, const std::string& commandName);
 	std::string buildIncorrectPasswordMessage(const std::string& clientNickname, const std::string& channelName);
 	std::string buildRegistartionEnd(const std::string& nickname);
+
+	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason);
+	std::string buildKick(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& target, const std::string& kickReason);
 	// You can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

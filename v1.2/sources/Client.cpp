@@ -296,11 +296,11 @@ void Client::removeJoinedChannel(const std::string& channel_name) {
 }
 
 // === Example for addJoinedChannel (you'll call this when a client successfully JOINs) ===
-void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr) {
+/*void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr) {
     // Assuming 'channel_name' is already in lowercase.
     _joinedChannels[channel_name] = channel_ptr; // Store a weak_ptr to the channel
     std::cout << "CLIENT: " << _nickName << " added channel '" << channel_name << "' to its _joinedChannels list.\n";
-}
+}*/
 
 // // === Example for getJoinedChannels (useful for QUIT command processing) ===
 // const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {

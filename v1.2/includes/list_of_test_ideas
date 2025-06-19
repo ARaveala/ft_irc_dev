@@ -20,7 +20,7 @@ join
 part
 * when not in a channel
 * when in a channel
-* when in multiple channels
+* when in multiple channels part leaves 1 part #channel1,#channel2 leaves both channels
 * try to activate mode when parted
 
 send bible

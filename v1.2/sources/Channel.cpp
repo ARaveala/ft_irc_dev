@@ -489,7 +489,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 
 // using optional here instead as we can just retun nullptr 
 std::optional<std::pair<MsgType, std::vector<std::string>>>
-Channel::canClientJoin(const std::string& nickname, const std::string& password) {
+Channel::canClientJoin(const std::string& nickname, const std::string& value) {
     if (_ChannelModes.test(Modes::INVITE_ONLY)) {
         auto it = std::find(_invites.begin(), _invites.end(), nickname);
         if (it != _invites.end()) {
@@ -500,15 +500,22 @@ Channel::canClientJoin(const std::string& nickname, const std::string& password)
         }
     }
     if (_ChannelModes.test(Modes::PASSWORD)) {
-        if (password.empty()) {
-            return std::make_pair(MsgType::NEED_MORE_PARAMS,
-                                  std::vector<std::string>{nickname, "JOIN"});
+        if (value.empty()) {
+            return std::make_pair(MsgType::NEED_MORE_PARAMS, std::vector<std::string>{nickname, "JOIN"});
         }
-        if (password != _password) {
-            return std::make_pair(MsgType::INVALID_PASSWORD,
-                                  std::vector<std::string>{nickname, getName()});
+        if (value != _password) {
+            return std::make_pair(MsgType::INVALID_PASSWORD, std::vector<std::string>{nickname, getName()});
         }
     }
+	if (_ChannelModes.test(Modes::USER_LIMIT)) {
+		if (_clientCount + 1 > _ulimit) {
+            return std::make_pair(MsgType::CHANNEL_FULL, std::vector<std::string>{nickname, getName()});
+
+		}
+
+	}
+
+	//471 ERR_CHANNELISFULL.
     // Placeholder for future checks:
     // - client limit/ user limit exceeded
     // - ban list ??
@@ -630,32 +637,21 @@ bool Channel::removeClient(const std::string& nickname) {
 }
 
 
-
-
-
-
-// refactor looking at can client join
 std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
         const std::string& ClientNickname,
         size_t paramsSize)  {
-        // The target (params[0]) is the channel name itself, which is implicitly 'this->getName()'.
         if (paramsSize == 1) {
-            // Client must be in the channel to list its modes.
             if (!isClientInChannel(ClientNickname)) {
                 return {MsgType::NOT_ON_CHANNEL, {ClientNickname, getName()}};
             }
-            // Return RPL_CHANNELMODEIS with necessary parameters for MessageBuilder
             return {MsgType::RPL_CHANNELMODEIS, {ClientNickname, getName(), getCurrentModes(), ""}};
         }
         if (!isClientInChannel(ClientNickname)) {
             return {MsgType::NOT_ON_CHANNEL, {ClientNickname, getName()}};
         }
-
-        // Client must be an operator in the channel to set its modes.
         if (!getClientModes(ClientNickname).test(Modes::OPERATOR)) {
             return {MsgType::NOT_OPERATOR, {ClientNickname, getName()}};
         }
-        // If all channel-specific initial checks pass, return success.
         return {MsgType::NONE, {}};
 }
 
@@ -665,7 +661,7 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
 	if (mode == 'o') {
         if (param.empty() || !isClientInChannel(param)) {
             std::cout << "DEBUG: Invalid or missing client '" << param << "' for +o.\n";
-            return MsgType::NO_SUCH_NICK;
+            return MsgType::ERR_NOSUCHNICK;
         }
     }
     else if (mode == 'l' && sign == '+') {
@@ -673,23 +669,19 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
             unsigned long limit = std::stoul(param);
             if (limit > 100) {
                 std::cout << "DEBUG: Limit too high (" << limit << ")\n";
+				return {MsgType::NEED_MORE_PARAMS};
             }
         } catch (...) {
-            std::cout << "DEBUG: Invalid number: '" << param << "'\n";
             return {MsgType::NEED_MORE_PARAMS};
         }
     }
     else if (mode == 'k' && sign == '+') {
         if (param.empty()) {
-            std::cout << "DEBUG: Empty password for +k\n";
             return {MsgType::NEED_MORE_PARAMS};
         }
     }
-
     return MsgType::NONE;
 }
-
-
 
 std::pair<MsgType, std::vector<std::string>>
 Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::string>& params) const {
@@ -734,129 +726,6 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
 
     return {MsgType::NONE, {}};
 }
-
-
-
-
-
-
-
-/**
- * @brief +o-o user1 user2 is not standard protocol, you can not make me try to imitate libera chat at this 
- * stage of my education at this pace . 
- * 
- * @param requestingClientNickname 
- * @param params 
- * @return std::pair<MsgType, std::vector<std::string>> 
- */
-/*std::pair<MsgType, std::vector<std::string>> Channel::modeSyntaxValidator(const std::string& requestingClientNickname, const std::vector<std::string>& params) const {
-
-        size_t currentIndex = 1;
-        char currentSign = ' '; // current mode operation ('+' or '-')
-
-        // Loop through all tokens in `params` starting from the first mode/parameter token.
-        while (currentIndex < params.size()) {
-            const std::string& currentToken = params[currentIndex];
-
-            // --- 1. Determine if currentToken is a mode group or a parameter ---
-            bool isModeGroupToken = (currentToken.length() > 0 && (currentToken[0] == '+' || currentToken[0] == '-'));
-			// this will be false on first run if not flags
-            if (isModeGroupToken) {
-                // If it's a mode group token, set the sign and iterate through its characters
-                currentSign = currentToken[0];
-
-                // Iterate through mode characters within this token (skip the sign)
-                for (size_t i = 1; i < currentToken.length(); ++i) {
-                    char modeChar = currentToken[i];
-
-                    // --- 1a. Validate modeChar is known for this channel ---
-                    bool modeCharValid = isValidChannelMode(modeChar) || isValidClientMode(modeChar);
-
-                    if (!modeCharValid) {
-                        std::cout << "DEBUG: Syntax Error: Unknown mode char '" << modeChar << "' for channel " << getName() << "." << std::endl;
-                        // Parameters for UNKNOWN_MODE: {modeChar, clientNickname, channelName}
-                        return {MsgType::UNKNOWN_MODE, {std::string(1, modeChar), requestingClientNickname, getName()}};
-                    }
-
-                    // --- 1b. Check if modeChar requires a parameter and validate parameter existence ---
-                    bool paramExpected = channelModeRequiresParameter(modeChar); // Using a Channel method
-
-                    if (paramExpected) {
-                        // Check for missing parameter *before* trying to access it
-                        if (currentIndex + 1 >= params.size()) {
-                            std::cout << "DEBUG: Syntax Error: Mode '" << modeChar << "' requires a parameter but none found." << std::endl;
-                            // Parameters for NEED_MORE_PARAMS: {clientNickname, "MODE", modeChar}
-                            return {MsgType::NEED_MORE_PARAMS, {requestingClientNickname, "MODE", std::string(1, modeChar)}};
-                        }
-
-                        // If parameter exists, get it for content validation
-                        const std::string& modeParam = params[currentIndex + 1];
-
-                        // --- 1c. Validate parameter content specific to channel modes ---
-                        if (modeChar == 'o' ) { // || modeChar == 'v'Channel client modes (+o, +v)
-                            // The user specified: "we dont care if it exists merly if they exist in the channel"
-                            if (!isClientInChannel(modeParam)) { // Check if the target client for +o/+v is in *this* channel
-                                std::cout << "DEBUG: Syntax Error: User '" << modeParam << "' not in channel for mode '" << modeChar << "'." << std::endl;
-                                // Parameters for NO_SUCH_NICK: {clientNickname, modeParam, channelName}
-                                return {MsgType::NO_SUCH_NICK, {requestingClientNickname, modeParam, getName()}};
-                            }
-                            // Also, check if username starts with lowercase for IRC standard compliance
-                            if (modeParam.empty()) { 
-                                std::cout << "DEBUG: Syntax Error: Invalid nickname format '" << modeParam << "' for mode '" << modeChar << "'." << std::endl;
-                                return {MsgType::NO_SUCH_NICK, {requestingClientNickname, modeParam, getName()}};
-                            }
-                        } else if (modeChar == 'l' && currentSign == '+') { // Set user limit (+l)
-                            try {
-                                if (modeParam.empty()) throw std::invalid_argument("empty");
-                                
-								try
-								{
-									 long limit = std::stoul(modeParam);
-									 if (limit > 100)
-									 	std::cout<<"something is not right limit too big boys \n";
-									
-								}
-								catch(const std::exception& e)
-								{
-									std::cerr << e.what() << '\n';
-								}
-                                // Add a limit max check here, e.g., if (limit > MAX_USERS_ALLOWED)
-                                // if (limit > SOME_MAX_CHANNEL_LIMIT) {
-                                //     return {MsgType::INVALID_MODEPARAM, {requestingClientNickname, std::string(1, modeChar), "limit too high"}};
-                                // }
-                            } catch (const std::exception& e) {
-                                std::cout << "DEBUG: Syntax Error: Invalid numeric parameter '" << modeParam << "' for mode '" << modeChar << "'." << std::endl;
-                                // Custom message for invalid limit, using NEED_MORE_PARAMS for structure
-                                return {MsgType::NEED_MORE_PARAMS, {requestingClientNickname, "MODE", std::string(1, modeChar), "Invalid limit (not a number or too high)"}};
-                            }
-                        } else if (modeChar == 'k' && currentSign == '+') { // Set channel key/password (+k)
-                            if (modeParam.empty()) {
-                                std::cout << "DEBUG: Syntax Error: Empty password parameter for mode '" << modeChar << "'." << std::endl;
-                                // Custom message for empty password, using NEED_MORE_PARAMS for structure
-                                return {MsgType::NEED_MORE_PARAMS, {requestingClientNickname, "MODE", std::string(1, modeChar), "Empty password"}};
-                            }
-                            // Add password restrictions (e.g., length, allowed characters) here
-                            // if (!isValidPassword(modeParam)) { ... return error ... }
-                        }
-
-                        // If a parameter was expected and consumed, advance currentIndex past it.
-                        currentIndex++;
-                    }
-                } // End inner loop over characters in currentToken
-                currentIndex++;
-
-            } else { // Current token is NOT a mode group (doesn't start with '+' or '-')
-                // This means it's an unexpected parameter or malformed command.
-                std::cout << "DEBUG: Syntax Error: Unexpected token '" << currentToken << "' for channel " << getName() << ". Expected mode group or end of command." << std::endl;
-                // Using NEED_MORE_PARAMS for general structural errors, or UNKNOWN_COMMAND if more specific.
-                return {MsgType::NEED_MORE_PARAMS, {requestingClientNickname, "MODE", currentToken}};
-            }
-        } // End while loop over params
-
-        // If the loop completes without any errors, the syntax is valid.
-        return {MsgType::NONE, {}};
-    }*/
-
 
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {
     if (!client) {
@@ -903,7 +772,7 @@ Proceed with this version of isClientOperator. It will correctly implement the l
 
 */
 
-
+// this is not needed at all !!
 bool Channel::isClientOperator(const std::string& nickname) {
     std::cout << "CHANNEL: Checking if '" << nickname << "' is operator in '" << _name << "' (case-sensitive)\n";
 

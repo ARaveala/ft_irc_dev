@@ -10,7 +10,7 @@ namespace MessageBuilder {
     std::string buildErrorReply(const std::string& sender_prefix, const std::string& reply_code,
                                 const std::string& recipient_nickname, const std::string& message_text);
     std::string buildNotOperator(const std::string& nickname, const std::string& channelName);
-    std::string buildNoSuchNickOrChannel(const std::string& nickname, const std::string& target); // For 401
+    std::string buildNoSuchNick(const std::string& nickname, const std::string& target); // For 401
     std::string buildNeedMoreParams(const std::string& nickname, const std::string& command); // For 461
 
     // Welcome Package
@@ -25,7 +25,7 @@ namespace MessageBuilder {
 
     // Channel related messages
     //std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);
-    std::string buildJoinChannel(const std::string& nickname, const std::string& channelName, const std::string& clientList, const std::string& topic);
+    std::string buildJoinChannel(const std::string& nickname, const std::string& username, const std::string& channelName, const std::string& clientList, const std::string& topic);
 	std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList);
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName);
     // Note: CHANNEL_TOPIC macro is missing a 'topic' parameter. This will be added correctly.

@@ -2,9 +2,11 @@ servers = (
   {
     address = "localhost";
     port = 6669;
+
     nick = "anonthe_silentm";
     user = "user_anonthe_silentm";
     realname = "real_anonthe_silentm";
+
   }
 );
 
@@ -13,6 +15,7 @@ settings = {
     real_name = "real_anonthe_silentm";
     user_name = "user_anonthe_silentm";
     nick = "anonthe_silentm";
+
   };
 };
 

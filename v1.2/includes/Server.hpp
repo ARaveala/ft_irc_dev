@@ -83,6 +83,7 @@ class Server {
 		int get_fd(const std::string& nickname) const;
 		int get_signal_fd() const;
 		int get_client_count() const;
+        std::shared_ptr<Client> getClientByNickname(const std::string& nickname);
 		int get_event_pollfd() const;
 		int get_current_client_in_progress() const;
 
@@ -108,10 +109,9 @@ class Server {
 		void shutDown();
 		bool checkTimers(int fd);
 	
-		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
-
+		
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
-
+		
 		// epoll stuff
 		int setup_epoll(int epoll_fd, int fd, uint32_t events);
 		int setup_epoll_timer(int epoll_fd, int timeout_seconds);
@@ -122,19 +122,21 @@ class Server {
 		void send_message(const std::shared_ptr<Client>& client);
 		//void send_server_broadcast();
 		//void sendChannelBroadcast();
-
+		
 		// channel related 
 		bool channelExists(const std::string& channelName) const;
+		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip);
+		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
+		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleJoinChannel(std::shared_ptr<Client> client, const std::string& channelName, const std::string& password);
 		void handleReadEvent(int client_fd);
 		void handleQuit(std::shared_ptr<Client> client);
-		void broadcastMessageToChannel(std::shared_ptr<Channel> channel, const std::string& message_content, std::shared_ptr<Client> sender, bool skip);
-		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleNickCommand(std::shared_ptr<Client> client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
-		void broadcastMessageToClients( std::shared_ptr<Client> client, const std::string& msg, bool quit);
+		void handleKickCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
 
 
 		//whois

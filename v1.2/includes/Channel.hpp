@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "Client.hpp"
+
 /**
  * @brief a custome comparator, since we use weak_ptrs as keys and they do not 
  * have comparison operators defined, a map can not order the keys, this comparitor
@@ -83,8 +84,10 @@ struct WeakPtrCompare {
 		void setTopic(const std::string& newTopid);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(const std::string& nickname);
+	    void removeClientByNickname(const std::string& nickname);
 
 		bool isClientInChannel(const std::string& nickname) const;
+		bool isClientOperator(const std::string& nickname);
 		bool isValidChannelMode(char modeChar) const;
 		bool isValidClientMode(char modeChar) const;
 		bool channelModeRequiresParameter(char modeChar) const;
@@ -93,6 +96,11 @@ struct WeakPtrCompare {
 		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;
 		std::vector<std::string> applymodes(std::vector<std::string> params);
 
+	    bool isEmpty() const;
+
+		void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
+
+  
 		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;

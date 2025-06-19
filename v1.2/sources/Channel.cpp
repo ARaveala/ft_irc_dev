@@ -893,7 +893,7 @@ bool Channel::isEmpty() const {
     return _ClientModes.empty();
 }
 
-
+// this function is too woke and should be deleted
 // void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
 //     // For logging, just show the first part of the message to avoid super long console lines
 //     std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
@@ -921,3 +921,27 @@ bool Channel::isEmpty() const {
 //         }
 //     }
 // }
+
+
+void Channel::addInvite(const std::string& nickname) {
+    // Check if already invited to avoid duplicates
+    if (!isInvited(nickname)) {
+        _invites.push_back(nickname); // Add to the deque
+        std::cout << "CHANNEL: Added '" << nickname << "' to invite list for '" << _name << "'. Current invites: " << _invites.size() << std::endl;
+    } else {
+        std::cout << "CHANNEL: '" << nickname << "' is already on invite list for '" << _name << "'.\n";
+    }
+}
+
+bool Channel::isInvited(const std::string& nickname) const {
+    // Use std::find to check if the nickname exists in the _invites deque
+    return std::find(_invites.begin(), _invites.end(), nickname) != _invites.end();
+}
+
+void Channel::removeInvite(const std::string& nickname) {
+    auto it = std::find(_invites.begin(), _invites.end(), nickname);
+    if (it != _invites.end()) {
+        _invites.erase(it); // Remove from the deque
+        std::cout << "CHANNEL: Removed '" << nickname << "' from invite list for '" << _name << "'. Current invites: " << _invites.size() << std::endl;
+    }
+}

@@ -23,7 +23,7 @@ std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std:
 #include <iostream> // debugging only 
 namespace MessageBuilder {
 
-	std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
+std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
 	std::cout << "MsgType numeric value: " << static_cast<int>(type) << std::endl;
 
 		switch (type) {
@@ -32,6 +32,13 @@ namespace MessageBuilder {
 
 	        case MsgType::RPL_NICK_CHANGE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
+
+			case MsgType::RPL_INVITING: // 341
+			// This assumes buildInviting takes (sender_nickname, target_nickname, channel_name)
+			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
+
+
+
 
 	        case MsgType::WELCOME:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::generatewelcome), params);
@@ -51,6 +58,9 @@ namespace MessageBuilder {
 
 	        case MsgType::NO_SUCH_CHANNEL:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchChannel), params);
+
+            case MsgType::NO_SUCH_NICK: // This is MsgType 401, used for Invite
+                return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchNick), params); // <-- New line here
 
 	        case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotInChannel), params);
@@ -145,6 +155,10 @@ namespace MessageBuilder {
     }
 
     std::string buildNoSuchNickOrChannel(const std::string& nickname, const std::string& target) {
+        return SERVER_PREFIX + " 401 " + nickname + " " + target + " :No such nick/channel\r\n";
+    }
+
+	std::string buildNoSuchNick(const std::string& nickname, const std::string& target) {
         return SERVER_PREFIX + " 401 " + nickname + " " + target + " :No such nick/channel\r\n";
     }
 
@@ -287,6 +301,11 @@ namespace MessageBuilder {
 	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVALID_PASSWORD)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+k)\r\n";
 	}
+
+std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name) {
+    return SERVER_PREFIX + " 341 " + sender_nickname + " " + target_nickname + " :" + channel_name + "\r\n";
+}
+
 
 	/*std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName) {
 	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_CHANNELISFULL)) +

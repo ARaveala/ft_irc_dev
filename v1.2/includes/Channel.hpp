@@ -8,7 +8,7 @@
 #include <map>
 #include <algorithm>
 #include <optional>
-
+#include <ctime>
 
 #include "config.h"
 #include "Client.hpp"
@@ -50,6 +50,9 @@ struct WeakPtrCompare {
 		std::string _name;
 		std::string _topic;
 		std::string _password;
+		std::string _topicSetter; // Stores the nickname of the user who last set the topic
+		std::time_t _topicSetTime; // Stores the Unix timestamp (from <ctime>) when the topic was last set
+
 
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
 
@@ -81,7 +84,8 @@ struct WeakPtrCompare {
 		bool setModeBool(char onoff);
 		//bool canClientJoin(const std::string& nickname, const std::string& password );
 		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
-		void setTopic(const std::string& newTopid);
+		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
+		void setTopic(const std::string& newTopic);
 		bool addClient(std::shared_ptr <Client> Client);
 		bool removeClient(const std::string& nickname);
 	    void removeClientByNickname(const std::string& nickname);
@@ -99,8 +103,17 @@ struct WeakPtrCompare {
 	    bool isEmpty() const;
 
 		void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
+// T O P I C 
+		const std::string& getTopicSetter() const;
+		std::time_t getTopicSetTime() const;
+		void setTopicSetter(const std::string& setter_nickname);
+		void setTopicSetTime(std::time_t set_time);
 
-  
+// I N V I T E
+		void addInvite(const std::string& nickname);
+		bool isInvited(const std::string& nickname) const; // To check if a client is on the invite list
+		void removeInvite(const std::string& nickname); // To remove client from invite list after they join
+
 		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 

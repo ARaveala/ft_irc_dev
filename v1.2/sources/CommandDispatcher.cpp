@@ -98,6 +98,18 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         return;
 	}
 
+	if (command == "TOPIC"){
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleTopicCommand.\n";
+        _server->handleTopicCommand(client, params);
+		return;
+	}
+
+	if (command == "INVITE"){
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleInviteCommand.\n";
+        _server->handleInviteCommand(client, params);
+		return;
+	}
+
     if (command == "JOIN"){
 
 		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";

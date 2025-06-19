@@ -42,7 +42,7 @@ std::set<std::shared_ptr<Client>> Server::getSharedChannelRecipients(std::shared
 }
 
 // --- Refactored broadcastMessage Function ---
-
+// todo doxygen this
 void Server::broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, // For single channel broadcasts
     bool skip_sender,
     std::shared_ptr<Client> individual_recipient // Optional: for sending to a single client

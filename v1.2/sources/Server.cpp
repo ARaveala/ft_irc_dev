@@ -1,4 +1,3 @@
-#include "Server.hpp"
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h> //strlen
@@ -13,12 +12,14 @@
 #include <algorithm> // find_if
 #include <unordered_set>
 #include <cctype>    // Required for std::tolower (character conversion)
-
-#include "Client.hpp"
+#include <vector>
+#include <ctime>
 
 #include "config.h"
 #include "ServerError.hpp"
 #include "Channel.hpp"
+#include "Client.hpp"
+#include "Server.hpp"
 #include "MessageBuilder.hpp"
 
 class ServerException;
@@ -1380,4 +1381,237 @@ std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname)
 
     // std::cout << "SERVER: Client shared_ptr found for nickname '" << nickname << "'.\n"; // Uncomment for debugging
     return client_it->second; // Return the shared_ptr to the Client
+}
+
+void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+    std::cout << "SERVER: handleTopicCommand entered for " << client->getNickname() << std::endl;
+
+    if (!client) {
+        std::cerr << "SERVER ERROR: handleTopicCommand called with null client.\n";
+        return;
+    }
+
+    const std::string& sender_nickname = client->getNickname();
+
+    // TOPIC <channel> [<topic>]
+    // Params:
+    // params[0] = channel name
+    // params[1] = new topic (optional)
+
+    if (params.empty()) {
+        // ERR_NEEDMOREPARAMS (461) if no channel is provided
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "TOPIC"}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: TOPIC - Not enough params from " << sender_nickname << std::endl;
+        return;
+    }
+
+    std::string channel_name = params[0];
+
+    // 1. Channel Existence Check
+    auto channel_it = _channels.find(channel_name);
+    if (channel_it == _channels.end()) {
+        // ERR_NOSUCHCHANNEL (403)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: TOPIC - Channel '" << channel_name << "' not found.\n";
+        return;
+    }
+
+    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+
+    // 2. Client In Channel Check
+    if (!channel_ptr->isClientInChannel(sender_nickname)) {
+        // ERR_NOTONCHANNEL (442)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: TOPIC - Client '" << sender_nickname << "' not on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // --- Decision Point: View Topic or Set Topic ---
+
+    if (params.size() == 1) {
+        // Client wants to VIEW the topic (TOPIC #channel)
+        std::string current_topic = channel_ptr->getTopic();
+        if (current_topic.empty()) {
+            // RPL_NOTOPIC (331) - No topic is set
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_NOTOPIC, {sender_nickname, channel_name}));
+            std::cout << "SERVER: TOPIC - No topic set for '" << channel_name << "'.\n";
+        } else {
+            // RPL_TOPIC (332) - Send the current topic
+            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_TOPIC, {sender_nickname, channel_name, current_topic}));
+            std::cout << "SERVER: TOPIC - Sent topic '" << current_topic << "' for '" << channel_name << "'.\n";
+
+            // RPL_TOPICWHOTIME (333) - Who set the topic and when
+            // For this, your Channel class needs _topicSetter (std::string) and _topicSetTime (std::time_t)
+            // If you have these:
+            // std::string setter_info = channel_ptr->getTopicSetter() + " " + std::to_string(channel_ptr->getTopicSetTime());
+            // client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_TOPICWHOTIME, {sender_nickname, channel_name, setter_info}));
+        }
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        return; // Done with viewing topic
+    }
+
+    // --- If we reach here, params.size() > 1, so client wants to SET the topic ---
+    std::string new_topic_content = params[1]; // The topic string starts at params[1]
+
+    // You need to handle multi-word topics correctly. If the topic has spaces, it should
+    // be everything after the first space after the channel name.
+    // For example, if params[1] is ":This is my topic", the colon indicates the rest is the topic.
+    // Your command parser should ideally handle this and give you a single string for the topic.
+    // Assuming params[1] now holds the full topic string, including potentially initial colon.
+    if (!new_topic_content.empty() && new_topic_content[0] == ':') {
+        new_topic_content = new_topic_content.substr(1); // Remove leading colon if present
+    }
+
+    // 3. Topic Privilege Check (based on channel mode +t)
+    // You need a way to get channel modes. Assuming Channel has a getMode() or isModeSet('t').
+    // Let's assume you have Channel::isModeSet(char mode_char) or similar.
+    // For now, we'll assume a default behavior if modes aren't implemented yet.
+    bool topic_is_protected = true; // Default to true if you don't have modes yet
+
+    // If you have channel modes, replace 'true' with a check like channel_ptr->isModeSet('t')
+    // e.g., if (channel_ptr->getMode() & TOPIC_PROTECTED_BIT) { topic_is_protected = true; }
+    // Or if you have a separate boolean flag: if (channel_ptr->isTopicProtected()) { topic_is_protected = true; }
+
+    if (topic_is_protected && !channel_ptr->isClientOperator(sender_nickname)) {
+        // ERR_CHANOPRIVSNEEDED (482)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: TOPIC - Client '" << sender_nickname << "' not operator on channel '" << channel_name << "' with +t mode.\n";
+        return;
+    }
+
+    // --- All checks passed for setting the topic ---
+
+    // Set the new topic
+    channel_ptr->setTopic(new_topic_content);
+    std::cout << "SERVER: TOPIC - Set topic for '" << channel_name << "' to: '" << new_topic_content << "'.\n";
+
+    // Store who set the topic and when (for RPL_TOPICWHOTIME)
+    // You need to add _topicSetter and _topicSetTime to your Channel class
+    // channel_ptr->setTopicSetter(sender_nickname);
+    // channel_ptr->setTopicSetTime(std::time(NULL)); // Current Unix timestamp
+
+    // 4. Broadcast Topic Change to all channel members
+    // Format: :<sender_nick>!<sender_user>@<sender_host> TOPIC <channel> :<new_topic>
+    std::string sender_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
+    std::string topic_change_message = sender_prefix + " TOPIC " + channel_name + " :" + new_topic_content + "\r\n";
+
+    // Use the versatile broadcastMessage function!
+    broadcastMessage(topic_change_message, nullptr, channel_ptr, false, nullptr); // Broadcast to all in channel
+
+    std::cout << "SERVER: TOPIC command successful. Topic for '" << channel_name
+              << "' changed by '" << sender_nickname << "' to: '" << new_topic_content << "'\n";
+}
+
+
+void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+    std::cout << "SERVER: handleInviteCommand entered for " << client->getNickname() << std::endl;
+
+    if (!client) {
+        std::cerr << "SERVER ERROR: handleInviteCommand called with null client.\n";
+        return;
+    }
+
+    const std::string& sender_nickname = client->getNickname();
+
+    // INVITE <nickname> <channel>
+    // Params:
+    // params[0] = target nickname
+    // params[1] = channel name
+
+    // 1. Check for correct number of parameters
+    if (params.size() < 2) {
+        // ERR_NEEDMOREPARAMS (461)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "INVITE"}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Not enough parameters from " << sender_nickname << std::endl;
+        return;
+    }
+
+    std::string target_nickname = params[0];
+    std::string channel_name = params[1];
+
+    // 2. Check if target nickname exists (is connected to the server)
+    std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname); // Assuming you have getClientByNickname
+    if (!target_client_ptr) {
+        // ERR_NOSUCHNICK (401)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_NICK, {sender_nickname, target_nickname}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Target nickname '" << target_nickname << "' not found.\n";
+        return;
+    }
+
+    // 3. Check if channel exists
+    auto channel_it = _channels.find(channel_name);
+    if (channel_it == _channels.end()) {
+        // ERR_NOSUCHCHANNEL (403)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Channel '" << channel_name << "' not found.\n";
+        return;
+    }
+    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+
+    // 4. Check if sender is on the channel
+    if (!channel_ptr->isClientInChannel(sender_nickname)) {
+        // ERR_NOTONCHANNEL (442)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Sender '" << sender_nickname << "' not on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // 5. Check if target client is already on the channel
+    if (channel_ptr->isClientInChannel(target_nickname)) {
+        // ERR_USERONCHANNEL (443)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_USERONCHANNEL, {sender_nickname, target_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Target client '" << target_nickname << "' is already on channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // --- Privilege Check for Invite-Only Channel (+i mode) ---
+    // If the channel is invite-only (+i mode), only channel operators can send invites.
+    // Assuming you have Channel::isModeSet('i') or similar.
+    bool channel_is_invite_only = false; // Default to false if modes not fully implemented yet
+
+    // Replace 'false' with actual mode check once you have it, e.g.:
+    // if (channel_ptr->isModeSet('i')) { channel_is_invite_only = true; }
+
+    if (channel_is_invite_only && !channel_ptr->isClientOperator(sender_nickname)) {
+        // ERR_CHANOPRIVSNEEDED (482)
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {sender_nickname, channel_name}));
+        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        std::cout << "SERVER: INVITE - Sender '" << sender_nickname << "' is not operator on invite-only channel '" << channel_name << "'.\n";
+        return;
+    }
+
+    // --- All checks passed: Perform the Invite! ---
+
+    // 6. Add target client to channel's invite list
+    // You have std::deque<std::string> _invites; in your Channel class.
+    // You'll need a method to add a nickname to this deque, and check if it's already there.
+    // Let's assume you'll add Channel::addInvite(const std::string& nickname);
+    channel_ptr->addInvite(target_nickname); // You'll need to implement this in Channel.cpp and declare in Channel.hpp
+    std::cout << "SERVER: INVITE - Added '" << target_nickname << "' to invite list for channel '" << channel_name << "'.\n";
+
+
+    // 7. Send RPL_INVITING (341) to the sender
+    client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}));
+    updateEpollEvents(client->getFd(), EPOLLOUT, true);
+    std::cout << "SERVER: INVITE - Sent RPL_INVITING to " << sender_nickname << std::endl;
+
+    // 8. Send INVITE message to the target client
+    // Format: :<sender_nick>!<sender_user>@<sender_host> INVITE <target_nick> :<channel>
+    std::string sender_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
+    std::string invite_message = sender_prefix + " INVITE " + target_nickname + " :" + channel_name + "\r\n";
+
+    // Use your broadcastMessage, targeting a single recipient
+    broadcastMessage(invite_message, nullptr, nullptr, false, target_client_ptr);
+    std::cout << "SERVER: INVITE - Sent INVITE message to target client " << target_nickname << std::endl;
+
+    std::cout << "SERVER: INVITE command successful. '" << target_nickname << "' invited to '" << channel_name << "' by '" << sender_nickname << "'.\n";
 }

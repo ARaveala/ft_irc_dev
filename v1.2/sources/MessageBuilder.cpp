@@ -160,9 +160,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
         return SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::NO_SUCH_NICK)) + " " + nickname + " " + target + " :No such nick/channel\r\n";
     }
 
-	std::string buildNoSuchNick(const std::string& nickname, const std::string& target) {
-        return SERVER_PREFIX + " 401 " + nickname + " " + target + " :No such nick/channel\r\n";
-    }
+
 
     // Welcome Package
     std::string buildWelcome(const std::string& nickname) {

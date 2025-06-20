@@ -135,6 +135,9 @@ class Server {
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleKickCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
+		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+
 
 
 		//whois

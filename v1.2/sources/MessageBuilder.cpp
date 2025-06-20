@@ -24,7 +24,7 @@ std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std:
 #include <iostream> // debugging only 
 namespace MessageBuilder {
 
-	std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
+std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
 	std::cout << "MsgType numeric value: " << static_cast<int>(type) << std::endl;
 
 		switch (type) {
@@ -33,6 +33,16 @@ namespace MessageBuilder {
 
 	        case MsgType::RPL_NICK_CHANGE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
+
+			case MsgType::RPL_INVITING: // 341
+			// This assumes buildInviting takes (sender_nickname, target_nickname, channel_name)
+			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
+
+			case MsgType::ERR_USERONCHANNEL: // 443
+				// This assumes buildUserOnChannel takes (inviter_nickname, target_nickname, channel_name)
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildUserOnChannel), params);
+
+
 
 	        case MsgType::WELCOME:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::generatewelcome), params);
@@ -153,6 +163,8 @@ namespace MessageBuilder {
     std::string buildNoSuchNick(const std::string& nickname, const std::string& target) {
         return SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::ERR_NOSUCHNICK)) + " " + nickname + " " + target + " :No such nick/channel\r\n";
     }
+
+
 
     // Welcome Package
     std::string buildWelcome(const std::string& nickname) {
@@ -280,9 +292,27 @@ namespace MessageBuilder {
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+k)\r\n";
 	}
 
+std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name) {
+    return SERVER_PREFIX + " 341 " + sender_nickname + " " + target_nickname + " :" + channel_name + "\r\n";
+	
+	}
+	 // namespace MessageBuilder
+	
+	 // New function for ERR_USERONCHANNEL (443)
+	// params: { inviter_nickname, target_nickname, channel_name }
+	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name) {
+		// According to RFC 2812, 443 format is:
+		// :<server> 443 <nick> <channel> :is already on channel
+		// However, common clients/servers often include the target nick for clarity.
+		// Let's use the RFC-compliant format which is slightly simpler for parameters
+		// If your current params are {inviter, target, channel}, you might pass target_nickname as params[0]
+		// and channel_name as params[1] to this function when calling from handleInviteCommand.
+		return SERVER_PREFIX + " 443 " + inviter_nickname + " " + target_nickname + " " + channel_name + " :is already on channel\r\n";
+	}
+	
 	std::string buildIvalidChannelName(const std::string& clientNickname, const std::string& channelName) {
-	    return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVALID_CHANNEL_NAME)) +
-	           " " + clientNickname + " " + channelName + " :illegal channel name\r\n";
+		return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::INVALID_CHANNEL_NAME)) +
+			   " " + clientNickname + " " + channelName + " :illegal channel name\r\n";
 	}
 	// add to above
 	std::string buildChannelIsFull(const std::string& clientNickname, const std::string& channelName) {

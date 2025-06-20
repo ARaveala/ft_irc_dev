@@ -55,7 +55,9 @@ class Server {
 		std::map<int, std::string> _fd_to_nickname;
 		
 		std::unique_ptr<CommandDispatcher> _commandDispatcher;
-		
+		// apparently the rule of thumb is to always make anythingprivate and public only if you need too 
+		std::vector<std::string> splitCommaList(const std::string& input);
+		std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick);
 	public:
 		Server();
 		Server(int port, const std::string& password);
@@ -66,7 +68,6 @@ class Server {
 
 		void remove_Client(int client_fd);
 		// todo we need a remove channel, when last client leaves channel?
-		//void removeClientFromChannels(int fd);
 	
 		// SETTERS
 		void setFd(int fd);
@@ -120,16 +121,14 @@ class Server {
 		void resetClientTimer(int timer_fd, int timeout_seconds);
 		int make_socket_unblocking(int fd);
 		void send_message(const std::shared_ptr<Client>& client);
-		//void send_server_broadcast();
-		//void sendChannelBroadcast();
 		
 		// channel related 
 		bool channelExists(const std::string& channelName) const;
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
-		void handleJoinChannel(std::shared_ptr<Client> client, std::vector<std::string> params);
+		void handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params);
 		void handleReadEvent(int client_fd);
 		void handleQuit(std::shared_ptr<Client> client);
-		void handleNickCommand(std::shared_ptr<Client> client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
+		void handleNickCommand(const std::shared_ptr<Client>& client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
@@ -139,7 +138,7 @@ class Server {
 
 		//whois
 		std::shared_ptr<Client> findClientByNickname(const std::string& nickname);
-	// if these work we will swap for broadcasttochannel, breoadcasttoclients
+
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);
 		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);

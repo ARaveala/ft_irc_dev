@@ -65,7 +65,7 @@ class Client {
 		void setHasRegistered();
 
 		void setNickname(const std::string& nickname) { _nickName.clear(); _nickName = nickname;};
-		void setUsername(const std::string& username);
+		//void setUsername(const std::string& username);
 
 
 		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
@@ -109,7 +109,7 @@ class Client {
 		void setHostname(const std::string& hostname);
 		void setOperator(bool status);
 
-		bool addChannel(std::string channelName, std::shared_ptr<Channel> channel);
+		bool addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel);
 		std::string getChannel(std::string channelName);
 		void sendPing();
 		void sendPong();

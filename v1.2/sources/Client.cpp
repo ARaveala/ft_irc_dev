@@ -161,12 +161,6 @@ void Client::setDefaults(){ //todo check these are really called - or woudl we c
 	lastActivityTime = time(NULL);
 }
 
-void Client::sendPing() {
-	safeSend(_fd, "PING :localhost/r/n"); // todo should these be \r\n?
-}
-void Client::sendPong() {
-	safeSend(_fd, "PONG :localhost/r/n"); // todo should these be \r\n?
-}
 
 
 bool Client::change_nickname(std::string nickname){
@@ -184,13 +178,10 @@ std::string Client::getChannel(std::string channelName)
 {
 	auto it = _joinedChannels.find(channelName);
 	//if (find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
-	if (it != _joinedChannels.end())
-	{
-		std::cout<<"channel already exists on client list\n";
+	if (it != _joinedChannels.end()) {
 		return channelName;
 	}
-	else
-		std::cout<<"channel does not exist\n";
+	std::cout<<"channel does not exist\n";
 	return "";
 		//_joinedChannels.push_back(channelName);
 }
@@ -233,22 +224,20 @@ int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) 
 	return indicator;
 }
 
-bool Client::addChannel(std::string channelName, std::shared_ptr<Channel> channel) {
+bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
 
 	if (!channel)
-		return false; // no poopoo pointers could be throw
+		return false;
 	auto it = _joinedChannels.find(channelName);
 	//if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end()) {
 	if (it != _joinedChannels.end()) {
 		std::cout<<"channel already exists on client list\n";
 		return false;
-	} else {
-		std::cout<<"------------------channel ahas been added to the map of joined channles for client----------------------------------------- \n";
-		std::weak_ptr<Channel> weakchannel = channel;
-		_joinedChannels.emplace(channelName, weakchannel);
 	}
+	std::cout<<"------------------channel ahas been added to the map of joined channles for client----------------------------------------- \n";
+	std::weak_ptr<Channel> weakchannel = channel;
+	_joinedChannels.emplace(channelName, weakchannel);
 	return true;
-
 }
 
 bool Client::isOperator() const {

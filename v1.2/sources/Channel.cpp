@@ -495,94 +495,59 @@ Channel::canClientJoin(const std::string& nickname, const std::string& value) {
         if (it != _invites.end()) {
             _invites.erase(it);
         } else {
-            return std::make_pair(MsgType::INVITE_ONLY,
-                                  std::vector<std::string>{nickname, getName()});
+            return std::make_pair(MsgType::INVITE_ONLY, std::vector<std::string>{nickname, getName()});
         }
     }
     if (_ChannelModes.test(Modes::PASSWORD)) {
         if (value.empty()) {
-            return std::make_pair(MsgType::NEED_MORE_PARAMS, std::vector<std::string>{nickname, "JOIN"});
+			return std::make_pair(MsgType::NEED_MORE_PARAMS, std::vector<std::string>{nickname, "JOIN"});
         }
         if (value != _password) {
-            return std::make_pair(MsgType::INVALID_PASSWORD, std::vector<std::string>{nickname, getName()});
+			return std::make_pair(MsgType::INVALID_PASSWORD, std::vector<std::string>{nickname, getName()});
         }
     }
 	if (_ChannelModes.test(Modes::USER_LIMIT)) {
 		if (_clientCount + 1 > _ulimit) {
             return std::make_pair(MsgType::CHANNEL_FULL, std::vector<std::string>{nickname, getName()});
-
 		}
-
 	}
-
-	//471 ERR_CHANNELISFULL.
-    // Placeholder for future checks:
-    // - client limit/ user limit exceeded
     // - ban list ??
 	// - is memeber already joined ??
     return std::nullopt;
 }
 
-bool Channel::addClient(std::shared_ptr <Client> client) {
-    //std::set::insert returns a pair: iterator to the element and a boolean indicating insertion
+int Channel::addClient(std::shared_ptr <Client> client) {
 	if (!client)
-		return false; // no poopoo pointers
+		return -1;
 	std::weak_ptr<Client> weakclient = client;
-	//_ClientModes.emplace(weakclient, std::make_pair(std::bitset<4>(), client->getFd()));
-	//_ClientModes[weakclient].first.set(MODE_OPERATOR);
-
 	if (_ClientModes.find(weakclient) == _ClientModes.end()) {
 		_ClientModes.insert({weakclient, std::make_pair(std::bitset<config::CLIENT_NUM_MODES>(), client->getFd())});  //Insert new client
-		if (client->getChannelCreator() == true)
-		{
+		if (client->getChannelCreator() == true) {
 			setChannelMode('o', setModeBool('+'), client->getNickname());
-			//setClientMode("+q", client->getNickname(), "");
+			setChannelMode('q', setModeBool('+'), client->getNickname()); // incase we want to know who created the channel
 			// if we add any other here we must remeber to set to 0 or 1
-			client->setChannelCreator(false);
+			client->setChannelCreator(false); // so we do not step inside here again
 		}
-		else 
-		{
+		else {
 			setChannelMode('o', setModeBool('-'), client->getNickname());
-
 			// make sure these modes are set to 0
-			//setClientMode("-o", client->getNickname(), "");
 			//setClientMode("-q", client->getNickname(), "");
 		}
 		_clientCount += 1;
 	} else {
 		std::cout << "Client already exists in channel!" << std::endl;
+		return 1;
 	}
-	for (auto it = _ClientModes.begin(); it != _ClientModes.end(); it++)
+	/*for (auto it = _ClientModes.begin(); it != _ClientModes.end(); it++)
 	{
 		std::cout<<"show me the fds in the clientmodes map = "<<it->second.second<<"\n";
-	}
+	}*/
 
 	/*if (result.second) {
         if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
     }*/
-    return true; // Return true if insertion happened (Client was not already there)
+    return 2; // Return true if insertion happened (Client was not already there)
 }
-
-
-/*
- *
- * @param Client
- * @return true
- * @return false
- */
-// bool Channel::removeClient(const std::string& nickname) {
-//     // We already use getWeakPtrByNickname which handles case-insensitivity
-//     size_t removed_count = _ClientModes.erase(getWeakPtrByNickname(nickname));
-//     if (removed_count > 0) {
-//         // Also remove from operators if they were an operator
-//         //operators.erase(Client); // This comment refers to an old structure
-
-//         std::cout << nickname << " left channel " << _name << std::endl;
-//         _clientCount -= 1; // Decrement client count
-//     }
-//     return removed_count > 0;
-// }
-
 
 // In sources/Channel.cpp
 
@@ -829,32 +794,3 @@ void Channel::removeClientByNickname(const std::string& nickname) {
 bool Channel::isEmpty() const {
     return _ClientModes.empty();
 }
-
-
-// void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
-//     // For logging, just show the first part of the message to avoid super long console lines
-//     std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
-
-//     for (const auto& entry : _ClientModes) {
-//         std::shared_ptr<Client> current_client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
-
-//         if (current_client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
-//             // If an exclude_client is provided, skip sending the message to them.
-//             // We compare file descriptors (fds) as a robust way to identify shared_ptr<Client> instances.
-//             if (exclude_client && current_client_sptr->getFd() == exclude_client->getFd()) {
-//                 continue; // Skip this client if they are the one to be excluded
-//             }
-
-//             // Queue the message for the current client to be sent later by the main loop
-//             current_client_sptr->getMsg().queueMessage(message);
-
-//             // Important: You might also need to signal your epoll loop that this client
-//             // now has data to send (i.e., add EPOLLOUT to their monitored events).
-//             // This is often done by a method in Server, like:
-//             // server_instance->updateEpollEvents(current_client_sptr->getFd(), EPOLLOUT, true);
-//             // If your server design doesn't easily allow Channel to call Server methods directly,
-//             // then your main epoll loop will need to regularly check if any client has queued messages
-//             // and update their EPOLLOUT events accordingly. For now, just queueing is the first step.
-//         }
-//     }
-// }

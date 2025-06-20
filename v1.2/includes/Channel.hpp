@@ -63,13 +63,13 @@ struct WeakPtrCompare {
 
 		const std::string& getName() const;
 		const std::string& getTopic() const;
-		const unsigned long& getClientCount() {return _clientCount;};
+		const unsigned long& getClientCount() {return _clientCount;}; //const
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 
-		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname);
+		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); //ref
 		std::string getCurrentModes() const;
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
 		std::vector<std::shared_ptr<Client>> getActiveClients() const;
@@ -82,7 +82,7 @@ struct WeakPtrCompare {
 		//bool canClientJoin(const std::string& nickname, const std::string& password );
 		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
 		void setTopic(const std::string& newTopid);
-		bool addClient(std::shared_ptr <Client> Client);
+		int addClient(std::shared_ptr <Client> Client);
 		bool removeClient(const std::string& nickname);
 	    void removeClientByNickname(const std::string& nickname);
 
@@ -98,10 +98,6 @@ struct WeakPtrCompare {
 
 	    bool isEmpty() const;
 
-		void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
-
-  
-		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;
 

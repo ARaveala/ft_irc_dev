@@ -84,6 +84,16 @@ int Server::get_current_client_in_progress() const{
 	return _current_client_in_progress;
 }
 
+std::vector<std::string> Server::splitCommaList(const std::string& input) {
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        result.push_back(token);
+    }
+    return result;
+}
+
 /**
  * @brief Here a client is accepted , error checked , socket is adusted for non-blocking
  * the client fd is added to the epoll and then added to the Client map. a welcome message
@@ -165,16 +175,6 @@ void Server::remove_Client(int client_fd) {
         if (channel_ptr) { // Ensure the channel pointer is valid
             std::cout << "SERVER: Notifying and removing client " << client_to_remove->getNickname()
                       << " from channel " << channel_name << " due to disconnect.\n";
-
-            // A) Build the QUIT message to broadcast to remaining channel members.
-            // This is equivalent to an implicit QUIT command from the client.
-            //std::string client_prefix = ":" + client_to_remove->getNickname() + "!" +
-            //                           client_to_remove->getUsername() + "@" + // Make sure Client has getUsername() and getHostname()
-            //                           client_to_remove->getHostname();
-
-            // B) can not broadcast here !!! quitting client needs to have active fd for epollout, we end it here
-            // C) Remove the client from the channel's internal member list.
-            // Channel::removeClient should also update client_to_remove's _joinedChannels list.
             bool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
 
             // D) If the channel became empty after this client left, remove it from the server's map.
@@ -372,7 +372,7 @@ bool Server::checkTimers(int fd) {
         return false;
     }
     std::cout << "should be sending ping onwards " << std::endl;
-    clientit->second->sendPing();
+   // clientit->second->sendPing();
     clientit->second->set_failed_response_counter(1);
     resetClientTimer(timerit->first, config::TIMEOUT_CLIENT);
 	return false;
@@ -402,18 +402,17 @@ void Server::send_message(const std::shared_ptr<Client>& client)
             //std::cerr << "ERROR: Fatal send error for FD " << fd << ". Disconnecting client.\n";
             // !!!Call remove client function here !!!
             return;
-        } else {
-			//std::cout << "DEBUG: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
-			client->getMsg().advanceCurrentMessageOffset(bytes_sent); 
-		 	if (client->getMsg().getRemainingBytesInCurrentMessage() == 0) {
-            // The entire current message has been sent.
-            client->getMsg().removeQueueMessage();
-            std::cout << "DEBUG: Full message sent for FD " << fd << ". Moving to next message.\n";
-            // The outer 'while' loop will now check for the next message in the queue.
-	        } else {
-	            // Partial send of the current message.
-	            return;
-			}
+        }
+		//std::cout << "DEBUG: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
+		client->getMsg().advanceCurrentMessageOffset(bytes_sent); 
+		if (client->getMsg().getRemainingBytesInCurrentMessage() == 0) {
+        // The entire current message has been sent.
+        client->getMsg().removeQueueMessage();
+        std::cout << "DEBUG: Full message sent for FD " << fd << ". Moving to next message.\n";
+        // The outer 'while' loop will now check for the next message in the queue.
+	    } else {
+	       // Partial send of the current message.
+	        return;
 		}
 	}
 	if (client->isMsgEmpty()) {
@@ -424,7 +423,7 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 	}
 
 }
-
+// should this be a utility ficntion jjust?
 std::string toLower(const std::string& input) {
     std::string output = input;
     std::transform(output.begin(), output.end(), output.begin(),
@@ -445,23 +444,24 @@ void Server::createChannel(const std::string& channelName) {
 		return ;
     }
 	// handle error
-    std::cerr << "Error: Channel '" << channelName << "' already exists" << std::endl;
+    std::cerr << "Error: Channel '" << channelName << "' already exists\n";
 }
 
+// oohlala check out this, ranged based iteration , no mroe this and that--->>
 std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
-	for (std::map<std::string, std::shared_ptr<Channel>>::iterator it = _channels.begin(); it != _channels.end(); it++) {
-		if (it->first == ChannelName)
-			return it->second;
+	for (const auto& [name, channel] : _channels) {
+    	if (name == ChannelName)
+        	return channel;
 	}
-	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()"); // this should be no channel in map 
+	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()");
 }
 
-std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick)
+std::pair<MsgType, std::vector<std::string>> Server::validateChannelName(const std::string& channelName, const std::string& clientNick)
 {
 	if (channelName.empty()) {
 		return {MsgType::NEED_MORE_PARAMS, {clientNick, "JOIN"}};
 	}
-	if (channelName.size() > 25) {
+	if (channelName.size() > config::MAX_LEN_CHANNAME) {
 		return{MsgType::INVALID_CHANNEL_NAME, {clientNick, channelName, ":to many characters limit 25"}};
 	}
 	size_t illegalPos = channelName.find_first_of(IRCillegals::ForbiddenChannelChars);
@@ -472,19 +472,12 @@ std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::stri
 	return {MsgType::NONE, {}};
 
 }
-void Server::handleJoinChannel(std::shared_ptr<Client> client, std::vector<std::string> params)
+void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params)
 {
-	 if (!client || params.empty()) return;
-    const std::string& nickname = client->getNickname();
-    // Parse and match channel to key, i.e(channel to password)
-    std::stringstream chstream(params[0]);
-    std::stringstream keystream(params.size() > 1 ? params[1] : "");
-    std::vector<std::string> channels;
-    std::vector<std::string> keys;
-    std::string token;
-    while (std::getline(chstream, token, ',')) channels.push_back(token);
-    while (std::getline(keystream, token, ',')) keys.push_back(token);
-
+	 if (!client || params.empty()){return;}
+	const std::string& nickname = client->getNickname();
+	std::vector<std::string> channels = splitCommaList(params[0]);
+	std::vector<std::string> keys = (params.size() > 1) ? splitCommaList(params[1]) : std::vector<std::string>{};
     size_t keyIndex = 0;
     for (const std::string& chanNameRaw : channels) {
 	    std::string key = (keyIndex < keys.size()) ? keys[keyIndex++] : "";
@@ -499,14 +492,14 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, std::vector<std::
 			client->setChannelCreator(true);
 		}
 		auto channel = get_Channel(lower);
-		if (channel->isClientInChannel(nickname)) continue;
+		if (channel->isClientInChannel(nickname)) {continue;}
 		auto canJoin = channel->canClientJoin(nickname, key);
 		if (canJoin) {
 			broadcastMessage(MessageBuilder::generateMessage(canJoin->first, canJoin->second),  nullptr, nullptr, false, client);
-			return ;
+			continue ;
 		}
 		client->addChannel(lower, channel);
-		channel->addClient(client);
+		if (channel->addClient(client) != 2) {return ;};		
 		std::string ClientList = channel->getAllNicknames();
 		std::vector<std::string> join = {client->getNickname(), client->getUsername(), channel->getName(), ClientList, channel->getTopic()};
 		std::vector<std::string> updateChannel = {client->getNickname(), client->getUsername(), channel->getName()};
@@ -517,8 +510,8 @@ void Server::handleJoinChannel(std::shared_ptr<Client> client, std::vector<std::
 
 
 // todo be very sure this is handling property fd_to_nick and nick_to_fd. I am skipping over this and adding notes below...
-void Server::handleNickCommand(std::shared_ptr<Client> client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param) {
-	if (client->getHasSentNick() == false) {
+void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param) {
+	if (!client->getHasSentNick()) {
 		client->setHasSentNick();
 		return;
 	} if (client->getMsg().check_and_set_nickname(param, client->getFd(), fd_to_nick, nick_to_fd)) {
@@ -968,33 +961,14 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         std::cerr << "SERVER ERROR: handlePartCommand called with null client.\n";
         return;
     }
-
-   	const std::string& nickname = client->getNickname();
+	 // Assumed to be lowercase
+	const std::string& nickname = client->getNickname();
     if (params.empty()) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}), client, nullptr, false, nullptr);
-        //updateEpollEvents(client->getFd(), EPOLLOUT, true); // Assuming updateEpollEvents for client output
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}), client, nullptr, false, client);
         return;
     }
-	
-	
-	 // Assumed to be lowercase
-    //std::string client_prefix = ":" + nickname + "!" + client->getUsername() + "@" + client->getHostname();
-
-    // 2. Parse channel list (comma-separated)
-	std::string channel_names_str;
-	channel_names_str = params[0];
-    // Default part reason is the client's nickname if not provided.
-    // IRC convention: if no reason given, the reason defaults to the nickname.
-    // If you want it to be empty string, use "" instead of nickname.
     std::string part_reason = (params.size() > 1 && !params[1].empty()) ? params[1] : nickname;
-
-    std::vector<std::string> channels_to_part;
-    std::stringstream ss(channel_names_str);
-    std::string channel_name_token;
-    while (std::getline(ss, channel_name_token, ',')) {
-        channels_to_part.push_back(channel_name_token);
-    }
-// qhy are we looping through all channels, u only part from 1 channel 
+	std::vector<std::string> channels_to_part = splitCommaList(params[0]);
     // 3. Process each channel
     for (const std::string& ch_name : channels_to_part) {
         // As per our latest understanding, we assume channel names are already lowercase
@@ -1005,8 +979,7 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         auto it = _channels.find(lower_ch_name);
         if (it == _channels.end()) {
             // ERR_NOSUCHCHANNEL (403)
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}));
-            updateEpollEvents(client->getFd(), EPOLLOUT, true);
+	        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}), client, nullptr, false, client);
             continue; // Move to the next channel in the list
         }
 
@@ -1017,9 +990,6 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
         if (!channel_ptr->isClientInChannel(nickname)) {
 	       	broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, client->getUsername() ,channel_ptr->getName()}), client, nullptr, false, client);
-
-//			client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, channel_ptr->getName()}));
-//            updateEpollEvents(client->getFd(), EPOLLOUT, true);
             continue; // Move to the next channel
         }
 

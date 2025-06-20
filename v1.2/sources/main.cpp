@@ -98,9 +98,10 @@ int loop(Server &server)
 						server.handle_client_connection_error(e.getType());
 					}
 				}
-				else if (server.get_Client(fd)->get_acknowledged() == true && server.get_Client(fd)->getQuit() == false) {
+				// if its a timer fd have to send ping update epoll and reset timer only once pong recived by that client 
+				else if (server.get_Client(fd)->get_acknowledged() && !server.get_Client(fd)->getQuit()) {
 					bool read_to_buffer = server.checkTimers(fd);
-					if (read_to_buffer == true)
+					if (read_to_buffer)
 					{
 						try {
 							server.handleReadEvent(fd);

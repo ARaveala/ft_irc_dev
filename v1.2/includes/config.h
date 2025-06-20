@@ -104,6 +104,10 @@ namespace config {
 	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
 	constexpr std::size_t MSG_TYPE_NUM = 502;
+	constexpr int MAX_LEN_CHANNAME = 25;	
+	constexpr int MAX_LEN_CHANPASSWORD = 20;	
+	
+
 }
 
 namespace errVal {

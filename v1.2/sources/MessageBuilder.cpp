@@ -194,7 +194,7 @@ namespace MessageBuilder {
 		//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
 	std::string buildJoinChannel(const std::string& nickname, const std::string& username, const std::string& channelName, const std::string& clientList, const std::string& topic) {
 		(void) topic;
-		std::string joinLine = ":" + nickname + "!" + username + "@" + SERVER + " JOIN " + channelName + "\r\n";
+		std::string joinLine =  prefix(nickname, username) + " JOIN " + channelName + "\r\n";
     	std::string namesReply = SERVER_PREFIX + " 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
     	std::string endOfNames = SERVER_PREFIX + " 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
     	std::string topicReply = SERVER_PREFIX + " 332 " + nickname + " " + channelName + " :Welcome to " + channelName + "!\r\n";;
@@ -202,25 +202,25 @@ namespace MessageBuilder {
 	}
 
     std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList) {
-        return ":localhost 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
+        return ":" + SERVER + " 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
     }
 
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName) {
-        return ":localhost 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
+        return ":" + SERVER + " 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
     }
 
     // Added 'topic' parameter that was missing in your macro
     std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic) {
-        return ":localhost 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
+        return ":" + SERVER + " 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
     }
 
 
     std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick) {
-        return ":" + oldnick + "!" + username + SERVER_AT + " NICK " +  newnick + "\r\n";
+        return prefix(oldnick, username) + " NICK " +  newnick + "\r\n";
     }
-    std::string buildClientQuit(const std::string& nickname, const std::string& username) {
-        return ":" + nickname +"!" + username + SERVER_AT + " QUIT :" + QUIT_MSG + "\r\n";
-    } //"nickname!username@localhost"
+    std::string buildClientQuit(const std::string& clientNickname, const std::string& username) {
+        return prefix(clientNickname, username) + " QUIT :" + QUIT_MSG + "\r\n";
+    } 
 
     // Server notices not sure if needed 
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick) {
@@ -254,16 +254,16 @@ namespace MessageBuilder {
     std::string buildChannelModeIs(const std::string& clientNickname, const std::string& channelName, const std::string& modeString, const std::string& modeParams) {
         return  SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::RPL_CHANNELMODEIS)) + " " + clientNickname + " " + channelName + " " + modeString + (modeParams.empty() ? "" : " " + modeParams) + "\r\n";
     }
-   	std::string buildChanUpdate(const std::string& nickname, const std::string& username, const std::string& channelName) {
-        return ":" + nickname + "!" + username + SERVER_AT + " JOIN " +  channelName + "\r\n";
+   	std::string buildChanUpdate(const std::string& clientNickname, const std::string& username, const std::string& channelName) {
+        return prefix(clientNickname, username) + " JOIN " +  channelName + "\r\n";
     }
 	//std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
     std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString) {
         return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::RPL_UMODEIS)) + " " + clientNickname + " " + modeString + "\r\n";
     }
 
-	std::string buildChannelModeChange(const std::string& nickname, const std::string& username, const std::string channelname, const std::string& modes, const std::string& targets) {
-        return  ":" + nickname +"!" + username+ SERVER_AT +" MODE " + channelname + " " + modes + " " + targets + "\r\n";
+	std::string buildChannelModeChange(const std::string& clientNickname, const std::string& username, const std::string channelname, const std::string& modes, const std::string& targets) {
+        return  prefix(clientNickname, username) +" MODE " + channelname + " " + modes + " " + targets + "\r\n";
     }
 
 	std::string buildClientModeChange(const std::string channelname, const std::string& modes) {
@@ -292,7 +292,7 @@ namespace MessageBuilder {
 
 
 	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason) {
-	    return ":" + clientNickname + "!" + username + SERVER_AT + " PART " + channelName + " :" + partReason + "\r\n";
+	    return prefix(clientNickname, username) + " PART " + channelName + " :" + partReason + "\r\n";
 	}
 
 	std::string buildKick(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& target, const std::string& kickReason) {

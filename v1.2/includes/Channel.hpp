@@ -88,7 +88,7 @@ struct WeakPtrCompare {
 		int addClient(std::shared_ptr <Client> Client);
 		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
 		void setTopic(const std::string& newTopic);
-		bool addClient(std::shared_ptr <Client> Client);
+		int addClient(std::shared_ptr <Client> Client);
 		bool removeClient(const std::string& nickname);
 	    void removeClientByNickname(const std::string& nickname);
 

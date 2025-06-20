@@ -1242,7 +1242,7 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
 
     if (topic_is_protected && !channel_ptr->isClientOperator(sender_nickname)) {
         // ERR_CHANOPRIVSNEEDED (482)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {sender_nickname, channel_name}));
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}));
         updateEpollEvents(client->getFd(), EPOLLOUT, true);
         std::cout << "SERVER: TOPIC - Client '" << sender_nickname << "' not operator on channel '" << channel_name << "' with +t mode.\n";
         return;
@@ -1303,8 +1303,7 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname); // Assuming you have getClientByNickname
     if (!target_client_ptr) {
         // ERR_NOSUCHNICK (401)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_NICK, {sender_nickname, target_nickname}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {sender_nickname, target_nickname}), client, nullptr, false, client);
         std::cout << "SERVER: INVITE - Target nickname '" << target_nickname << "' not found.\n";
         return;
     }
@@ -1348,7 +1347,7 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
 
     if (channel_is_invite_only && !channel_ptr->isClientOperator(sender_nickname)) {
         // ERR_CHANOPRIVSNEEDED (482)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_CHANOPRIVSNEEDED, {sender_nickname, channel_name}));
+        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}));
         updateEpollEvents(client->getFd(), EPOLLOUT, true);
         std::cout << "SERVER: INVITE - Sender '" << sender_nickname << "' is not operator on invite-only channel '" << channel_name << "'.\n";
         return;

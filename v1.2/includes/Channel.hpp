@@ -116,6 +116,7 @@ struct WeakPtrCompare {
 
 		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
+		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;
 
 		void clearAllChannel() {
 			_ClientModes.clear();

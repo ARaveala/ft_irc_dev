@@ -36,7 +36,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
 	if (command == "QUIT") {
-//		std::cout<<"QUIT CAUGHT IN command list handlking here --------------\n";
 		_server->handleQuit(client);
 		return ;
 	}
@@ -85,13 +84,11 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		return;
 
 	}
-
 	if (command == "KICK"){
 		std::cout << "COMMAND DISPATCHER: " << command << " command recieved. Calling Server::handleKickCommand." << std::endl;
 		_server->handleKickCommand(client, params);
 		return;
 	}
-
 	if (command == "LEAVE" || command == "PART"){
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handlePartCommand.\n";
         _server->handlePartCommand(client, params);

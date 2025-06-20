@@ -44,7 +44,7 @@ class Server {
 
 		std::map<std::string, std::shared_ptr<Channel>> _channels;
 		std::map<int, std::shared_ptr<Client>> _Clients; //shared pointer to identify client, also fds, nicknames? can there be unique indentifier?
-		std::map<int, int> _timer_map;
+		std::map<int, int> _timer_map; //timer fd to client fd
 
 		std::map<int, struct epoll_event> _epollEventMap;
 
@@ -58,6 +58,7 @@ class Server {
 		// apparently the rule of thumb is to always make anythingprivate and public only if you need too 
 		std::vector<std::string> splitCommaList(const std::string& input);
 		std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick);
+		
 	public:
 		Server();
 		Server(int port, const std::string& password);
@@ -68,7 +69,7 @@ class Server {
 
 		void remove_Client(int client_fd);
 		// todo we need a remove channel, when last client leaves channel?
-	
+		bool matchTimerFd(int fd);
 		// SETTERS
 		void setFd(int fd);
 		void set_signal_fd(int fd);

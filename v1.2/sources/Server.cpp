@@ -84,6 +84,12 @@ int Server::get_current_client_in_progress() const{
 	return _current_client_in_progress;
 }
 
+bool Server::matchTimerFd(int fd){
+	if (_timer_map.find(fd) == _timer_map.end()) {
+		return false;
+	}
+	return true;
+}
 std::vector<std::string> Server::splitCommaList(const std::string& input) {
     std::vector<std::string> result;
     std::stringstream ss(input);
@@ -355,6 +361,10 @@ Server::~Server(){
  * @return true if timer fd was not an active event 
  * @return false if timer fd was an active event
  */
+/*bool confirmClientAlive(int timer_fd, int client_fd) {
+    set_failed_response_counter(1);
+
+}*/
 bool Server::checkTimers(int fd) {
 	auto timerit = _timer_map.find(fd);
 	if (timerit == _timer_map.end()) {

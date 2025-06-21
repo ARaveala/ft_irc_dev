@@ -2,17 +2,17 @@ servers = (
   {
     address = "localhost";
     port = 6669;
-    nick = "anonthe_luckyn";
-    user = "user_anonthe_luckyn";
-    realname = "real_anonthe_luckyn";
+    nick = "anonthe_luckyx";
+    user = "user_anonthe_luckyx";
+    realname = "real_anonthe_luckyx";
   }
 );
 
 settings = {
   core = {
-    real_name = "real_anonthe_luckyn";
-    user_name = "user_anonthe_luckyn";
-    nick = "anonthe_luckyn";
+    real_name = "real_anonthe_luckyx";
+    user_name = "user_anonthe_luckyx";
+    nick = "anonthe_luckyx";
   };
 };
 

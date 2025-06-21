@@ -1,0 +1,82 @@
+test_mode_invite_only (test_channel_modes.TestChannelModes.test_mode_invite_only)
+Test setting/unsetting invite-only mode (+i) and its effects. ... ERROR
+test_mode_key (test_channel_modes.TestChannelModes.test_mode_key)
+Test setting/unsetting channel key mode (+k) and its effects. ... ERROR
+test_mode_missing_parameters_for_o (test_channel_modes.TestChannelModes.test_mode_missing_parameters_for_o)
+Test attempting to set +o mode without providing a nickname. ... ERROR
+test_mode_operator_grant_revoke (test_channel_modes.TestChannelModes.test_mode_operator_grant_revoke)
+Test granting and revoking channel operator status (+o / -o). ... ERROR
+test_mode_topic_op_only (test_channel_modes.TestChannelModes.test_mode_topic_op_only)
+Test setting topic operator-only mode (+t) and its effects. ... ERROR
+test_mode_unknown_mode_flag (test_channel_modes.TestChannelModes.test_mode_unknown_mode_flag)
+Test attempting to set an unknown mode flag. ... ERROR
+test_mode_user_limit (test_channel_modes.TestChannelModes.test_mode_user_limit)
+Test setting/unsetting user limit mode (+l) and its effects. ... ERROR
+
+======================================================================
+ERROR: test_mode_invite_only (test_channel_modes.TestChannelModes.test_mode_invite_only)
+Test setting/unsetting invite-only mode (+i) and its effects.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_key (test_channel_modes.TestChannelModes.test_mode_key)
+Test setting/unsetting channel key mode (+k) and its effects.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_missing_parameters_for_o (test_channel_modes.TestChannelModes.test_mode_missing_parameters_for_o)
+Test attempting to set +o mode without providing a nickname.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_operator_grant_revoke (test_channel_modes.TestChannelModes.test_mode_operator_grant_revoke)
+Test granting and revoking channel operator status (+o / -o).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_topic_op_only (test_channel_modes.TestChannelModes.test_mode_topic_op_only)
+Test setting topic operator-only mode (+t) and its effects.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_unknown_mode_flag (test_channel_modes.TestChannelModes.test_mode_unknown_mode_flag)
+Test attempting to set an unknown mode flag.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_mode_user_limit (test_channel_modes.TestChannelModes.test_mode_user_limit)
+Test setting/unsetting user limit mode (+l) and its effects.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.003s
+
+FAILED (errors=7)

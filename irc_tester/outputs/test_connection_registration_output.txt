@@ -1,0 +1,93 @@
+test_missing_nick_after_user (test_connection_registration.TestConnectionRegistration.test_missing_nick_after_user)
+Tests successful USER registration but missing NICK, then sending a command. ... ERROR
+test_missing_user_params (test_connection_registration.TestConnectionRegistration.test_missing_user_params)
+Tests sending USER command with missing parameters. ... ERROR
+test_nick_change_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_change_after_registration)
+Tests changing nickname after successful registration. ... ERROR
+test_nick_change_to_empty (test_connection_registration.TestConnectionRegistration.test_nick_change_to_empty)
+Tests changing nickname to an empty string. ... ERROR
+test_nick_collision_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_collision_after_registration)
+Tests a registered client attempting to change to a nickname already in use. ... ERROR
+test_nick_collision_during_registration (test_connection_registration.TestConnectionRegistration.test_nick_collision_during_registration)
+Tests a client attempting to register with a nickname already in use. ... ERROR
+test_registration_order_user_first (test_connection_registration.TestConnectionRegistration.test_registration_order_user_first)
+Tests registration when USER is sent before NICK. ... ERROR
+test_user_command_after_registration (test_connection_registration.TestConnectionRegistration.test_user_command_after_registration)
+Tests sending the USER command again after successful registration. ... ERROR
+
+======================================================================
+ERROR: test_missing_nick_after_user (test_connection_registration.TestConnectionRegistration.test_missing_nick_after_user)
+Tests successful USER registration but missing NICK, then sending a command.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_missing_user_params (test_connection_registration.TestConnectionRegistration.test_missing_user_params)
+Tests sending USER command with missing parameters.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_nick_change_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_change_after_registration)
+Tests changing nickname after successful registration.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_nick_change_to_empty (test_connection_registration.TestConnectionRegistration.test_nick_change_to_empty)
+Tests changing nickname to an empty string.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_nick_collision_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_collision_after_registration)
+Tests a registered client attempting to change to a nickname already in use.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_nick_collision_during_registration (test_connection_registration.TestConnectionRegistration.test_nick_collision_during_registration)
+Tests a client attempting to register with a nickname already in use.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_registration_order_user_first (test_connection_registration.TestConnectionRegistration.test_registration_order_user_first)
+Tests registration when USER is sent before NICK.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_user_command_after_registration (test_connection_registration.TestConnectionRegistration.test_user_command_after_registration)
+Tests sending the USER command again after successful registration.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.001s
+
+FAILED (errors=8)

@@ -1,0 +1,60 @@
+test_notice_to_existing_user (test_messaging.TestMessaging.test_notice_to_existing_user)
+Tests sending a NOTICE to another online user. (NOTICE does not trigger automatic replies). ... ERROR
+test_privmsg_no_recipient (test_messaging.TestMessaging.test_privmsg_no_recipient)
+Tests sending a PRIVMSG without specifying a recipient. ... ERROR
+test_privmsg_no_text_to_send (test_messaging.TestMessaging.test_privmsg_no_text_to_send)
+Tests sending a PRIVMSG without any message text. ... ERROR
+test_privmsg_to_existing_user (test_messaging.TestMessaging.test_privmsg_to_existing_user)
+Tests sending a PRIVMSG to another online user. ... ERROR
+test_privmsg_to_nonexistent_user (test_messaging.TestMessaging.test_privmsg_to_nonexistent_user)
+Tests sending a PRIVMSG to a user that does not exist. ... ERROR
+
+======================================================================
+ERROR: test_notice_to_existing_user (test_messaging.TestMessaging.test_notice_to_existing_user)
+Tests sending a NOTICE to another online user. (NOTICE does not trigger automatic replies).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_privmsg_no_recipient (test_messaging.TestMessaging.test_privmsg_no_recipient)
+Tests sending a PRIVMSG without specifying a recipient.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_privmsg_no_text_to_send (test_messaging.TestMessaging.test_privmsg_no_text_to_send)
+Tests sending a PRIVMSG without any message text.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_privmsg_to_existing_user (test_messaging.TestMessaging.test_privmsg_to_existing_user)
+Tests sending a PRIVMSG to another online user.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+======================================================================
+ERROR: test_privmsg_to_nonexistent_user (test_messaging.TestMessaging.test_privmsg_to_nonexistent_user)
+Tests sending a PRIVMSG to a user that does not exist.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
+    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+ConnectionRefusedError: [Errno 111] Connection refused
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+FAILED (errors=5)

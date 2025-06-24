@@ -97,7 +97,7 @@ int loop(Server &server)
 				}
 				else if (server.get_Client(fd)->get_acknowledged() && !server.get_Client(fd)->getQuit()) {
 					try {
-						server.handleReadEvent(fd);
+						server.handleReadEvent(server.get_Client(fd), fd);
 					} catch(const ServerException& e) {
 						if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
 							server.remove_Client(fd);

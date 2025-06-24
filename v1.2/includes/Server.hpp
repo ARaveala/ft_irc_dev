@@ -37,7 +37,6 @@ class Server {
 		int _current_client_in_progress;
 		int _signal_fd;
 		int _epoll_fd;
-		int _private_fd = 0;
 
 		std::string _server_name;
 		std::string _password;
@@ -77,7 +76,6 @@ class Server {
 		void set_client_count(int val);
 		void set_event_pollfd(int epollfd);
 		void set_current_client_in_progress(int fd);
-		void set_private_fd(int fd) {_private_fd = fd;};
 		void set_nickname_in_map(std::string, int); 
 
 		// GETTERS
@@ -104,10 +102,9 @@ class Server {
 		std::map<std::string, std::shared_ptr<Channel>>& get_channels_map() { return _channels; }
 		const std::map<std::string, std::shared_ptr<Channel>>& get_channels_map() const { return _channels; }
 
-
-		std::deque<std::string>& getBroadcastQueue() { return _server_broadcasts; }
-		std::deque<std::shared_ptr<Channel>> getChannelsToNotify() { return _channelsToNotify; }
-
+		// validators
+		bool validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname);
+		
 		void handle_client_connection_error(ErrorType err_type);
 		void shutDown();
 		bool checkTimers(int fd);
@@ -129,7 +126,7 @@ class Server {
 		bool channelExists(const std::string& channelName) const;
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params);
-		void handleReadEvent(int client_fd);
+		void handleReadEvent(const std::shared_ptr<Client>& client, int client_fd);
 		void handlePing(const std::shared_ptr<Client>& client);
 		void handlePong(const std::shared_ptr<Client>& client); 
 		void handleQuit(std::shared_ptr<Client> client);
@@ -145,8 +142,6 @@ class Server {
 
 
 		//whois
-		std::shared_ptr<Client> findClientByNickname(const std::string& nickname);
-
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);
 		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);

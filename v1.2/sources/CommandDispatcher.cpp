@@ -139,11 +139,9 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			std::string contents = ":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 			if (params[0][0] == '#')
 			{
-				if (_server->channelExists(params[0]) == true) {
-					// MessageBuilder 
-					// is client in channel 
-					_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
-				}
+				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
+				// is client in channel 
+				_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
 			}
 			else
 			{

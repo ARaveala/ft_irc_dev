@@ -28,7 +28,12 @@ class ServerException;
 Server::Server(){
 	std::cout << "#### Server instance created.\n";
 }
-
+std::string toLower(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return output;
+}
 /**
  * @brief Construct a new Server:: Server object
  * 
@@ -132,8 +137,8 @@ void Server::create_Client(int epollfd) {
 	_timer_map[timer_fd] = client_fd;
 	set_current_client_in_progress(client_fd);
 	client->setDefaults();
-	_fd_to_nickname.insert({client_fd, client->getNickname()});
-	_nickname_to_fd.insert({client->getNickname(), client_fd});
+	_fd_to_nickname.insert({client_fd, toLower(client->getNickname())});
+	_nickname_to_fd.insert({toLower(client->getNickname()), client_fd});
 	if (!client->get_acknowledged()){			
 		client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
 		set_client_count(1);		
@@ -276,24 +281,14 @@ void Server::handle_client_connection_error(ErrorType err_type) {
 	}
 }
 
-void Server::handleReadEvent(int client_fd) {
-    std::shared_ptr<Client> client = get_Client(client_fd);
-    if (!client) {
-        // This client might have been disconnected by another event (e.g., EPOLLHUP)
-        // or during processing of previous messages in this same loop iteration.
-        // Just return as there's nothing to read for it.
-        return;
-    }
+void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_fd) { // send client as aparam const ref
+    if (!client) { return; }
 	set_current_client_in_progress(client_fd);
     char buffer[config::BUFFER_SIZE];
     ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0); // Server does the recv, ONCE per event!
 	std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
     if (bytes_read < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // No more data to read right now (non-blocking socket behavior)
-            // This is NORMAL, just means we've read everything that was available.
-            return;
-        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK) { return; }
         perror("recv failed in handleReadEvent"); // error
 		remove_Client(client_fd);
 		return;
@@ -384,8 +379,6 @@ bool Server::checkTimers(int fd) {
     std::cout << "should be sending ping onwards " << std::endl;
 	broadcastMessage(MessageBuilder::bildPing(), nullptr, nullptr, false, get_Client(fd));
 	resetClientFullTimer(1, clientit->second);
-	//clientit->second->set_failed_response_counter(1);
-    //resetClientTimer(timerit->first, config::TIMEOUT_CLIENT);
 	return false;
 }
 
@@ -452,16 +445,12 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 
 }
 // should this be a utility ficntion jjust?
-std::string toLower(const std::string& input) {
-    std::string output = input;
-    std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return output;
-}
+
 //channel realted 
 
 bool Server::channelExists(const std::string& channelName) const {
-    return _channels.count(channelName) > 0;
+    
+	return _channels.count(channelName) > 0;
 }
 
 void Server::createChannel(const std::string& channelName) {
@@ -471,7 +460,7 @@ void Server::createChannel(const std::string& channelName) {
         std::cout << "Channel '" << channelName << "' created." << std::endl;
 		return ;
     }
-	// handle error
+	// todo handle error
     std::cerr << "Error: Channel '" << channelName << "' already exists\n";
 }
 
@@ -577,23 +566,22 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
     if (targetIsChannel) {
         std::shared_ptr<Channel> channel;
         try {
-            channel = get_Channel(toLower(target)); // This can throw ServerException(ErrorType::NO_CHANNEL_INMAP)
+            channel = get_Channel(toLower(target));
         } catch (const ServerException& e) {
             if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
                 broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {target}), client, nullptr, false, client);
-				return; // Abort: Channel does not exist
+				return;
             }
 		}
 		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
 		if (validationResult.first != MsgType::NONE) {
 			broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second),client, channel, false, nullptr);
-			return; // Abort: Validation failed or command was for listing
+			return;
         }
 		validationResult = channel->modeSyntaxValidator(client->getNickname(), params);
 		if (validationResult.first != MsgType::NONE) {
            broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second), client, nullptr, false, client);
-			//updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			return; // Abort: modeSyntaxValidator found an error and sent a message.
+			return;
     	}
 		std::vector<std::string> modeparams = channel->applymodes(params);
 		std::vector<std::string> messageParams;
@@ -767,46 +755,17 @@ std::string generateUniqueNickname() {
     return newNick;
 }
 
-void Server::set_nickname_in_map(std::string nickname, int fd) {
+/*void Server::set_nickname_in_map(std::string nickname, int fd) {
     std::string lower_nickname = nickname;
     std::transform(lower_nickname.begin(), lower_nickname.end(), lower_nickname.begin(),
                    [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
     _nickname_to_fd[lower_nickname] = fd; // Store lowercase as key
     _fd_to_nickname[fd] = nickname;      // Store original case here if needed (less critical for WHOIS lookup)
-}
-
-
-std::shared_ptr<Client> Server::findClientByNickname(const std::string& nickname) {
-    // 1. Prepare the nickname for case-insensitive lookup
-    //    IRC nicknames are case-insensitive for comparison.
-    std::string lower_nickname = nickname;
-    std::transform(lower_nickname.begin(), lower_nickname.end(), lower_nickname.begin(),
-                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-    // 2. Look up the file descriptor using the canonical (lowercase) nickname
-    auto it_nick_to_fd = _nickname_to_fd.find(lower_nickname);
-
-    if (it_nick_to_fd != _nickname_to_fd.end()) {
-        int client_fd = it_nick_to_fd->second; // Found the FD
-
-        // 3. Use the file descriptor to get the Client shared_ptr from _Clients map
-        auto it_client = _Clients.find(client_fd);
-        if (it_client != _Clients.end()) {
-            return it_client->second; // Found the Client shared_ptr
-        }
-        // This case should ideally not happen if _nickname_to_fd is kept consistent with _Clients
-        // but it's a good defensive check.
-        return nullptr; // Client not found in _Clients map despite FD being present
-    }
-
-    return nullptr; // Nickname not found in _nickname_to_fd map
-}
-
-
+}*/
 
 void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
     // 1. Find the target client
-    std::shared_ptr<Client> target_client = findClientByNickname(target_nick);
+    std::shared_ptr<Client> target_client = getClientByNickname(target_nick); // tolower?
 
     // 2. Handle Nick Not Found (ERR_NOSUCHNICK)
     if (!target_client) {
@@ -947,10 +906,11 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
     // Ensure target_nickname is in the correct case for lookup (your server's invariant)
     // std::transform(target_nickname.begin(), target_nickname.end(), target_nickname.begin(), ::tolower); // Uncomment if needed
-    if(!channelExists(channel_name_lower)) {
+    if (!validateChannelExists(client, channel_name_lower, kicker_nickname)) { return;}
+	/*if(!channelExists(channel_name_lower)) {
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}), client, nullptr, false, client);
         return;
-    }
+    }*/
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name_lower);
     if (!channel_ptr->isClientInChannel(kicker_nickname)) {
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
@@ -1010,7 +970,24 @@ std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname)
 	}
     return client; // Return the shared_ptr to the Client
 }
+// validators these are tasked with a simple job, it helps prevent repative code all over the files
+bool Server::validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname) {
+ if(!channelExists(toLower(channel_name))) {
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}
 
+/*bool commandValidity()
+{
+
+if (!channel_ptr->isClientInChannel(sender_nickname)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}*/
 void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
     std::cout << "SERVER: handleTopicCommand entered for " << client->getNickname() << std::endl;
 
@@ -1025,10 +1002,11 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     }
     std::string channel_name = toLower(params[0]);
     // 1. Channel Existence Check
-    if(!channelExists(channel_name)) {
+	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
+    /*if(!channelExists(channel_name)) {
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
-    }
+    }*/
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 2. Client In Channel Check
     if (!channel_ptr->isClientInChannel(sender_nickname)) {
@@ -1119,10 +1097,11 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
     }
 
     // 3. Check if channel exists
-	if(!channelExists(channel_name)) {
+	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
+	/*if(!channelExists(channel_name)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
-    }
+    }*/
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);//channel_it->second;
 
     // 4. Check if sender is on the channel

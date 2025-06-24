@@ -947,12 +947,11 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
     // Ensure target_nickname is in the correct case for lookup (your server's invariant)
     // std::transform(target_nickname.begin(), target_nickname.end(), target_nickname.begin(), ::tolower); // Uncomment if needed
-    auto channel_it = _channels.find(channel_name_lower); // Assuming channel_name is already canonical (e.g., lowercase)
-    if (channel_it == _channels.end()) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}), client, nullptr, false, client);
+    if(!channelExists(channel_name_lower)) {
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
-    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name_lower);
     if (!channel_ptr->isClientInChannel(kicker_nickname)) {
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
         return;
@@ -997,33 +996,19 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 
 
 std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname){
-    // std::cout << "SERVER: Looking up FD for nickname: '" << nickname << "' (case-sensitive) in _nickname_to_fd map\n"; // Uncomment for debugging
-
+    std::cout << "SERVER: Looking up FD for nickname: '" << nickname << "' (case-sensitive) in _nickname_to_fd map\n"; // Uncomment for debugging
     // Step 1: Look up the file descriptor using the nickname
     auto fd_it = _nickname_to_fd.find(nickname);
-
     if (fd_it == _nickname_to_fd.end()) {
-        // std::cout << "SERVER: Nickname '" << nickname << "' not found in _nickname_to_fd.\n"; // Uncomment for debugging
-        return nullptr; // Nickname not found, so no such client
-    }
-
-    int client_fd = fd_it->second; // Get the file descriptor
-
-    // Step 2: Use the file descriptor to get the shared_ptr<Client> from _Clients
-    // std::cout << "SERVER: Found FD " << client_fd << " for nickname '" << nickname << "'. Now looking up in _Clients.\n"; // Uncomment for debugging
-
-    auto client_it = _Clients.find(client_fd);
-
-    if (client_it == _Clients.end()) {
-        // This case should ideally not happen if _nickname_to_fd is kept consistent with _Clients.
-        // It indicates an inconsistency if a FD is in _nickname_to_fd but not in _Clients.
-        std::cerr << "SERVER ERROR: Found FD " << client_fd << " for nickname '" << nickname
-                  << "' in _nickname_to_fd, but no client found in _Clients map for this FD.\n";
         return nullptr;
     }
-
-    // std::cout << "SERVER: Client shared_ptr found for nickname '" << nickname << "'.\n"; // Uncomment for debugging
-    return client_it->second; // Return the shared_ptr to the Client
+	std::shared_ptr<Client> client;
+	try {
+		client = get_Client(fd_it->second);
+	} catch(const ServerException& e) {
+		return nullptr;
+	}
+    return client; // Return the shared_ptr to the Client
 }
 
 void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
@@ -1038,19 +1023,16 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "TOPIC"}), client, nullptr, false, client);
         return;
     }
-    std::string channel_name = params[0];
+    std::string channel_name = toLower(params[0]);
     // 1. Channel Existence Check
-    auto channel_it = _channels.find(channel_name);
-    if (channel_it == _channels.end()) {
-    	broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        std::cout << "SERVER: TOPIC - Channel '" << channel_name << "' not found.\n";
+    if(!channelExists(channel_name)) {
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
-    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 2. Client In Channel Check
     if (!channel_ptr->isClientInChannel(sender_nickname)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        std::cout << "SERVER: TOPIC - Client '" << sender_nickname << "' not on channel '" << channel_name << "'.\n";
         return;
     }
 
@@ -1077,20 +1059,13 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     // --- If we reach here, params.size() > 1, so client wants to SET the topic ---
     std::string new_topic_content = params[1]; // The topic string starts at params[1]
 
-    // You need to handle multi-word topics correctly. If the topic has spaces, it should
-    // be everything after the first space after the channel name.
-    // For example, if params[1] is ":This is my topic", the colon indicates the rest is the topic.
-    // Your command parser should ideally handle this and give you a single string for the topic.
-    // Assuming params[1] now holds the full topic string, including potentially initial colon.
+	// multi word topics work
     if (!new_topic_content.empty() && new_topic_content[0] == ':') {
         new_topic_content = new_topic_content.substr(1); // Remove leading colon if present
     }
 	// i guess we could still use a bool
     if (channel_ptr->getClientModes(client->getNickname()).test(Modes::TOPIC) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
-	// ERR_CHANOPRIVSNEEDED (482)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: TOPIC - Client '" << sender_nickname << "' not operator on channel '" << channel_name << "' with +t mode.\n";
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
 
@@ -1127,84 +1102,48 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
     }
 
     const std::string& sender_nickname = client->getNickname();
-
-    // INVITE <nickname> <channel>
-    // Params:
-    // params[0] = target nickname
-    // params[1] = channel name
-
     // 1. Check for correct number of parameters
     if (params.size() < 2) {
-        // ERR_NEEDMOREPARAMS (461)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "INVITE"}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: INVITE - Not enough parameters from " << sender_nickname << std::endl;
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "INVITE"}), client, nullptr, false, client);
         return;
     }
 
     std::string target_nickname = params[0];
-    std::string channel_name = params[1];
+    std::string channel_name = toLower(params[1]);
 
     // 2. Check if target nickname exists (is connected to the server)
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname); // Assuming you have getClientByNickname
     if (!target_client_ptr) {
-        // ERR_NOSUCHNICK (401)
         broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {sender_nickname, target_nickname}), client, nullptr, false, client);
-        std::cout << "SERVER: INVITE - Target nickname '" << target_nickname << "' not found.\n";
         return;
     }
 
     // 3. Check if channel exists
-    auto channel_it = _channels.find(channel_name);
-    if (channel_it == _channels.end()) {
-        // ERR_NOSUCHCHANNEL (403)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: INVITE - Channel '" << channel_name << "' not found.\n";
+	if(!channelExists(channel_name)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
-    std::shared_ptr<Channel> channel_ptr = channel_it->second;
+    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);//channel_it->second;
 
     // 4. Check if sender is on the channel
     if (!channel_ptr->isClientInChannel(sender_nickname)) {
-        // ERR_NOTONCHANNEL (442)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: INVITE - Sender '" << sender_nickname << "' not on channel '" << channel_name << "'.\n";
+         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
-
     // 5. Check if target client is already on the channel
     if (channel_ptr->isClientInChannel(target_nickname)) {
-        // ERR_USERONCHANNEL (443)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::ERR_USERONCHANNEL, {sender_nickname, target_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: INVITE - Target client '" << target_nickname << "' is already on channel '" << channel_name << "'.\n";
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_USERONCHANNEL, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
 
     // --- Privilege Check for Invite-Only Channel (+i mode) ---
-    // If the channel is invite-only (+i mode), only channel operators can send invites.
-    // Assuming you have Channel::isModeSet('i') or similar.
-    bool channel_is_invite_only = false; // Default to false if modes not fully implemented yet
-
-    // Replace 'false' with actual mode check once you have it, e.g.:
-    // if (channel_ptr->isModeSet('i')) { channel_is_invite_only = true; }
-
-    if (channel_is_invite_only && !channel_ptr->isClientOperator(sender_nickname)) {
-        // ERR_CHANOPRIVSNEEDED (482)
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}));
-        updateEpollEvents(client->getFd(), EPOLLOUT, true);
-        std::cout << "SERVER: INVITE - Sender '" << sender_nickname << "' is not operator on invite-only channel '" << channel_name << "'.\n";
+   if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
 
     // --- All checks passed: Perform the Invite! ---
-
-    // 6. Add target client to channel's invite list
-    // You have std::deque<std::string> _invites; in your Channel class.
-    // You'll need a method to add a nickname to this deque, and check if it's already there.
-    // Let's assume you'll add Channel::addInvite(const std::string& nickname);
+	// you rproccess seems valid, comments cleaned
     channel_ptr->addInvite(target_nickname); // You'll need to implement this in Channel.cpp and declare in Channel.hpp
     std::cout << "SERVER: INVITE - Added '" << target_nickname << "' to invite list for channel '" << channel_name << "'.\n";
 

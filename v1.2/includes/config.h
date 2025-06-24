@@ -101,7 +101,7 @@ namespace config {
 	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 2;
+	constexpr std::size_t CLIENT_NUM_MODES = 4;
 	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
 	constexpr std::size_t CHANNEL_NUM_MODES = 5;
 	constexpr std::size_t MSG_TYPE_NUM = 502;

@@ -132,11 +132,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	 */
 	if (command == "MODE") {
 		_server->handleModeCommand(client, params);
-		// · i: Set/remove Invite-only channel
-        //· t: Set/remove the restrictions of the TOPIC command to channel operators
-        //· k: Set/remove the channel key (password)
-		//· o: Give/take channel operator privilege
-		//· l: Set/remove the user limit to channel
 	}
 	if (client->getMsg().getCommand() == "PRIVMSG")  {
 		if (!params[0].empty()) // && 1 !empty

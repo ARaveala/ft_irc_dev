@@ -61,18 +61,6 @@ int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
     return timer_fd;
 }
 
-/*int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
-	int timer_fd = 0;
-	timer_fd = createTimerFD(timeout_seconds);  //Creates a timer specific to this client
-
-	struct epoll_event timer_event;
-	timer_event.events = EPOLLIN;  //Triggers when timer expires
-	timer_event.data.fd = timer_fd;
-	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &timer_event);
-	_epollEventMap[timer_fd] = timer_event;
-	return timer_fd;
-}*/
-
 /**
  * @brief We set socket to nonblocking so that recv() dosnt wait for data,
  * if it where to wait for data it would freeze our programe and potentailly stop 

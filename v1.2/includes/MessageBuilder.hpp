@@ -42,7 +42,9 @@ namespace MessageBuilder {
 
 	std::string buildNoSuchChannel(const std::string& clientNickname, const std::string& channelName);
 	std::string buildNoSuchNick(const std::string& nickname, const std::string& target); // <-- THIS LINE WAS OVERLOOKED BY YOUR PARTNER!
-    std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name);
+    std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name);	
+	std::string buildGetInvite(const std::string& nickname, const std::string& username, const std::string& target, const std::string& channel_name);
+	
 	std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName);
 	std::string buildInvalidTarget(const std::string& clientNickname, const std::string& target);
 	std::string buildInvalidChannelName(const std::string& clientNickname, const std::string& channelName, const std::string& msg);

@@ -45,6 +45,17 @@ const std::string Channel::getAllNicknames() {
 	return list;
 }
 
+/*bool Channel::validateModes(bool valid, MsgType comp, MsgType operator, const std::string& nickname){
+	if (!comp)
+		if (!getClientModes(nickname()).test(operator)) {
+			 broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {nickname, getName()}), client, nullptr, false, client);
+			return false;
+
+		}
+	}
+	return true;
+}*/
+
 /*const std::string Channel::getAllNicknames() {
     std::string list;
     for (const auto& entry : _ClientModes) {

@@ -34,11 +34,12 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	        case MsgType::RPL_NICK_CHANGE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
 
-			case MsgType::RPL_INVITING: // 341
+			case MsgType::RPL_INVITING: 
 			// This assumes buildInviting takes (sender_nickname, target_nickname, channel_name)
-			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
-
-			case MsgType::ERR_USERONCHANNEL: // 443
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
+			case MsgType::GET_INVITE:
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildGetInvite), params);
+			case MsgType::ERR_USERONCHANNEL:
 				// This assumes buildUserOnChannel takes (inviter_nickname, target_nickname, channel_name)
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildUserOnChannel), params);
 
@@ -257,7 +258,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     }
 
     std::string buildNotInChannel(const std::string& clientNickname, const std::string& channelName) {
-        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_ON_CHANNEL)) + " " + clientNickname + " " + channelName + " :You're not on that channel\r\n";
+        return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::NOT_ON_CHANNEL)) + " " + channelName + " " + clientNickname + " :not on that channel\r\n";
     } // changed from NOT_IN_CHANNEL
     std::string buildInvalidChannelName(const std::string& clientNickname, const std::string& channelName, const std::string& msg) {
         return  SERVER_PREFIX +  " " +  std::to_string(static_cast<int>(MsgType::INVALID_CHANNEL_NAME)) + " " + clientNickname + " " + channelName + " " + msg + "\r\n";
@@ -301,9 +302,14 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+k)\r\n";
 	}
 
-std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name) {
-    return SERVER_PREFIX + " 341 " + sender_nickname + " " + target_nickname + " :" + channel_name + "\r\n";
-	
+	std::string buildInviting(const std::string& sender_nickname, const std::string& target_nickname, const std::string& channel_name) {
+    	return SERVER_PREFIX + " 341 " + sender_nickname + " " + target_nickname + " :" + channel_name + "\r\n";
+	}
+
+	std::string buildGetInvite(const std::string& nickname, const std::string& username, const std::string& target, const std::string& channel_name) {
+		//td::string sender_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
+    	//std::string invite_message = sender_prefix + " INVITE " + target_nickname + " :" + channel_name + "\r\n";
+		return prefix(nickname, username) +  " INVITE " + target + " :" + channel_name + "\r\n";
 	}
 	 // namespace MessageBuilder
 	

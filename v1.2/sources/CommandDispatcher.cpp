@@ -32,6 +32,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
+	// command == "PASS" get the password and accept or dewcline based on getpassword()
 	if (command == "CAP" && !client->getHasSentCap()) {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}

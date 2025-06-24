@@ -106,6 +106,51 @@ std::vector<std::string> Server::splitCommaList(const std::string& input) {
     return result;
 }
 
+// validators these are tasked with a simple job, it helps prevent repative code all over the files
+bool Server::validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname) {
+ if(!channelExists(toLower(channel_name))) {
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}
+
+bool Server::validateIsClientInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& nickname){
+	if (!channel->isClientInChannel(nickname)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, channel_name}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}
+
+bool Server::validateTargetInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& target_nickname) {
+	if (channel->isClientInChannel(target_nickname)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_USERONCHANNEL, {client->getNickname(), target_nickname, channel_name}), client, nullptr, false, client);
+		return false;
+	}
+	return true;
+}
+
+bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const std::string& sender_nickname, const std::string& target_nickname) {
+	if (!client) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {sender_nickname, target_nickname}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}
+
+/*bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, Modes::MsgType comp) {
+	if (comp == MsgType::NONE && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR))	{
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
+		return false;
+	}
+
+	if (channel->getClientModes(client->getNickname()).test(comp) && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
+        return false;
+    }
+	return true;
+}*/
 /**
  * @brief Here a client is accepted , error checked , socket is adusted for non-blocking
  * the client fd is added to the epoll and then added to the Client map. a welcome message
@@ -421,13 +466,12 @@ void Server::send_message(const std::shared_ptr<Client>& client)
             // Fatal error (e.g., connection reset, broken pipe).
             perror("send error");
             //std::cerr << "ERROR: Fatal send error for FD " << fd << ". Disconnecting client.\n";
-            // !!!Call remove client function here !!!
+            // !!!Call remove client function here !!! or quit = true?
             return;
         }
 		//std::cout << "DEBUG: Before advanceCurrentMessageOffset: " << _bytesSentForCurrentMessage << std::endl;
 		client->getMsg().advanceCurrentMessageOffset(bytes_sent); 
 		if (client->getMsg().getRemainingBytesInCurrentMessage() == 0) {
-        // The entire current message has been sent.
         client->getMsg().removeQueueMessage();
         std::cout << "DEBUG: Full message sent for FD " << fd << ". Moving to next message.\n";
         // The outer 'while' loop will now check for the next message in the queue.
@@ -613,6 +657,7 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 			return; // Abort: Command was for listing
         }
+		// todo fix so either + or - and we dont accept any others
 		if (params[1] == "+i")
 		{
 			client->setMode(clientPrivModes::INVISABLE);
@@ -755,14 +800,6 @@ std::string generateUniqueNickname() {
     return newNick;
 }
 
-/*void Server::set_nickname_in_map(std::string nickname, int fd) {
-    std::string lower_nickname = nickname;
-    std::transform(lower_nickname.begin(), lower_nickname.end(), lower_nickname.begin(),
-                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-    _nickname_to_fd[lower_nickname] = fd; // Store lowercase as key
-    _fd_to_nickname[fd] = nickname;      // Store original case here if needed (less critical for WHOIS lookup)
-}*/
-
 void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
     // 1. Find the target client
     std::shared_ptr<Client> target_client = getClientByNickname(target_nick); // tolower?
@@ -840,7 +877,7 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         std::cerr << "SERVER ERROR: handlePartCommand called with null client.\n";
         return;
     }
-	 // Assumed to be lowercase
+	// Assumed to be lowercase
 	const std::string& nickname = client->getNickname();
     if (params.empty()) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}), client, nullptr, false, client);
@@ -866,10 +903,7 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
         // Check if the client is actually in the channel
         // Your Channel::isClientInChannel *must* also rely on the assumption
         // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
-        if (!channel_ptr->isClientInChannel(nickname)) {
-	       	broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, client->getUsername() ,channel_ptr->getName()}), client, nullptr, false, client);
-            continue; // Move to the next channel
-        }
+        if (!validateIsClientInChannel (channel_ptr, client, lower_ch_name, nickname)) { return ;}
        	broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), client, channel_ptr, false, nullptr);
         bool channel_is_empty = channel_ptr->removeClient(nickname);
         client->removeJoinedChannel(lower_ch_name);
@@ -901,53 +935,21 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 	std::string channel_name_lower = toLower(channel_name);
     std::string target_nickname = params[1];
     std::string kick_reason = (params.size() > 2) ? params[2] : kicker_nickname; // Default reason is kicker's nick
-
-    // std::transform(channel_name.begin(), channel_name.end(), channel_name.begin(), ::tolower); // Uncomment if needed
-
-    // Ensure target_nickname is in the correct case for lookup (your server's invariant)
-    // std::transform(target_nickname.begin(), target_nickname.end(), target_nickname.begin(), ::tolower); // Uncomment if needed
     if (!validateChannelExists(client, channel_name_lower, kicker_nickname)) { return;}
-	/*if(!channelExists(channel_name_lower)) {
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {kicker_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }*/
+
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name_lower);
-    if (!channel_ptr->isClientInChannel(kicker_nickname)) {
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
-        return;
-    }
+    if (!validateIsClientInChannel (channel_ptr, client, channel_name, kicker_nickname)) { return ;}
     if (!channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
         return;
     }
-
-    // 5. Get shared_ptr to target client & check if target is in channel.
-    // First, find the target client's shared_ptr from the server's global client list.
-    // You will need a method in Server to get a client by nickname.
-    // Example: std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname);
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
-
-    if (!target_client_ptr) { // Target client not even connected to the server
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {kicker_nickname, target_nickname}), client, nullptr, false, client);
-        return;
-    }
-
+	if(!validateTargetExists(target_client_ptr, target_nickname, kicker_nickname)) { return; }
     // Check if the target is on the specified channel (ERR_USERNOTINCHANNEL)
-    if (!channel_ptr->isClientInChannel(target_nickname)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_USERNOTINCHANNEL, {kicker_nickname, target_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }
-
-    // --- If we reach here, all validations have passed! ---
-    // Now proceed to actual kicking logic (Phase 3)
+   	if (!validateIsClientInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::KICK, {client->getNickname(), client->getUsername(), channel_name, target_nickname, kick_reason}), client, channel_ptr, false, nullptr);
-    // 8. Remove target client from channel's internal data structures (e.g., _ClientModes map)
     channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
-
-    // 9. Remove channel from target client's _joinedChannels list
     target_client_ptr->removeJoinedChannel(channel_name_lower); // Needs to be implemented in Client
-
-    // 10. Check if channel is empty, delete if so.
     if (channel_ptr->isEmpty()) { // Needs to be implemented in Channel
         _channels.erase(channel_name_lower); // Remove the channel from Server's map
         std::cout << "SERVER: Channel '" << channel_name << "' is now empty and has been removed.\n";
@@ -970,24 +972,8 @@ std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname)
 	}
     return client; // Return the shared_ptr to the Client
 }
-// validators these are tasked with a simple job, it helps prevent repative code all over the files
-bool Server::validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname) {
- if(!channelExists(toLower(channel_name))) {
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return false;
-    }
-	return true;
-}
 
-/*bool commandValidity()
-{
 
-if (!channel_ptr->isClientInChannel(sender_nickname)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return false;
-    }
-	return true;
-}*/
 void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
     std::cout << "SERVER: handleTopicCommand entered for " << client->getNickname() << std::endl;
 
@@ -1003,16 +989,9 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     std::string channel_name = toLower(params[0]);
     // 1. Channel Existence Check
 	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
-    /*if(!channelExists(channel_name)) {
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }*/
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 2. Client In Channel Check
-    if (!channel_ptr->isClientInChannel(sender_nickname)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }
+	if (!validateIsClientInChannel (channel_ptr, client, channel_name, sender_nickname)) { return ;}
 
     // --- Decision Point: View Topic or Set Topic ---
 
@@ -1024,7 +1003,6 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
         } else {
             broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_TOPIC, {sender_nickname, channel_name, current_topic}), client, nullptr, false, client);
             std::cout << "SERVER: TOPIC - Sent topic '" << current_topic << "' for '" << channel_name << "'.\n";
-
             // RPL_TOPICWHOTIME (333) - Who set the topic and when
             // For this, your Channel class needs _topicSetter (std::string) and _topicSetTime (std::time_t)
             // If you have these:
@@ -1065,81 +1043,41 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
 
     // Use the versatile broadcastMessage function!
     broadcastMessage(topic_change_message, nullptr, channel_ptr, false, nullptr); // Broadcast to all in channel
-
-    std::cout << "SERVER: TOPIC command successful. Topic for '" << channel_name
-              << "' changed by '" << sender_nickname << "' to: '" << new_topic_content << "'\n";
 }
 
 
 void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
     std::cout << "SERVER: handleInviteCommand entered for " << client->getNickname() << std::endl;
-
     if (!client) {
         std::cerr << "SERVER ERROR: handleInviteCommand called with null client.\n";
         return;
     }
-
     const std::string& sender_nickname = client->getNickname();
     // 1. Check for correct number of parameters
     if (params.size() < 2) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "INVITE"}), client, nullptr, false, client);
         return;
     }
-
     std::string target_nickname = params[0];
     std::string channel_name = toLower(params[1]);
-
     // 2. Check if target nickname exists (is connected to the server)
-    std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname); // Assuming you have getClientByNickname
-    if (!target_client_ptr) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {sender_nickname, target_nickname}), client, nullptr, false, client);
-        return;
-    }
-
+    std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
+    if(!validateTargetExists(target_client_ptr, target_nickname, sender_nickname)) { return; }
     // 3. Check if channel exists
 	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
-	/*if(!channelExists(channel_name)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }*/
-    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);//channel_it->second;
-
+    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 4. Check if sender is on the channel
-    if (!channel_ptr->isClientInChannel(sender_nickname)) {
-         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }
+	if (!validateIsClientInChannel (channel_ptr, client, channel_name, sender_nickname)) { return ;}
     // 5. Check if target client is already on the channel
-    if (channel_ptr->isClientInChannel(target_nickname)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_USERONCHANNEL, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }
-
+	if (!validateTargetInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
     // --- Privilege Check for Invite-Only Channel (+i mode) ---
-   if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+   
+	if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
     }
-
     // --- All checks passed: Perform the Invite! ---
-	// you rproccess seems valid, comments cleaned
     channel_ptr->addInvite(target_nickname); // You'll need to implement this in Channel.cpp and declare in Channel.hpp
-    std::cout << "SERVER: INVITE - Added '" << target_nickname << "' to invite list for channel '" << channel_name << "'.\n";
-
-
-    // 7. Send RPL_INVITING (341) to the sender
-    client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}));
-    updateEpollEvents(client->getFd(), EPOLLOUT, true);
-    std::cout << "SERVER: INVITE - Sent RPL_INVITING to " << sender_nickname << std::endl;
-
-    // 8. Send INVITE message to the target client
-    // Format: :<sender_nick>!<sender_user>@<sender_host> INVITE <target_nick> :<channel>
-    std::string sender_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
-    std::string invite_message = sender_prefix + " INVITE " + target_nickname + " :" + channel_name + "\r\n";
-
-    // Use your broadcastMessage, targeting a single recipient
-    broadcastMessage(invite_message, nullptr, nullptr, false, target_client_ptr);
-    std::cout << "SERVER: INVITE - Sent INVITE message to target client " << target_nickname << std::endl;
-
-    std::cout << "SERVER: INVITE command successful. '" << target_nickname << "' invited to '" << channel_name << "' by '" << sender_nickname << "'.\n";
+	broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);
+	broadcastMessage(MessageBuilder::generateMessage(MsgType::GET_INVITE, {sender_nickname, client->getUsername(), target_nickname, channel_name}), client, nullptr, false, target_client_ptr);
 }

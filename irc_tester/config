@@ -1,0 +1,32 @@
+servers = (
+  {
+    address = "localhost";
+    port = 6669;
+    nick = "anonthe_luckyx";
+    user = "user_anonthe_luckyx";
+    realname = "real_anonthe_luckyx";
+  }
+);
+
+settings = {
+  core = {
+    real_name = "real_anonthe_luckyx";
+    user_name = "user_anonthe_luckyx";
+    nick = "anonthe_luckyx";
+  };
+};
+
+channels = (
+  {
+    name = "#test_channel";
+    chatnet = "LocalNet";
+    autojoin = "No";
+  }
+);
+
+IRCSource = {
+  type = "IRC";
+  max_kicks = "1";
+  max_msgs = "4";
+  max_whois = "1";
+};

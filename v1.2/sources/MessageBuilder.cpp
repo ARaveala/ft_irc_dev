@@ -65,7 +65,9 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchChannel), params);
 	        case MsgType::ERR_NOSUCHNICK:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchNick), params);
-	        case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
+			case MsgType::ERR_ERRONEUSNICKNAME:
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildErroneousNickname), params);	        
+			case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotInChannel), params);
 
 	        case MsgType::NOT_OPERATOR:
@@ -165,7 +167,9 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
         return SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::ERR_NOSUCHNICK)) + " " + nickname + " " + target + " :No such nick/channel\r\n";
     }
 
-
+	std::string buildErroneousNickname(const std::string& clientCurrentNick, const std::string& badNick) {
+    	return SERVER_PREFIX + " " + std::to_string(static_cast<int>(MsgType::ERR_ERRONEUSNICKNAME))+ " " + clientCurrentNick + " " + badNick + " :Erroneous nickname\r\n";
+	}
 
     // Welcome Package
     std::string buildWelcome(const std::string& nickname) {

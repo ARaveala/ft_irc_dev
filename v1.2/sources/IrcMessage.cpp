@@ -42,7 +42,9 @@ const std::string IrcMessage::getParam(unsigned long index) const {
 
 // definition of illegal nick_names ai
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
-    "ping", "pong", "server", "root", "nick", "services", "god"
+       "ping", "pong", "server", "root", "nick", "services", "god",
+    "admin", "operator", "op", "system", "console", "bot",
+    "null", "undefined", "localhost", "irc", "help", "whois"
 };
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
@@ -75,85 +77,60 @@ MsgType IrcMessage::getActiveMessageType() const {
    		return _activeMsg;  // Returns the currently active message type
 }
 
-// we should enum values or alike or we can just send the correct error message straight from here ?
-// check_and_set_nickname definition, std::string& nickref
-bool IrcMessage::check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd) {
+bool IrcMessage::isValidNickname(const std::string& nick) {
+    if (nick.empty() || nick.length() > 9) return false;
 
-    // 1. Check for invalid characters
-	// check nickname exists
-	std::cout << "#### Nickname '" << nickname  << fd << ": Empty." << std::endl;
+    const std::string allowedSpecial = "-[]\\`^{}_";
 
-	if (nickname.empty()) {
-		std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Empty." << std::endl;
+    // first character: must be a letter or an allowed special character
+    char first = nick[0];
+    if (!std::isalpha(static_cast<unsigned char>(first)) && allowedSpecial.find(first) == std::string::npos)
         return false;
+    // remaining characters alphanumerics or allowed special characters no emojis
+    for (char c : nick) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) &&
+            allowedSpecial.find(c) == std::string::npos)
+            return false;
     }
-	// check nickname is all lowercase
-    for (char c : nickname) {
-         if (!std::islower(static_cast<unsigned char>(c))) {
-			if (c == '_')
-				continue;
-             std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Contains non-lowercase chars." << std::endl;
-             return false;
-         }
-    }
+    return true;
+}
 
-    std::string processed_nickname = nickname; // TODO do we need this allocation? no i dont think so 
+// we should enum values or alike or we can just send the correct error message straight from here ?
+// check_nickname definition, std::string& nickref
+MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd) {
+	auto toLower = [](const std::string& input) -> std::string {
+    	std::string lower;
+    	lower.reserve(input.size());
+    	for (char c : input)
+        	lower += std::tolower(static_cast<unsigned char>(c));
+    	return lower;
+	};
+
+	if (!isValidNickname(nickname)) { 
+		return {MsgType::ERR_ERRONEUSNICKNAME}; 
+	}
+
+    std::string nickname_lower = toLower(nickname); // TODO do we need this allocation? no i dont think so 
 
     // 2. check legality
-    if (_illegal_nicknames.count(processed_nickname) > 0) {
+    if (_illegal_nicknames.count(nickname_lower) > 0) {
         std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Illegal name." << std::endl;
-        return false;
+        return {MsgType::ERR_ERRONEUSNICKNAME};
     }
 
     // check if nickname exists for anyone
-    auto nick_it = nick_to_fd.find(processed_nickname);
+    auto nick_it = nick_to_fd.find(nickname_lower);
 	if (nick_it != nick_to_fd.end()) {
         // Nickname exists. Is it the same Client trying to set their current nick?
-        if (nick_it->second == fd) {
-            // FD already head requested nickname.
-            std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
-            return true;
-        } else {
-			setType(MsgType::NICKNAME_IN_USE, {nickname});
-            // Nickname is taken by some cunt else
-            std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
-            return false;
+        if (nick_it->second != fd) {
+			std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
+			// FD already head requested nickname.
+            return {MsgType::NICKNAME_IN_USE};
         }
+        std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
+        return {MsgType::NONE};
     }
-
-    // Check if the FD has an old nickname with an iterator
-    auto fd_it = fd_to_nick.find(fd);
-	std::string old_nickname;
-    if (fd_it != fd_to_nick.end()){
-        // This FD already has a nickname. We need to remove the old one from both maps.
-		// find out nickname
-        old_nickname = fd_it->second;
-        std::cout << "#### FD " << fd << " had old nickname '" << old_nickname << "', removing entries." << std::endl;
-
-        // Remove the old nickname -> fd entry using the old nickname as key
-        // Use erase(key) which is safe even if the key somehow wasn't found
-        nick_to_fd.erase(old_nickname);
-
-        // Remove the old fd -> nickname entry using the iterator we already have
-        fd_to_nick.erase(fd_it);
-
-        std::cout << "#### Removed old nickname '" << old_nickname << "' for fd " << fd << "." << std::endl;
-
-    } else {
-        // FD does not currently have a nickname.
-         std::cout << "#### FD " << fd << " does not have an existing nickname." << std::endl;
-    }
-
-    // update both maps
-    std::cout << "#### Setting nickname '" << nickname << "' for fd " << fd << "." << std::endl;
-	nick_to_fd.insert({processed_nickname, fd});
-    fd_to_nick.insert({fd, processed_nickname});
-	setType(MsgType::RPL_NICK_CHANGE, {old_nickname, "kitty", nickname});
-	std::cout << "#### old_nickname '" << old_nickname << "' set successfully for fd " << fd << "." << std::endl;
-    std::cout << "#### Nickname '" << nickname << "' set successfully for fd " << fd << "." << std::endl;
-	std::cout << "#### param 1 '" << _params[0] << "' num 2 " << _params[1] << " number 3" << _params[2]<<std::endl;
-	//nickref = _params[0];
-	return true;
+	return MsgType::RPL_NICK_CHANGE;
 }
 
 std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {

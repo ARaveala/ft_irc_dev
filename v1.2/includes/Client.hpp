@@ -64,7 +64,11 @@ class Client {
 		void setHasSentUser() {_hasSentUser = true;};
 		void setHasRegistered();
 
-		void setNickname(const std::string& nickname) { _nickName.clear(); _nickName = nickname;};
+		// clear out all the data 
+		void setNickname(const std::string& nickname) { 
+			_nickName.clear();
+			_nickName = nickname;
+		};
 		//void setUsername(const std::string& username);
 
 

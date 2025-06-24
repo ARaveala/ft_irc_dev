@@ -64,16 +64,17 @@ class IrcMessage {
 		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };
 		std::string& getQueueMessage() { return _messageQue.front();}; //return _messageQue.empty() ? "" : _messageQue.front();
-		void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
+		//void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
+		//void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
 		
 		void clearQue() {_messageQue.clear();};
 
 		const std::string getMsgParam(int index) const{ return _params[index]; };
 		void changeTokenParam(int index, const std::string& newValue) {_paramsList[index] = newValue;};
 		const std::vector<std::string>& getMsgParams() { return _params; };
-
-		bool check_and_set_nickname(std::string nickname, int fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);//, std::string& nickref);  // ai
+		
+		bool isValidNickname(const std::string& nick);
+		MsgType check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd);//, std::string& nickref);  // ai
 		std::map<int, std::string>& get_fd_to_nickname();
 		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick); // ai // we have remove client function , this could be called in there, to remove all new maps
 		std::string get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const;  // ai

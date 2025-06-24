@@ -58,6 +58,9 @@ void Server::broadcastMessage(const std::string& message_content, std::shared_pt
         recipients = getChannelRecipients(target_channel, sender, skip_sender);
     } else if (sender) {
         recipients = getSharedChannelRecipients(sender, skip_sender);
+		if (recipients.empty() && !skip_sender) {
+        	recipients.insert(sender);  // Ensure sender receives the message even if alone
+    	}
     } else {
         std::cerr << "Error: Invalid call to broadcastMessage. Must provide an individual recipient, a target channel, or a sender.\n";
         return;

@@ -181,8 +181,8 @@ void Server::create_Client(int epollfd) {
 	_timer_map[timer_fd] = client_fd;
 	set_current_client_in_progress(client_fd);
 	client->setDefaults();
-	_fd_to_nickname.insert({client_fd, toLower(client->getNickname())});
-	_nickname_to_fd.insert({toLower(client->getNickname()), client_fd});
+	//_fd_to_nickname.insert({client_fd, toLower(client->getNickname())});
+	//_nickname_to_fd.insert({toLower(client->getNickname()), client_fd});
 	if (!client->get_acknowledged()){			
 		client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
 		set_client_count(1);		
@@ -567,21 +567,32 @@ void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vecto
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::UPDATE_CHAN, updateChannel),client, channel, true, nullptr);
 	}
 }
-
+void Server::updateNickname(const std::shared_ptr<Client>& client, const std::string& newNick, const std::string& oldNick) {
+//	const std::string& oldNick = client->getNickname();
+	const int& fd = client->getFd();
+	_nickname_to_fd.erase(toLower(oldNick));
+   // _fd_to_nickname.erase(fd);
+	client->setNickname(newNick);
+    _nickname_to_fd[toLower(newNick)] = fd;
+    //_fd_to_nickname[client->getFd()] = toLower(newNick);
+}
 
 // todo be very sure this is handling property fd_to_nick and nick_to_fd.
-void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param) {
+void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
 	if (!client->getHasSentNick()) {
 		client->setHasSentNick();
-		return;
-	} if (client->getMsg().check_and_set_nickname(param, client->getFd(), fd_to_nick, nick_to_fd)) {
-		std::string oldnick = client->getNickname();
-		client->setNickname(param);
-		client->getMsg().setType(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()});	
-	} 
-	std::string msg = MessageBuilder::generateMessage(client->getMsg().getActiveMessageType(),  client->getMsg().getMsgParams());
-	broadcastMessage(msg, nullptr, nullptr, false, client);
-	broadcastMessage(msg, client, nullptr, true, nullptr);
+		//return;
+	}
+	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
+	if ( type == MsgType::RPL_NICK_CHANGE) {
+		const std::string& oldnick = client->getNickname();
+		updateNickname(client, param, oldnick);
+		//client->setNickname(param);
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
+	} else if (type != MsgType::NONE){
+		broadcastMessage(MessageBuilder::generateMessage(type, {client->getNickname(), param}), client, nullptr, false, nullptr);
+
+	}
 }
 
 // todo be very sure this is handling property fd_to_nick and nick_to_fd.
@@ -670,10 +681,14 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 }
 
 void Server::handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent){
-		
-		que.push_back(":localhost CAP " + nickname + " LS :multi-prefix sasl\r\n");
+		(void)nickname;
+		/*que.push_back(":localhost CAP " + nickname + " LS :multi-prefix sasl\r\n");
         que.push_back(":localhost CAP " + nickname + " ACK :multi-prefix\r\n");
-        que.push_back(":localhost CAP " + nickname + " ACK :END\r\n");
+        que.push_back(":localhost CAP " + nickname + " ACK :END\r\n");*/
+		//que.push_back(":localhost CAP  LS :multi-prefix sasl\r\n");
+        que.push_back(":localhost CAP * ACK :multi-prefix\r\n");
+		//que.push_back(":localhost CAP * ACK :sasl\r\n");
+		que.push_back(":localhost CAP * ACK :END\r\n");
 		capSent = true;
 }
 

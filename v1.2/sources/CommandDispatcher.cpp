@@ -46,7 +46,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		client->setHasSentUser();
 	}
 	if (command == "NICK") {
-		_server->handleNickCommand(client, _server->get_fd_to_nickname(), _server->get_nickname_to_fd(), params[0]);
+		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
 		return ; 
 	}
 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {

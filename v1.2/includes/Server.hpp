@@ -57,7 +57,7 @@ class Server {
 		// apparently the rule of thumb is to always make anythingprivate and public only if you need too 
 		std::vector<std::string> splitCommaList(const std::string& input);
 		std::pair<MsgType, std::vector<std::string>> validateChannelName(const std::string& channelName, const std::string& clientNick);
-		
+		void updateNickname(const std::shared_ptr<Client>& client, const std::string& newNick,  const std::string& oldNick);
 	public:
 		Server();
 		Server(int port, const std::string& password);
@@ -76,7 +76,7 @@ class Server {
 		void set_client_count(int val);
 		void set_event_pollfd(int epollfd);
 		void set_current_client_in_progress(int fd);
-		void set_nickname_in_map(std::string, int); 
+		//void set_nickname_in_map(std::string, int); 
 
 		// GETTERS
 		int getPort() const;
@@ -133,7 +133,7 @@ class Server {
 		void handlePing(const std::shared_ptr<Client>& client);
 		void handlePong(const std::shared_ptr<Client>& client); 
 		void handleQuit(std::shared_ptr<Client> client);
-		void handleNickCommand(const std::shared_ptr<Client>& client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
+		void handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);

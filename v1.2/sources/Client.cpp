@@ -157,7 +157,8 @@ void Client::set_acknowledged(){
 void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
-	_nickName = generateUniqueNickname();
+	//_nickName = generateUniqueNickname();
+	std::string potential_nick = generateUniqueNickname();
 	_username = "user_" + _nickName;
 	_fullName = "real_" + _nickName;
 	_isOperator = false;

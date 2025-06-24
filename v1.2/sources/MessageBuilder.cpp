@@ -203,7 +203,16 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
     return SERVER_PREFIX + " CAP " + clientNickname + " ACK :" + acknowledgedCaps + "\r\n";
 	}
-		//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
+
+	std::string bildPing() {
+		return "PING :" + SERVER + "\r\n";
+	}
+
+	std::string bildPong() {
+		return "PONG :" + SERVER + "\r\n";
+	}
+
+	//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
 	std::string buildJoinChannel(const std::string& nickname, const std::string& username, const std::string& channelName, const std::string& clientList, const std::string& topic) {
 		(void) topic;
 		std::string joinLine =  prefix(nickname, username) + " JOIN " + channelName + "\r\n";

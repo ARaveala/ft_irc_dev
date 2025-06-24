@@ -56,13 +56,17 @@ int Client::get_failed_response_counter(){
 
 // specifically adds a specific amount, not increment by 1
 void Client::set_failed_response_counter(int count){
-	std::cout<<"failed response counter is "
+	/*std::cout<<"failed response counter is "
 				<< _failed_response_counter
 				<<"new value to be added "
 				<< count
-				<<std::endl;
+				<<std::endl;*/
 	if ( count < 0 && _failed_response_counter == 0)
-		return ;	
+		return ;
+	if ( count == 0){
+		_failed_response_counter = 0;
+		return;
+	}	
 	_failed_response_counter += count;
 }
 

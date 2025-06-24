@@ -45,6 +45,7 @@ enum class ErrorType {
 	ACCEPT_FAILURE,
 	NO_Client_INMAP, // next up senderror
 	NO_CHANNEL_INMAP,
+	TIMER_FD_FAILURE,
 	BUFFER_FULL,
 	BAD_FD,
 	BROKEN_PIPE,

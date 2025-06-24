@@ -1,0 +1,6 @@
+.vscode
+objects
+ircserv
+bot/bot
+*.log
+nohup.out

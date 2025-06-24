@@ -39,26 +39,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleQuit(client);
 		return ;
 	}
-	
-	/*	    PART
-	    LEAVE
-	    TOPIC
-	    NAMES
-	    LIST
-	    INVITE
-	    PARAMETER NICKNAME
-		
-*/
-	/*if (command == "KICK") {
-			
-	}
-	if (command == "INVITE") {
-			
-	}*/
 
 	if (command == "USER" && !client->getHasSentUser()) {
-		// if (params.size() == 1/2)
-		// 	chnage username to param, follow same logic as nickname? 
 		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
 		client->setHasSentUser();
 	}
@@ -72,15 +54,11 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
 	if (command == "PING"){
-		client->getMsg().queueMessage("PONG :localhost\r\n");
-		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		_server->handlePing(client);
 		return;
-		//Client->set_failed_response_counter(-1);
-		//resetClientTimer(Client->get_timer_fd(), config::TIMEOUT_CLIENT);
 	}
 	if (command == "PONG"){
-		client->getMsg().queueMessage("PING :localhost\r\n");		
-		_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		_server->handlePong(client);
 		return;
 
 	}

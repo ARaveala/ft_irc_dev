@@ -1,0 +1,59 @@
+nick name 
+* empty
+* taken nickname
+* nickname had unwanted characters
+
+modes
+* more client modes than client names +ioo user1
+* more client names than client modes +io user1 user2
+* channel modes and client modes with and without client names
+* client names that dont exist
+* client names that are not in the channel
+* client name that has just been kicked.
+
+join
+* join multiple clienst
+* join invite only 
+* join after kcicked
+* join when in another channel
+
+part
+* when not in a channel
+* when in a channel
+* when in multiple channels part leaves 1 part #channel1,#channel2 leaves both channels
+* try to activate mode when parted
+
+send bible
+
+
+SEGV IF JOIN CHANNEL BEFORE REGISTRATION COMPLETE SOMETIMES
+] /RAWLOG OPEN ~/logz/log.log
+sudo tcpdump -i lo port 6668 -A | grep PRIVMSG to look for priv message only 
+sudo netstat -tnp | grep port num show us connected clients and server
+
+when testing with netcat, send irssi to server, add \r\n press cntrlv then cntrl m then enter 
+
+// here is a test to showcase why epollout is important to handle 
+import socket
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(("localhost", 6668))
+
+# Send a huge message to fill up the buffer
+long_message = "A" * 100000  # 100,000 characters
+client.send(long_message.encode())
+
+# Wait to see if the server drops data or hangs
+response = client.recv(4096)
+print("Server response:", response.decode())
+
+client.close()
+
+
+
+/window new split
+/window name debug
+/log open -window debug raw_log.txt
+/log start raw_log.txt
+
+stat commands

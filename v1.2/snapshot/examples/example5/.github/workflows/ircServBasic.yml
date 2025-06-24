@@ -1,0 +1,61 @@
+name: FT_IRC Basic Check CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y irssi
+      # the -y flag automatically answer yes
+
+    - name: Compile the project
+      run: make
+
+    - name: Testing basic number 1
+      continue-on-error: true
+      run: |
+        echo "Testing ./ircserv without port/password..."
+        ./ircserv || echo "Expected failure occured. Next Test.."
+        
+    - name: Start IRC Server
+      run: |
+         ./ircserv 6667 myPass &
+         echo "Waiting for the server to start ... "
+         sleep 10
+
+    - name: Install tmux for irssi
+      run: sudo apt-get install -y tmux
+      
+    - name: Irssi Check with Wrong Password
+      continue-on-error: true
+      run: |
+        echo "client connecting with wrong password"
+        tmux new-session -d -s irssi_test "irssi -c 127.0.0.1 -p 6667 -w wrongPass -n testuser" || echo "Expected deny. Checking next.."
+        sleep 5
+        tmux kill-session -t irssi_test
+        #kill irssi to prevent it from hanging
+        
+    - name: Irssi Check success
+      run: |
+       echo "Connecting with the correct password..."
+       tmux new-session -d -s irssi_test "irssi -c 127.0.0.1 -p 6667 -w myPass -n testuser"
+       sleep 5  # Allow time for connection
+       tmux kill-session -t irssi_test
+        #kill irrsi to prevent it from hanging
+
+    - name: Clean up
+      run: |
+       echo "Closing Down the IRC server"
+       pkill -f ircserv || echo "Server Stopped"
+       make fclean

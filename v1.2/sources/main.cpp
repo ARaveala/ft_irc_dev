@@ -67,23 +67,17 @@ int loop(Server &server)
 	struct epoll_event events[config::MAX_CLIENTS];
 	while (!should_exit)
 	{
-		// from epoll fd, in events struct this has niche error handling
 		int nfds = epoll_pwait(epollfd, events, config::MAX_CLIENTS, config::TIMEOUT_EPOLL, &sigmask);
-		if (nfds == 0)
-			std::cout << "epoll_wait returned: " << nfds << " events\n";
-		/*if (errno == EINTR) {
-			std::cerr << "accept() interrupted by signal, retrying..." << std::endl;
-		} else if (errno == EMFILE || errno == ENFILE) {
-			std::cerr << "Too many open files—server may need tuning!" << std::endl;
- 		}*/
-		// if nfds == -1 we have perro we should be able to print with perror.
-		for (int i = 0; i < nfds; i++)
-		{
+		if (nfds == -1 && errno == EINTR) {
+		    std::cerr << "epoll interrupted by signal" << std::endl;
+    		continue;
+		}
+		for (int i = 0; i < nfds; i++) {
 			//debug_helper_print_events(&events[i]);
 		  //if ((events[i].events & EPOLLIN) &&  (events[i].events & EPOLLOUT))
 		//		std::cout<<"IF YOU SEE THIS EVERYTIME THERE IS SOMETHING NOT WORKING , WE FOUND THE SPOT  \n";
 			if (events[i].events & EPOLLIN) {
-                int fd = events[i].data.fd; // Get the associated file descriptor
+                int fd = events[i].data.fd;
 
 				if (fd == server.get_signal_fd()) {
 					// must test signals properly still
@@ -98,25 +92,20 @@ int loop(Server &server)
 						server.handle_client_connection_error(e.getType());
 					}
 				}
-				/*if (server.matchTimerFd(fd)){
-					
-				}*/
-				// if its a timer fd have to send ping update epoll and reset timer only once pong recived by that client 
+				else if (server.isTimerFd(fd)){
+					server.checkTimers(fd);
+				}
 				else if (server.get_Client(fd)->get_acknowledged() && !server.get_Client(fd)->getQuit()) {
-					bool read_to_buffer = server.checkTimers(fd);
-					if (read_to_buffer)
-					{
-						try {
-							server.handleReadEvent(fd);
-						} catch(const ServerException& e) {
-							if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
-								server.remove_Client(fd);
-								std::cout<<server.get_client_count()<<"debuggin :: this is the new client count <<<<\n"; // debugging
-							}
-							if (e.getType() == ErrorType::NO_Client_INMAP)
-								continue ;
-							// here you can catch an error of your choosing if you dont want to catch it in the message handling
+					try {
+						server.handleReadEvent(fd);
+					} catch(const ServerException& e) {
+						if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
+							server.remove_Client(fd);
+							std::cout<<server.get_client_count()<<"debuggin :: this is the new client count <<<<\n"; // debugging
 						}
+						if (e.getType() == ErrorType::NO_Client_INMAP)
+							continue ;
+						// here you can catch an error of your choosing if you dont want to catch it in the message handling
 					}
 				}
 			}

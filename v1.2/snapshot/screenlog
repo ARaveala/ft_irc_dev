@@ -1,0 +1,15 @@
+--- Log opened Tue Apr 15 17:16:05 2025
+17:16 -!- Irssi: Log file screenlog opened
+17:17 -!- Irssi: Unknown command: log status
+17:18 -!- Irssi: No PONG reply from server localhost in 301 seconds, disconnecting
+17:18 -!- Irssi: Connection lost to localhost
+17:18 -!- Irssi: Removed reconnection to server localhost port 6666
+17:18 -!- Irssi: Looking up localhost
+17:18 -!- Irssi: Reconnecting to localhost [127.0.0.1] port 6666 - use /RMRECONNS to abort
+17:18 -!- Irssi: Connection to localhost established
+17:18 -!- Irssi: Not enough parameters given
+17:19 -!- Irssi: Log file ~/irc.log.(status) opened
+17:19 -!- Irssi: Not connected to server
+17:20 -!- Irssi: Disconnecting from server localhost: [leaving]
+17:20 -!- Irssi: Connection lost to localhost
+--- Log closed Tue Apr 15 17:20:00 2025

@@ -23,8 +23,10 @@
  * 
  * @note other events could potentially be added 
  */
+
 int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 {
+	
 	struct epoll_event event = {};
 	memset(&event, 0, sizeof(event));
 
@@ -42,6 +44,24 @@ int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 }
 
 int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
+    int timer_fd = createTimerFD(timeout_seconds);
+    if (timer_fd == -1) {
+        perror("Failed to create timer FD");
+        return -1;
+    }
+    struct epoll_event timer_event;
+    timer_event.events = EPOLLIN;
+    timer_event.data.fd = timer_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &timer_event) == -1) {
+        perror("Failed to add timer FD to epoll");
+        close(timer_fd);  // Clean up!
+        return -1;
+    }
+    _epollEventMap[timer_fd] = timer_event;
+    return timer_fd;
+}
+
+/*int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
 	int timer_fd = 0;
 	timer_fd = createTimerFD(timeout_seconds);  //Creates a timer specific to this client
 
@@ -51,7 +71,7 @@ int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &timer_event);
 	_epollEventMap[timer_fd] = timer_event;
 	return timer_fd;
-}
+}*/
 
 /**
  * @brief We set socket to nonblocking so that recv() dosnt wait for data,

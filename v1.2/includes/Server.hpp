@@ -67,9 +67,10 @@ class Server {
 		void create_Client(int epollfd);
 		void createChannel(const std::string& channelName);
 
+		void closeAndResetClient();
 		void remove_Client(int client_fd);
 		// todo we need a remove channel, when last client leaves channel?
-		bool matchTimerFd(int fd);
+		bool isTimerFd(int fd);
 		// SETTERS
 		void setFd(int fd);
 		void set_signal_fd(int fd);
@@ -110,6 +111,7 @@ class Server {
 		void handle_client_connection_error(ErrorType err_type);
 		void shutDown();
 		bool checkTimers(int fd);
+		void resetClientFullTimer(int resetVal, std::shared_ptr<Client> client);
 	
 		
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
@@ -128,6 +130,8 @@ class Server {
 		void updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable);
 		void handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params);
 		void handleReadEvent(int client_fd);
+		void handlePing(const std::shared_ptr<Client>& client);
+		void handlePong(const std::shared_ptr<Client>& client); 
 		void handleQuit(std::shared_ptr<Client> client);
 		void handleNickCommand(const std::shared_ptr<Client>& client, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);

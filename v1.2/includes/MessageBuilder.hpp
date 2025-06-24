@@ -62,7 +62,8 @@ namespace MessageBuilder {
 	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason);
 	std::string buildKick(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& target, const std::string& kickReason);
 	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name);
-
+	std::string bildPing();
+	std::string bildPong();
 	// You can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

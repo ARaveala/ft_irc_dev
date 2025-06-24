@@ -139,18 +139,17 @@ bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const s
 	return true;
 }
 
-/*bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, Modes::MsgType comp) {
-	if (comp == MsgType::NONE && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR))	{
+bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, Modes::ChannelMode comp) {
+	if (comp == Modes::NONE && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR))	{
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
 		return false;
 	}
-
-	if (channel->getClientModes(client->getNickname()).test(comp) && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+	if (channel->getClientModes(client->getNickname()).test(static_cast<std::size_t>(comp)) && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
         return false;
     }
 	return true;
-}*/
+}
 /**
  * @brief Here a client is accepted , error checked , socket is adusted for non-blocking
  * the client fd is added to the epoll and then added to the Client map. a welcome message
@@ -1019,11 +1018,12 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     if (!new_topic_content.empty() && new_topic_content[0] == ':') {
         new_topic_content = new_topic_content.substr(1); // Remove leading colon if present
     }
+	if (!validateModes(channel_ptr, client, Modes::TOPIC)) { return;}
 	// i guess we could still use a bool
-    if (channel_ptr->getClientModes(client->getNickname()).test(Modes::TOPIC) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+    /*if (channel_ptr->getClientModes(client->getNickname()).test(modes::TOPIC) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
-    }
+    }*/
 
     // --- All checks passed for setting the topic ---
 
@@ -1044,7 +1044,6 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     // Use the versatile broadcastMessage function!
     broadcastMessage(topic_change_message, nullptr, channel_ptr, false, nullptr); // Broadcast to all in channel
 }
-
 
 void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
     std::cout << "SERVER: handleInviteCommand entered for " << client->getNickname() << std::endl;
@@ -1071,11 +1070,11 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
     // 5. Check if target client is already on the channel
 	if (!validateTargetInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
     // --- Privilege Check for Invite-Only Channel (+i mode) ---
-   
-	if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+   	if (!validateModes(channel_ptr, client, Modes::INVITE_ONLY)) { return;}
+	/*if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
         return;
-    }
+    }*/
     // --- All checks passed: Perform the Invite! ---
     channel_ptr->addInvite(target_nickname); // You'll need to implement this in Channel.cpp and declare in Channel.hpp
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);

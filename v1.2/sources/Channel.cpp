@@ -510,9 +510,6 @@ Channel::canClientJoin(const std::string& nickname, const std::string& value) {
         }
     }
     if (_ChannelModes.test(Modes::PASSWORD)) {
-        if (value.empty()) {
-			return std::make_pair(MsgType::NEED_MORE_PARAMS, std::vector<std::string>{nickname, "JOIN"});
-        }
         if (value != _password) {
 			return std::make_pair(MsgType::INVALID_PASSWORD, std::vector<std::string>{nickname, getName()});
         }

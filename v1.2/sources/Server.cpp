@@ -130,7 +130,7 @@ void Server::create_Client(int epollfd) {
 	std::shared_ptr<Client> client = _Clients[client_fd];
 	
 	_timer_map[timer_fd] = client_fd;
-	std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
+	
 	
 	set_current_client_in_progress(client_fd);
 	client->setDefaults();
@@ -141,6 +141,7 @@ void Server::create_Client(int epollfd) {
 		//no update epollout as its on for the first call
 		set_client_count(1);		
 	}
+	std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
 }
 
 void Server::remove_Client(int client_fd) {

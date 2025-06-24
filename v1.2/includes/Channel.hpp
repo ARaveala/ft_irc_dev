@@ -84,11 +84,9 @@ struct WeakPtrCompare {
 		bool setModeBool(char onoff);
 		//bool canClientJoin(const std::string& nickname, const std::string& password );
 		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
-		void setTopic(const std::string& newTopid);
 		int addClient(std::shared_ptr <Client> Client);
 		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
 		void setTopic(const std::string& newTopic);
-		int addClient(std::shared_ptr <Client> Client);
 		bool removeClient(const std::string& nickname);
 	    void removeClientByNickname(const std::string& nickname);
 

@@ -169,7 +169,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				if (_server->channelExists(params[0]) == true) {
 					// MessageBuilder 
 					// is client in channel 
-					_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), false, nullptr);
+					_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
 				}
 			}
 			else

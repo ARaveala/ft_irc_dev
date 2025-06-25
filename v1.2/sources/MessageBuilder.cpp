@@ -29,7 +29,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
 		switch (type) {
 	        case MsgType::NICKNAME_IN_USE:
-	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildNicknameInUse), params);
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNicknameInUse), params);
 
 	        case MsgType::RPL_NICK_CHANGE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
@@ -137,7 +137,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	const std::string QUIT_MSG = "Client disconnected";
 	
 	std::string generateInitMsg() {
-		return SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n" + ":"+ SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\n";
+		return SERVER_PREFIX + " NOTICE * :initilization has begun.......\r\n";// +  SERVER_PREFIX + " CAP * LS :multi-prefix\r\n";
 	}
 	inline std::string prefix(const std::string& nick, const std::string& user) {
 	    return ":" + nick + "!" + user + SERVER_AT;
@@ -153,8 +153,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 		return fullhello;
 	}
     
-    std::string buildNicknameInUse(const std::string& nick) {
-        return SERVER_PREFIX + " 433 "  + nick + " " + nick + "\r\n";
+    std::string buildNicknameInUse(const std::string& nick, const std::string& attempted) {
+        return SERVER_PREFIX + " 433 "  + nick + " " + attempted + "\r\n";
     }
 
     // A more generic error builder, useful for 401, 461 etc.

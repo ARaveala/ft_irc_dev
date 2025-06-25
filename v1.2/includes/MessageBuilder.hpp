@@ -7,7 +7,7 @@ namespace MessageBuilder {
 	
 	std::string generateMessage(MsgType type, const std::vector<std::string>& params);
     // General purpose error/reply messages
-    std::string buildNicknameInUse(const std::string& nick);
+    std::string buildNicknameInUse(const std::string& nick, const std::string& attempted);
     std::string buildErrorReply(const std::string& sender_prefix, const std::string& reply_code,
                                 const std::string& recipient_nickname, const std::string& message_text);
     std::string buildNotOperator(const std::string& nickname, const std::string& channelName);

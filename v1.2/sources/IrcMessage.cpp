@@ -78,7 +78,7 @@ MsgType IrcMessage::getActiveMessageType() const {
 }
 
 bool IrcMessage::isValidNickname(const std::string& nick) {
-    if (nick.empty() || nick.length() > 9) return false;
+    if (nick.empty() || nick.length() > 25) return false;
 
     const std::string allowedSpecial = "-[]\\`^{}_";
 
@@ -98,39 +98,29 @@ bool IrcMessage::isValidNickname(const std::string& nick) {
 // we should enum values or alike or we can just send the correct error message straight from here ?
 // check_nickname definition, std::string& nickref
 MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd) {
-	auto toLower = [](const std::string& input) -> std::string {
-    	std::string lower;
-    	lower.reserve(input.size());
-    	for (char c : input)
-        	lower += std::tolower(static_cast<unsigned char>(c));
-    	return lower;
-	};
-
-	if (!isValidNickname(nickname)) { 
-		return {MsgType::ERR_ERRONEUSNICKNAME}; 
-	}
-
-    std::string nickname_lower = toLower(nickname); // TODO do we need this allocation? no i dont think so 
-
-    // 2. check legality
+    auto toLower = [](const std::string& input) -> std::string {
+        std::string lower;
+        lower.reserve(input.size());
+        for (char c : input)
+            lower += std::tolower(static_cast<unsigned char>(c));
+        return lower;
+    };
+    std::string nickname_lower = toLower(nickname);
+    if (!isValidNickname(nickname)) { 
+        return MsgType::ERR_ERRONEUSNICKNAME; 
+    }
     if (_illegal_nicknames.count(nickname_lower) > 0) {
-        std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Illegal name." << std::endl;
-        return {MsgType::ERR_ERRONEUSNICKNAME};
+        return MsgType::ERR_ERRONEUSNICKNAME;
     }
-
-    // check if nickname exists for anyone
     auto nick_it = nick_to_fd.find(nickname_lower);
-	if (nick_it != nick_to_fd.end()) {
-        // Nickname exists. Is it the same Client trying to set their current nick?
+    if (nick_it != nick_to_fd.end()) {
         if (nick_it->second != fd) {
-			std::cout << "#### Nickname '" << nickname << "' rejected for fd " << fd << ": Already taken by fd " << nick_it->second << "." << std::endl;
-			// FD already head requested nickname.
-            return {MsgType::NICKNAME_IN_USE};
+            return MsgType::NICKNAME_IN_USE;
+        } else {
+            return MsgType::NONE;
         }
-        std::cout << "#### Nickname '" << nickname << "' for fd " << fd << ": Already set. No change needed." << std::endl;
-        return {MsgType::NONE};
     }
-	return MsgType::RPL_NICK_CHANGE;
+    return MsgType::RPL_NICK_CHANGE;
 }
 
 std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {

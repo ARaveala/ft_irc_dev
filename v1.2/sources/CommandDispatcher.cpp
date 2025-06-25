@@ -42,12 +42,12 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 
 	if (command == "USER" && !client->getHasSentUser()) {
-		client->getMsg().queueMessage("USER " + client->getClientUname() + " 0 * :" + client->getfullName() +"\r\n");
+		client->setClientUname(params[0]);
+		client->setRealname(params[3]);
 		client->setHasSentUser();
 	}
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
-		return ; 
 	}
 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
 		client->setHasRegistered();

@@ -51,6 +51,7 @@ class Client {
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
 		void set_nickName(const std::string newname) {_nickName.clear(); _nickName = newname; };
+		void setRealname(const std::string newname) { _fullName = newname;};
 		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
 		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
 		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};

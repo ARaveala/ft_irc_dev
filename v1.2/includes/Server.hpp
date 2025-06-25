@@ -150,5 +150,5 @@ class Server {
 		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);
 };
 
-std::string generateUniqueNickname();
+std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to_fd);
 

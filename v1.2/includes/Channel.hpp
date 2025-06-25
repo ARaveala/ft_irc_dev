@@ -73,9 +73,11 @@ struct WeakPtrCompare {
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); //ref
+		bool CheckChannelMode(Modes::ChannelMode comp) const {return _ChannelModes.test(static_cast<std::size_t>(comp));}; //ref
+		
 		std::string getCurrentModes() const;
 		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
-		std::vector<std::shared_ptr<Client>> getActiveClients() const;
+		//std::vector<std::shared_ptr<Client>> getActiveClients() const;
 
 		std::vector<std::string> setChannelMode(char modeChar , bool enableMode, const std::string& target);
 		
@@ -102,12 +104,12 @@ struct WeakPtrCompare {
 
 	    bool isEmpty() const;
 
-		void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
+		//void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
 // T O P I C 
-		const std::string& getTopicSetter() const;
-		std::time_t getTopicSetTime() const;
-		void setTopicSetter(const std::string& setter_nickname);
-		void setTopicSetTime(std::time_t set_time);
+		//const std::string& getTopicSetter() const;
+		//std::time_t getTopicSetTime() const;
+		//void setTopicSetter(const std::string& setter_nickname);
+		//void setTopicSetTime(std::time_t set_time);
 
 // I N V I T E
 		void addInvite(const std::string& nickname);

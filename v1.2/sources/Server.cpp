@@ -140,11 +140,12 @@ bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const s
 }
 
 bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, Modes::ChannelMode comp) {
+	
 	if (comp == Modes::NONE && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR))	{
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
 		return false;
 	}
-	if (channel->getClientModes(client->getNickname()).test(static_cast<std::size_t>(comp)) && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
+	if (channel->CheckChannelMode(comp) && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {client->getNickname(), channel->getName()}), client, nullptr, false, client);
         return false;
     }
@@ -198,7 +199,7 @@ void Server::remove_Client(int client_fd) {
         std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
         return;
     }
-	 std::cout << "SERVER: REMOVAL OF CLIENT active message should be qued \n";
+	std::cout << "SERVER: REMOVAL OF CLIENT active message should be qued \n";
     //std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client_to_remove->getNickname(), client_to_remove->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
 	//broadcastMessage(quit_message, client_to_remove, nullptr, true, nullptr);
     // --- Step 2: Handle channel disassociation and notification ---
@@ -225,7 +226,6 @@ void Server::remove_Client(int client_fd) {
             }
             throw; // Re-throw other unexpected exceptions
         }
-
         if (channel_ptr) { // Ensure the channel pointer is valid
             std::cout << "SERVER: Notifying and removing client " << client_to_remove->getNickname()
                       << " from channel " << channel_name << " due to disconnect.\n";
@@ -238,14 +238,14 @@ void Server::remove_Client(int client_fd) {
             }
         }
     }
- 
-
     // After iterating through all channels, clear the client's internal list of joined channels.
     client_to_remove->clearJoinedChannels();
     // --- Step 3: Perform server-wide cleanup ---
     // Remove client's nickname to FD and FD to nickname mappings.
+
     _nickname_to_fd.erase(client_to_remove->getNickname());
     _fd_to_nickname.erase(client_fd);
+
 
     // Remove timer FD from epoll and close it.
     epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
@@ -568,30 +568,43 @@ void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vecto
 	}
 }
 void Server::updateNickname(const std::shared_ptr<Client>& client, const std::string& newNick, const std::string& oldNick) {
-//	const std::string& oldNick = client->getNickname();
-	const int& fd = client->getFd();
-	_nickname_to_fd.erase(toLower(oldNick));
-   // _fd_to_nickname.erase(fd);
-	client->setNickname(newNick);
-    _nickname_to_fd[toLower(newNick)] = fd;
-    //_fd_to_nickname[client->getFd()] = toLower(newNick);
+    const int& fd = client->getFd();
+    std::string old_lc = toLower(oldNick);
+    std::string new_lc = toLower(newNick);
+
+    std::cout << "=== [NICK UPDATE] FD: " << fd << " | Old: '" << oldNick << "' → New: '" << newNick << "'\n";
+    std::cout << "    Cleaning up old entry: '" << old_lc << "'\n";
+    _nickname_to_fd.erase(old_lc);
+
+    client->setNickname(newNick);
+
+    std::cout << "    Inserting new entry: '" << new_lc << "' for FD: " << fd << "\n";
+    _nickname_to_fd[new_lc] = fd;
+
+    std::cout << "    ✅ Nickname update complete.\n";
 }
+
 
 // todo be very sure this is handling property fd_to_nick and nick_to_fd.
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
-	if (!client->getHasSentNick()) {
-		client->setHasSentNick();
-		//return;
-	}
+
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();
 		updateNickname(client, param, oldnick);
-		//client->setNickname(param);
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
+		if (!client->getHasSentNick()) {
+			client->setHasSentNick();
+		} else {
+			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
+		}
 	} else if (type != MsgType::NONE){
+		if (type == MsgType::NICKNAME_IN_USE && !client->getHasSentNick()){
+			updateNickname(client, generateUniqueNickname(nick_to_fd), " ");
+			client->setHasSentNick();
+			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {param, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
+			return;
+		}
 		broadcastMessage(MessageBuilder::generateMessage(type, {client->getNickname(), param}), client, nullptr, false, nullptr);
-
 	}
 }
 
@@ -690,6 +703,7 @@ void Server::handleCapCommand(const std::string& nickname, std::deque<std::strin
 		//que.push_back(":localhost CAP * ACK :sasl\r\n");
 		que.push_back(":localhost CAP * ACK :END\r\n");
 		capSent = true;
+		std::cout << "[✅] client cap true : " << std::endl;
 }
 
 void Server::handlePing(const std::shared_ptr<Client>& client){
@@ -759,15 +773,23 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
 #include <fstream>
 //this is not an emergency 
 
-std::string generateUniqueNickname() {
+std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to_fd) {
     std::vector<std::string> adjectives = {
         "the_beerdrinking", "the_brave", "the_evil", "the_curious", "the_wild",
         "the_boring", "the_silent", "the_swift", "the_mystic", "the_slow", "the_lucky"
     };
-
-    std::string newNick = "anon" + adjectives[rand() % adjectives.size()] + static_cast<char>('a' + rand() % 26);
-
-    std::ofstream configFile("config");  // ✅ Opens the file for writing
+	std::string nickname;
+	int randomNum = 0;
+    do {
+		randomNum = rand() % 100;
+        nickname = "anon_" + adjectives[rand() % adjectives.size()] + "_" + std::to_string(randomNum);//static_cast<char>('a' + rand() % 26); // maybe a number, or 3-letter code
+    } while (nickname_to_fd.count(toLower(nickname)) > 0); // case-insensitive nick collision check
+    return nickname;
+}
+	// while produced name is not in nick name to fd map
+    //std::string newNick = "anon" + adjectives[rand() % adjectives.size()] + static_cast<char>('a' + rand() % 26);
+	
+   /* std::ofstream configFile("config");  // ✅ Opens the file for writing
     if (configFile.is_open()) {
         configFile << "servers = (\n";
         configFile << "  {\n";
@@ -812,7 +834,7 @@ std::string generateUniqueNickname() {
     }
 
     return newNick;
-}
+}*/
 
 void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
     // 1. Find the target client
@@ -1006,7 +1028,7 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 2. Client In Channel Check
 	if (!validateIsClientInChannel (channel_ptr, client, channel_name, sender_nickname)) { return ;}
-
+	
     // --- Decision Point: View Topic or Set Topic ---
 
     if (params.size() == 1) {
@@ -1025,7 +1047,7 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
         }
         return; // Done with viewing topic
     }
-
+	if (!validateModes(channel_ptr, client, Modes::TOPIC)) { std::cout<<"DEBUG TOPIC:: mode if false, should get not operator\n"; return;}
     // --- If we reach here, params.size() > 1, so client wants to SET the topic ---
     std::string new_topic_content = params[1]; // The topic string starts at params[1]
 
@@ -1033,12 +1055,7 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
     if (!new_topic_content.empty() && new_topic_content[0] == ':') {
         new_topic_content = new_topic_content.substr(1); // Remove leading colon if present
     }
-	if (!validateModes(channel_ptr, client, Modes::TOPIC)) { return;}
-	// i guess we could still use a bool
-    /*if (channel_ptr->getClientModes(client->getNickname()).test(modes::TOPIC) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);
-        return;
-    }*/
+	
 
     // --- All checks passed for setting the topic ---
 

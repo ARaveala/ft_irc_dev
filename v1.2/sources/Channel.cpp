@@ -45,31 +45,6 @@ const std::string Channel::getAllNicknames() {
 	return list;
 }
 
-/*bool Channel::validateModes(bool valid, MsgType comp, MsgType operator, const std::string& nickname){
-	if (!comp)
-		if (!getClientModes(nickname()).test(operator)) {
-			 broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {nickname, getName()}), client, nullptr, false, client);
-			return false;
-
-		}
-	}
-	return true;
-}*/
-
-/*const std::string Channel::getAllNicknames() {
-    std::string list;
-    for (const auto& entry : _ClientModes) {
-        if (auto clientPtr = entry.first.lock()) {
-            // Use getClientModePrefix here!
-            list += getClientModePrefix(clientPtr) + clientPtr->getNickname() + " ";
-            // You might also need the full hostmask like "!" + clientPtr->getUsername() + "@" + clientPtr->getHostname()
-            // depending on the exact IRC reply format you're building, but for a simple list, just the prefix+nickname is common.
-        }
-    }
-    return list;
-}*/
-
-
 std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
     if (auto clientPtr = weakClient.lock()) {  //  Convert weak_ptr to shared_ptr safely
         return clientPtr->getNickname();  //  Get the current nickname live
@@ -77,27 +52,6 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
     return "";  //eturn empty string if the Client no longe
 }
 
-//make this fucntion clean up any wekptr that no longer refrences
-// std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
-//     std::string lower_nickname_param = nickname;
-//     std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
-//                    [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-//     for (const auto& entry : _ClientModes) {
-//         if (auto clientPtr = entry.first.lock()) {
-//             std::string stored_lower_nickname = clientPtr->getNickname();
-//             std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
-//                            [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-//             if (stored_lower_nickname == lower_nickname_param) {
-//                 return entry.first; // return the matching weak_ptr
-//             }
-//         }
-//     }
-//     return {}; // return empty weak_ptr if no match is found
-// }
-
-// This function now correctly cleans up expired weak_ptrs,
 // assuming all incoming 'nickname' parameters and stored client nicknames are ALREADY in lowercase.
 std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
     // We assume 'nickname' is already in lowercase as per the program's invariant.
@@ -400,103 +354,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 
     return response;
 }
-	/*if (currentClientName != "" && getClientModes(currentClientName).test(Modes::OPERATOR) == false)
-	{
-		return {MsgType::NOT_OPERATOR, {nickname, channelname}};
-	}
-	char modechar = mode[1];
-	bool onoff = setModeBool(mode[0]);
-	MsgType ret;
-	Modes::ChannelMode cmodeType = charToChannelMode(modechar);
-	if (cmodeType != Modes::NONE) {
-		if (cmodeType == Modes::PASSWORD) {
-			if (pass.empty())
-				return {MsgType::INVALID_PASSWORD, {}};
-				// do we want a character limit here? we could just have it at 8 for simplicities sake
-			this->_password = pass;
-			ret = MsgType::PASSWORD_APPLIED;
-				  //  -!- mode/#bbq [+k hell] by user channel broadcast
-		}
-		if (cmodeType != Modes::INVITE_ONLY && (nickname.empty() || nickname == ""))
-		{
-			return {MsgType::INVALID_INVITE, {}};
-		}
-		_ChannelModes.set(cmodeType, onoff);
-		return {ret, {}};
-	}
-	return {MsgType::UNKNOWN, {}};*/
-//}
 
-
-// this confilct is maybe unresolved 
-    // This part should also be case-insensitive for currentClientName lookup, why?
-    /*if (currentClientName != "") {
-        std::string lower_current_client_name = currentClientName;
-        std::transform(lower_current_client_name.begin(), lower_current_client_name.end(), lower_current_client_name.begin(),
-                       [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-        
-        // Find the actual client shared_ptr for currentClientName
-        std::shared_ptr<Client> currentClientPtr;
-        for (const auto& entry : _ClientModes) {
-            if (auto clientPtr = entry.first.lock()) {
-                std::string stored_lower_nickname = clientPtr->getNickname();
-                std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
-                               [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-                if (stored_lower_nickname == lower_current_client_name) {
-                    currentClientPtr = clientPtr;
-                    break;
-                }
-            }
-        }
-
-        // Now check if currentClientPtr is an operator
-        if (!currentClientPtr || !getClientModes(currentClientPtr->getNickname()).test(Modes::OPERATOR)) {
-            // build message here ?
-            // Need a way to send error message back to currentClientName
-            std::cerr << "Error: " << currentClientName << " is not an operator on channel " << _name << std::endl;
-            return 2; // Indicate permission denied
-        }
-    }
-
-
-    char modechar = mode[1];
-    bool onoff = setModeBool(mode[0]);
-    Modes::ClientMode modeType = charToClientMode(modechar);
-
-    if (modeType != Modes::CLIENT_NONE) {
-        // Apply case-insensitivity for the target 'nickname'
-        std::string lower_target_nickname = nickname;
-        std::transform(lower_target_nickname.begin(), lower_target_nickname.end(), lower_target_nickname.begin(),
-                       [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-        // Find the target client's weak_ptr in _ClientModes
-        std::weak_ptr<Client> targetWeakClientPtr;
-        for (auto& entry : _ClientModes) { // Need non-const auto& here to modify the bitset
-            if (auto clientPtr = entry.first.lock()) {
-                std::string stored_lower_nickname = clientPtr->getNickname();
-                std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
-                               [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-                if (stored_lower_nickname == lower_target_nickname) {
-                    targetWeakClientPtr = entry.first;
-                    break;
-                }
-            }
-        }
-
-        if (auto targetClient = targetWeakClientPtr.lock()) {
-             // Now that we have the actual client's bitset, set the mode
-            // This is how you access and modify the bitset directly from the map:
-            _ClientModes[targetWeakClientPtr].first.set(modeType, onoff);
-            return 1; // Success
-        } else {
-            // Target client not found in channel (or weak_ptr expired)
-            std::cerr << "Error: Target client " << nickname << " not found in channel " << _name << std::endl;
-            // You might want to send an error message like ERR_NOSUCHNICK back to the currentClientName
-            return 0; // Failure
-        }
-    }
-    return 0; // Invalid mode
-}*/
 
 // using optional here instead as we can just retun nullptr 
 std::optional<std::pair<MsgType, std::vector<std::string>>>

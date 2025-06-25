@@ -158,9 +158,9 @@ void Client::setDefaults(){ //todo check these are really called - or woudl we c
 	// this needs an alternative to add unique identifiers 
 	// also must add to all relative containers. 
 	//_nickName = generateUniqueNickname();
-	std::string potential_nick = generateUniqueNickname();
-	_username = "user_" + _nickName;
-	_fullName = "real_" + _nickName;
+	//std::string potential_nick = generateUniqueNickname();
+	//_username = "user_" + potential_nick;
+	//_fullName = "real_" + potential_nick;
 	_isOperator = false;
 	signonTime = time(NULL);
 	lastActivityTime = time(NULL);

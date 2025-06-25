@@ -34,15 +34,34 @@ std::string toLower(const std::string& input) {
                    [](unsigned char c) { return std::tolower(c); });
     return output;
 }
-/**
- * @brief Construct a new Server:: Server object
- * 
- * @param port 
- * @param password 
- */
-Server::Server(int port , const std::string& password) : _port(port), _password(password) {
-	_commandDispatcher = std::make_unique<CommandDispatcher>(this);
+// /**
+//  * @brief Construct a new Server:: Server object
+//  * 
+//  * @param port 
+//  * @param password 
+//  */
+// Server::Server(int port , const std::string& password) : _port(port), _password(password) {
+// 	_commandDispatcher = std::make_unique<CommandDispatcher>(this);
+// }
+
+Server::Server(int port , const std::string& password) :
+    // Initialize members in the order they are declared in Server.hpp
+    _passwordRequired(true), // Always true as password is mandatory per brief
+    _port(port),
+    _client_count(0),
+    _fd(-1),
+    _current_client_in_progress(-1),
+    _signal_fd(-1),
+    _epoll_fd(-1),
+    _server_name("ft_irc_server"), // Default server name
+    _password(password) // Initialize the password
+    // ... (other initializers for your refactored code) ...
+{
+    _commandDispatcher = std::make_unique<CommandDispatcher>(this);
+    std::cout << "#### Server instance created on port " << _port << ".\n";
+    // Note: Your main.cpp should validate that both <port> and <password> arguments are provided.
 }
+
 
 // ~~~SETTERS
 void Server::setFd(int fd){
@@ -177,7 +196,11 @@ void Server::create_Client(int epollfd) {
     	close(client_fd);
 		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
 	}
-	_Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd);
+	
+	
+    // Pass _passwordRequired from the Server to the Client constructor
+    _Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd, _passwordRequired); // <--- CHANGE HERE
+
 	std::shared_ptr<Client> client = _Clients[client_fd];
 	_timer_map[timer_fd] = client_fd;
 	set_current_client_in_progress(client_fd);
@@ -1112,3 +1135,66 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::GET_INVITE, {sender_nickname, client->getUsername(), target_nickname, channel_name}), client, nullptr, false, target_client_ptr);
 }
+
+void Server::handlePassCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+    // 1. Check if the client is already registered
+    // A registered client sending PASS indicates a protocol violation.
+    if (client->getHasRegistered()) {
+        client->sendMessage(":" + getServerName() + " 462 " + client->getNickname() + " :Unauthorized command (already registered)");
+        return;
+    }
+
+    // 2. Check if a password was provided in the command parameters
+    if (params.empty()) {
+        client->sendMessage(":" + getServerName() + " 461 " + client->getNickname() + " PASS :Not enough parameters");
+        // Do NOT disconnect here, wait for registration attempt to handle it gracefully if no other commands follow.
+        return;
+    }
+
+    const std::string& clientPassword = params[0]; // The first parameter is the password
+
+    // --- PASSWORD POLICY CHECKS ---
+    const size_t MIN_PASS_LENGTH = 6;  // Minimum 6 characters
+    const size_t MAX_PASS_LENGTH = 20; // Maximum 20 characters
+
+    // 3. Check password length (Minimum)
+    if (clientPassword.length() < MIN_PASS_LENGTH) {
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password too short. Minimum " + std::to_string(MIN_PASS_LENGTH) + " characters required.");
+        client->disconnect("Password policy violation: too short."); // Disconnect immediately
+        return;
+    }
+
+    // 4. Check password length (Maximum)
+    if (clientPassword.length() > MAX_PASS_LENGTH) {
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password too long. Maximum " + std::to_string(MAX_PASS_LENGTH) + " characters allowed.");
+        client->disconnect("Password policy violation: too long."); // Disconnect immediately
+        return;
+    }
+
+    // 5. Check for eligible characters (basic printable ASCII check)
+    for (char c : clientPassword) {
+        if (!std::isprint(static_cast<unsigned char>(c))) {
+            client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password contains invalid or non-printable characters.");
+            client->disconnect("Password policy violation: invalid characters."); // Disconnect immediately
+            return;
+        }
+    }
+    // --- END PASSWORD POLICY CHECKS ---
+
+
+    // 6. Compare with the server's required password
+    // Since _passwordRequired is always true as per the brief, we only need to compare.
+    if (clientPassword == _password) {
+        // Password is correct, set client's authentication flag
+        client->setIsAuthenticatedByPass(true);
+        // No immediate success message for PASS. Success is implied when client registers fully.
+    } else {
+        // Password is incorrect
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password incorrect.");
+        client->disconnect("Password incorrect."); // Disconnect on incorrect password
+        return; // Stop processing further
+    }
+    // If the password is correct, the function returns, allowing CommandDispatcher
+    // to proceed to the registration attempt phase.
+}
+

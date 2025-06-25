@@ -38,6 +38,8 @@ class Server {
 		int _signal_fd;
 		int _epoll_fd;
 
+		bool	_passwordRequired;
+
 		std::string _server_name;
 		std::string _password;
 
@@ -141,6 +143,8 @@ class Server {
 		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
 		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+		void handlePassCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
+
 
 
 

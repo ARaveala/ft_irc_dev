@@ -33,6 +33,8 @@ class Client {
 		std::string _fullName;
 		std::string _hostname; // todo check this is set during connection
 		bool _isOperator; // todo client can be many chanel operator
+		bool _isAuthenticatedByPass;         // True if PASS command was correct
+        bool _passwordRequiredForRegistration; // True if the *server* required a password for registration
 
 		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
@@ -44,6 +46,7 @@ class Client {
 	public:
 		Client() = delete;
 		Client(int fd, int timerfd);
+		Client(int fd, int timerfd, bool serverPasswordRequired);
 		~Client();
 		int getFd();
 		int get_failed_response_counter();
@@ -148,6 +151,12 @@ class Client {
     // For QUITTING, you might need a getter for all joined channels
     // const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
 
+	// Getters for password-related flags
+	bool getIsAuthenticatedByPass() const { return _isAuthenticatedByPass; }
+	bool getPasswordRequiredForRegistration() const { return _passwordRequiredForRegistration; }
+
+	// Setter for authentication status
+	void setIsAuthenticatedByPass(bool status) { _isAuthenticatedByPass = status; }
 
 };
 

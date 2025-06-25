@@ -15,24 +15,41 @@
 
 // Client::Client(){} never let this exist - is that stated in the hpp?
 
-Client::Client(int fd, int timer_fd) :
-	_fd(fd),
-	_timer_fd(timer_fd),
-	_failed_response_counter(0),
-	signonTime(0),          // Initialize to 0, set on registration
-	lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
-	_channelCreator(false),
-	_quit(false),
-	_hasSentCap(false),
-	_hasSentNick(false),
-	// _hasSentUSer(false),
-	_registered(false),
-	_isOperator(false)      // Initialize to false
-  	
+// Constructor accepting client_fd and timer_fd (e.g., for direct client creation without password context)
+Client::Client(int fd, int timerfd) :
+    _fd(fd),
+    _timer_fd(timerfd),
+    signonTime(time(NULL)),
+    lastActivityTime(time(NULL)),
+    _isOperator(false),
+    _msg(fd), // Assuming IrcMessage constructor takes fd
+    _isAuthenticatedByPass(false),          // Initialize to false by default
+    _passwordRequiredForRegistration(false) // Default to false if no serverPasswordRequired is passed
 {
-		lastActivityTime = time(NULL);
-		_ClientPrivModes.reset();
+	lastActivityTime = time(NULL);
+	_ClientPrivModes.reset();
+    // ... (other initializations you might have in your refactored code) ...
+    setDefaults(); // Call setDefaults to set initial nickname etc.
 }
+
+// Constructor accepting client_fd, timer_fd, and serverPasswordRequired (preferred for clients created by Server)
+Client::Client(int fd, int timerfd, bool serverPasswordRequired) :
+    _fd(fd),
+    _timer_fd(timerfd),
+    signonTime(time(NULL)),
+    lastActivityTime(time(NULL)),
+    _isOperator(false),
+    _msg(fd), // Assuming IrcMessage constructor takes fd
+    _isAuthenticatedByPass(false),              // Client starts unauthenticated
+    _passwordRequiredForRegistration(serverPasswordRequired) // Initialize based on the server's setting
+{
+	lastActivityTime = time(NULL);
+	_ClientPrivModes.reset();
+    // ... (other initializations you might have in your refactored code) ...
+    setDefaults(); // Call setDefaults to set initial nickname etc.
+}
+
+
 
 Client::~Client(){
 	// when the client is deleted , go through clienst list of channels it 
@@ -262,11 +279,35 @@ long Client::getIdleTime() const {
     return time(NULL) - lastActivityTime;
 }
 
-// Ensure this is called when client successfully registers
+// This method is called to attempt to transition the client to a registered state.
+// It checks if all conditions for full registration are met.
 void Client::setHasRegistered() {
-    _registered = true;
-    signonTime = time(NULL); // Set signon time upon successful registration
-    lastActivityTime = time(NULL); // Also set initial last activity time
+    // A client is fully registered if:
+    // 1. They have successfully sent a NICK command (`_hasSentNick` is true).
+    // 2. They have successfully sent a USER command (`_hasSentUser` is true).
+    // 3. AND if the server requires a password (`passwordRequiredForRegistration` is true),
+    //    they *must also* have successfully sent the correct PASS command (`isAuthenticatedByPass` is true).
+    if (_hasSentNick && _hasSentUser) {
+        // Check password condition:
+        // If password is NOT required OR password IS required AND authenticated, then proceed.
+        if (!passwordRequiredForRegistration || isAuthenticatedByPass) {
+
+            // Only set _registered to true once to avoid re-registration issues
+            if (!_registered) {
+                _registered = true;
+                // Set signon and last activity times upon full registration
+                // (Ensure time.h is included for time(NULL))
+                signonTime = time(NULL);
+                lastActivityTime = time(NULL);
+
+                // The Server's CommandDispatcher will handle sending welcome messages (001-004, MOTD)
+                // after checking client->getHasRegistered() in its main command processing loop.
+                // No need to send messages from here directly, as this is purely a client-side state update.
+            }
+        }
+        // If _hasSentNick && _hasSentUser are true, but the password isn't authenticated (and required),
+        // then _registered remains false. The CommandDispatcher will handle sending ERR_PASSWDMISMATCH.
+    }
 }
 
 // You need to ensure this is called whenever you read data from the client's socket

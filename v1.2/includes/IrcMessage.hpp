@@ -25,6 +25,7 @@ class IrcMessage {
 		std::string _prefix;
 		std::string _command;
 
+		// lowercase appears here jw
 		static std::string to_lowercase(const std::string& s) {
 			std::string lower_s = s;
 			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),

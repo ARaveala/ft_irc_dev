@@ -41,40 +41,43 @@ std::set<std::shared_ptr<Client>> Server::getSharedChannelRecipients(std::shared
     return recipients;
 }
 
+
+// I have moved this to the server.cpp
 // --- Refactored broadcastMessage Function ---
 // todo doxygen this
-void Server::broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, // For single channel broadcasts
-    bool skip_sender,
-    std::shared_ptr<Client> individual_recipient // Optional: for sending to a single client
-) {
-    if (message_content.empty()) {
-        std::cerr << "WARNING: Attempted to broadcast an empty message. Skipping.\n";
-        return;
-    }
-    std::set<std::shared_ptr<Client>> recipients;
-    if (individual_recipient) {
-        recipients.insert(individual_recipient);
-    } else if (target_channel) {
-        recipients = getChannelRecipients(target_channel, sender, skip_sender);
-    } else if (sender) {
-        recipients = getSharedChannelRecipients(sender, skip_sender);
-    } else {
-        std::cerr << "Error: Invalid call to broadcastMessage. Must provide an individual recipient, a target channel, or a sender.\n";
-        return;
-    }
+// this is for sending to many?
+// void Server::broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, // For single channel broadcasts
+//     bool skip_sender,
+//     std::shared_ptr<Client> individual_recipient // Optional: for sending to a single client
+// ) {
+//     if (message_content.empty()) {
+//         std::cerr << "WARNING: Attempted to broadcast an empty message. Skipping.\n";
+//         return;
+//     }
+//     std::set<std::shared_ptr<Client>> recipients;
+//     if (individual_recipient) {
+//         recipients.insert(individual_recipient);
+//     } else if (target_channel) {
+//         recipients = getChannelRecipients(target_channel, sender, skip_sender);
+//     } else if (sender) {
+//         recipients = getSharedChannelRecipients(sender, skip_sender);
+//     } else {
+//         std::cerr << "Error: Invalid call to broadcastMessage. Must provide an individual recipient, a target channel, or a sender.\n";
+//         return;
+//     }
 
-    // Common logic for queuing and updating epoll events
-    for (const auto& recipientClient : recipients) {
-        if (!recipientClient) { // Safety check for null shared_ptr (shouldn't happen with weak_ptr locking)
-            std::cerr << "WARNING: Attempted to queue message for a null recipient client.\n";
-            continue;
-        }
-        bool wasEmpty = recipientClient->isMsgEmpty();
-        recipientClient->getMsg().queueMessage(message_content);
-        if (wasEmpty) {
-            std::cout << "it was empty yeah !!!!---------------\n"; // Keep your debug message if desired
-            updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
-        }
-        std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
-    }
-}
+//     // Common logic for queuing and updating epoll events
+//     for (const auto& recipientClient : recipients) {
+//         if (!recipientClient) { // Safety check for null shared_ptr (shouldn't happen with weak_ptr locking)
+//             std::cerr << "WARNING: Attempted to queue message for a null recipient client.\n";
+//             continue;
+//         }
+//         bool wasEmpty = recipientClient->isMsgEmpty();
+//         recipientClient->getMsg().queueMessage(message_content);
+//         if (wasEmpty) {
+//             std::cout << "it was empty yeah !!!!---------------\n"; // Keep your debug message if desired
+//             updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
+//         }
+//         std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
+//     }
+// }

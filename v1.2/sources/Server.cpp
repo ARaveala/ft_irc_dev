@@ -1,5 +1,5 @@
 #include <sys/types.h>
-#include <unistd.h>
+#include <unistd.h> // close
 #include <string.h> //strlen
 #include <iostream> // testing with cout
 #include <sstream>  // for passing parameters
@@ -24,25 +24,72 @@
 
 class ServerException;
 
-
-Server::Server(){
-	std::cout << "#### Server instance created.\n";
-}
 std::string toLower(const std::string& input) {
-    std::string output = input;
-    std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return output;
+	std::string output = input;
+	std::transform(output.begin(), output.end(), output.begin(),
+				   [](unsigned char c) { return std::tolower(c); });
+	return output;
 }
+
 /**
  * @brief Construct a new Server:: Server object
  * 
  * @param port 
  * @param password 
  */
-Server::Server(int port , const std::string& password) : _port(port), _password(password) {
-	_commandDispatcher = std::make_unique<CommandDispatcher>(this);
+
+
+
+// Server::Server(){
+// 	std::cout << "#### Server instance created.\n";
+// }
+
+// Server::Server(int port , const std::string& password) :
+//     _port(port),
+//     _password(password),
+//     _passwordRequired(!password.empty()) // jw to say false if it's empty
+// {
+//     _commandDispatcher = std::make_unique<CommandDispatcher>(this);
+// }
+
+
+// Server Constructors
+Server::Server(){
+    std::cout << "#### Server instance created (default constructor).\n";
+    // Initialize members with default/safe values if this constructor is used
+    _port = 0;
+    _client_count = 0;
+    _fd = -1;
+    _current_client_in_progress = -1;
+    _signal_fd = -1;
+    _epoll_fd = -1;
+    _passwordRequired = false; // Default to false if no password specified
+    _server_name = "ft_irc_server"; // Default server name
+    _password = "";
+    _commandDispatcher = std::make_unique<CommandDispatcher>(this);
 }
+
+// Corrected Constructor: Reordered initializer list to match declaration order in Server.hpp
+Server::Server(int port , const std::string& password) :
+    _passwordRequired(!password.empty()), // Initialize first, as declared first in Server.hpp
+    _port(port), // Initialize _port after _passwordRequired
+    _client_count(0),
+    _fd(-1),
+    _current_client_in_progress(-1),
+    _signal_fd(-1),
+    _epoll_fd(-1),
+    _server_name("ft_irc_server"), // Set a default server name
+    _password(password) // Initialize _password after _port
+{
+    _commandDispatcher = std::make_unique<CommandDispatcher>(this);
+    std::cout << "#### Server instance created on port " << _port << ".\n";
+}
+
+Server::~Server(){
+    std::cout << "#### Server instance destroyed.\n";
+    shutDown(); // Ensure proper shutdown
+}
+
 
 // ~~~SETTERS
 void Server::setFd(int fd){
@@ -160,34 +207,36 @@ bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::sh
 #include <netinet/in.h>
 
 void Server::create_Client(int epollfd) {
- 	// Handle new incoming connection
-	int client_fd = accept(getFd(), nullptr, nullptr);
- 	if (client_fd < 0) {
-		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
-	}
-	int flag = 1;
-	socklen_t optlen = sizeof(flag);
-	setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, optlen);
-	make_socket_unblocking(client_fd);
-	setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET);
-	int timer_fd = setup_epoll_timer(epollfd, config::TIMEOUT_CLIENT);
-	if (timer_fd == -1){
-		epoll_ctl(epollfd, EPOLL_CTL_DEL, client_fd, nullptr);  // Optional, but clean
-    	close(client_fd);
-		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
-	}
-	_Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd);
-	std::shared_ptr<Client> client = _Clients[client_fd];
-	_timer_map[timer_fd] = client_fd;
-	set_current_client_in_progress(client_fd);
-	client->setDefaults();
-	_fd_to_nickname.insert({client_fd, toLower(client->getNickname())});
-	_nickname_to_fd.insert({toLower(client->getNickname()), client_fd});
-	if (!client->get_acknowledged()){			
-		client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
-		set_client_count(1);		
-	}
-	std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
+    // Handle new incoming connection
+    int client_fd = accept(getFd(), nullptr, nullptr);
+    if (client_fd < 0) {
+        throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
+    }
+    int flag = 1;
+    socklen_t optlen = sizeof(flag);
+    setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, optlen);
+    make_socket_unblocking(client_fd);
+    setup_epoll(epollfd, client_fd, EPOLLIN | EPOLLOUT | EPOLLET);
+    int timer_fd = setup_epoll_timer(epollfd, config::TIMEOUT_CLIENT);
+    if (timer_fd == -1){
+        epoll_ctl(epollfd, EPOLL_CTL_DEL, client_fd, nullptr);  // Optional, but clean
+        close(client_fd);
+        throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
+    }
+    // Corrected: Pass _passwordRequired from the Server to the Client constructor
+    _Clients[client_fd] = std::make_shared<Client>(client_fd, timer_fd, _passwordRequired);
+    std::shared_ptr<Client> client = _Clients[client_fd];
+    _timer_map[timer_fd] = client_fd;
+    set_current_client_in_progress(client_fd);
+    client->setDefaults(); // This sets a default nickname (e.g., "guest") and other initial client details.
+                           // The actual nickname will be set by the NICK command.
+    _fd_to_nickname.insert({client_fd, toLower(client->getNickname())});
+    _nickname_to_fd.insert({toLower(client->getNickname()), client_fd});
+    if (!client->get_acknowledged()){
+        client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
+        set_client_count(1);
+    }
+    std::cout << "New Client created , fd value is  == " << client_fd << std::endl;
 }
 
 void Server::remove_Client(int client_fd) {
@@ -296,9 +345,9 @@ std::map<std::string, int>& Server::get_nickname_to_fd() {
 	return _nickname_to_fd;
 }
 
-std::string Server::get_password() const {
-	return _password;
-}
+// std::string Server::get_password() const {
+// 	return _password;
+// }
 
 void Server::closeAndResetClient() {
     if (_current_client_in_progress > 0) {
@@ -326,29 +375,46 @@ void Server::handle_client_connection_error(ErrorType err_type) {
 }
 
 void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_fd) { // send client as aparam const ref
-    if (!client) { return; }
-	set_current_client_in_progress(client_fd);
+    if (!client) { return; } // Should ideally not happen if client is in _Clients map
+    set_current_client_in_progress(client_fd);
     char buffer[config::BUFFER_SIZE];
     ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0); // Server does the recv, ONCE per event!
-	std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
+    std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
     if (bytes_read < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) { return; }
         perror("recv failed in handleReadEvent"); // error
-		remove_Client(client_fd);
-		return;
+        remove_Client(client_fd); // Remove client on persistent read error
+        return;
     }
     if (bytes_read == 0) {
         std::cout << "Client FD " << client_fd << " disconnected gracefully (recv returned 0).\n";
-        handleQuit(client);
+        handleQuit(client); // Use handleQuit to ensure proper cleanup and notifications
         return;
     }
     client->appendIncomingData(buffer, bytes_read);
-	  // This loop ensures all complete messages are processed.
+
+    // This loop ensures all complete messages are processed from the client's buffer.
+    // IMPORTANT: Add a check to break the loop if the client has been removed/marked for quit
     while (client->extractAndParseNextCommand()) {
-        // This is the point where you know the client is active and sent a valid message.
+        // If the client has been marked for quit (e.g., by handlePassCommand or QUIT)
+        // or has already been removed by _server->remove_Client in CommandDispatcher,
+        // stop processing further commands for this client.
+        if (client->getQuit()) { // Check the client's quit flag
+            std::cout << "DEBUG: Client FD " << client_fd << " marked for quit, stopping command processing loop.\n";
+            break; // Exit the loop as client is no longer valid for processing.
+        }
+
         resetClientTimer(client_fd, config::TIMEOUT_CLIENT);
-        client->set_failed_response_counter(-1);
+        client->set_failed_response_counter(-1); // Reset counter on successful command processing
+
         _commandDispatcher->dispatchCommand(client, client->getMsg().getParams());
+
+        // After dispatching a command, double-check if the client was removed during dispatch.
+        // This is a defense-in-depth against use-after-free, especially after commands that disconnect.
+        if (_Clients.find(client_fd) == _Clients.end()) {
+             std::cout << "DEBUG: Client FD " << client_fd << " removed during command dispatch, stopping processing.\n";
+             return; // Client no longer exists, exit handleReadEvent immediately.
+        }
     }
 }
 
@@ -387,9 +453,6 @@ void Server::shutDown() {
 	std::cout<<"server shutDown completed"<<std::endl;
 }
 
-Server::~Server(){
-	//shutDown();
-}
 
 /**
  * @brief checks if a timer fd was activated in epoll
@@ -819,7 +882,7 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
                                 + target_client->getNickname() + " "
                                 + target_client->getClientUname() + " "
                                 + target_client->getHostname() + " * :" // Make sure getHostname is implemented
-                                + target_client->getfullName() + "\r\n";
+                                + target_client->getFullName() + "\r\n";
     requester_client->getMsg().queueMessage(user_info_msg);
 
    // RPL_WHOISSERVER (312)
@@ -1080,3 +1143,120 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_INVITING, {sender_nickname, target_nickname, channel_name}), client, nullptr, false, client);
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::GET_INVITE, {sender_nickname, client->getUsername(), target_nickname, channel_name}), client, nullptr, false, target_client_ptr);
 }
+
+// Server::Server(int port, const std::string& password) : _port(port), _serverPassword(password) { //jw
+
+// Server.cpp
+
+// ... (other Server method implementations) ...
+
+void Server::handlePassCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
+    // 1. Check if the client is already registered
+    if (client->getHasRegistered()) { // Use getter
+        client->sendMessage(":" + getServerName() + " 462 " + client->getNickname() + " :Unauthorized command (already registered)");
+        return;
+    }
+
+    // 2. Check if a password was provided in the command
+    if (params.empty()) {
+        client->sendMessage(":" + getServerName() + " 461 " + client->getNickname() + " PASS :Not enough parameters");
+        return;
+    }
+
+    const std::string& clientPassword = params[0]; // The first parameter is the password
+
+    // --- NEW PASSWORD POLICY CHECKS ---
+
+    // Define minimum and maximum password length
+    const size_t MIN_PASS_LENGTH = 6;  // Example: Minimum 6 characters
+    const size_t MAX_PASS_LENGTH = 20; // User requested: Maximum 20 characters
+
+    // Define allowed characters (e.g., alphanumeric and common symbols)
+    // For ft_irc, this can be simple. Avoid strictly enforcing complex rules
+    // unless required by the subject. Here, we'll allow printable ASCII.
+    // If you need to restrict to specific alphanumeric + symbols:
+    // const std::string ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_+=[]{}|;:,.<>?/";
+    // For ft_irc, simply checking for non-printable characters might be enough.
+    // Let's go with checking for non-printable/control characters.
+
+    // 3. Check password length (Minimum)
+    if (clientPassword.length() < MIN_PASS_LENGTH) {
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password too short. Minimum " + std::to_string(MIN_PASS_LENGTH) + " characters required.");
+        client->disconnect("Password too short.");
+        return;
+    }
+
+    // 4. Check password length (Maximum) - NEW ADDITION
+    if (clientPassword.length() > MAX_PASS_LENGTH) {
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password too long. Maximum " + std::to_string(MAX_PASS_LENGTH) + " characters allowed.");
+        client->disconnect("Password too long.");
+        return;
+    }
+
+    // 5. Check for eligible characters (basic printable ASCII check)
+    // This loops through each character in the password.
+    for (char c : clientPassword) {
+        // Check if the character is a printable ASCII character (excluding space for strictness, or including it based on preference)
+        // isprint() checks for any printable character, including space.
+        // If you want to disallow spaces in passwords, you'd add: || c == ' '
+        if (!std::isprint(static_cast<unsigned char>(c))) {
+            client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password contains invalid or non-printable characters.");
+            client->disconnect("Password contains invalid characters.");
+            return;
+        }
+    }
+
+    // --- END NEW PASSWORD POLICY CHECKS ---
+
+
+    // 6. Compare with the server's required password
+    // This logic remains the same after the new checks are passed.
+    if (_password.empty()) { // If the server itself does not have a password set
+        client->setIsAuthenticatedByPass(true); // Still mark as true, as no password was needed.
+    } else if (clientPassword == _password) { // If server has a password and it matches
+        client->setIsAuthenticatedByPass(true);
+    } else { // If server has a password and it does NOT match
+        client->sendMessage(":" + getServerName() + " 464 " + client->getNickname() + " :Password incorrect.");
+        // Important: Incorrect password leads to the server closing the connection.
+        client->disconnect("Password incorrect.");
+        return; // Stop processing further
+    }
+    // No immediate success message for PASS. Success is implied when client registers fully.
+}
+
+void Server::broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, // For single channel broadcasts
+    bool skip_sender,
+    std::shared_ptr<Client> individual_recipient // Optional: for sending to a single client
+) {
+    if (message_content.empty()) {
+        std::cerr << "WARNING: Attempted to broadcast an empty message. Skipping.\n";
+        return;
+    }
+    std::set<std::shared_ptr<Client>> recipients;
+    if (individual_recipient) {
+        recipients.insert(individual_recipient);
+    } else if (target_channel) {
+        recipients = getChannelRecipients(target_channel, sender, skip_sender);
+    } else if (sender) {
+        recipients = getSharedChannelRecipients(sender, skip_sender);
+    } else {
+        std::cerr << "Error: Invalid call to broadcastMessage. Must provide an individual recipient, a target channel, or a sender.\n";
+        return;
+    }
+
+    // Common logic for queuing and updating epoll events
+    for (const auto& recipientClient : recipients) {
+        if (!recipientClient) { // Safety check for null shared_ptr (shouldn't happen with weak_ptr locking)
+            std::cerr << "WARNING: Attempted to queue message for a null recipient client.\n";
+            continue;
+        }
+        bool wasEmpty = recipientClient->isMsgEmpty();
+        recipientClient->getMsg().queueMessage(message_content);
+        if (wasEmpty) {
+            std::cout << "it was empty yeah !!!!---------------\n"; // Keep your debug message if desired
+            updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
+        }
+        std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
+    }
+}
+

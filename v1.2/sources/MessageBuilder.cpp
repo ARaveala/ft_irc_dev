@@ -113,7 +113,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	        case MsgType::PART:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildPart), params);
 			case MsgType::KICK:
-			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildKick), params);
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildKick), params);
 	        // Add more cases here...
 			default:
 		        return "Error: Unknown message type";

@@ -587,13 +587,21 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
 
 // todo be very sure this is handling property fd_to_nick and nick_to_fd.
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
-
+	// new function here , can use it all kinds of ways, this will help prevent segv on early attemps to chnage things before registartion
+	auto now = std::chrono::steady_clock::now();
+	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
+		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before changing nick\r\n");
+			updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		    return;
+	}
+	// willl be seperated
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();
 		updateNickname(client, param, oldnick);
 		if (!client->getHasSentNick()) {
 			client->setHasSentNick();
+			//tryRegisterClient(client);
 		} else {
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
 		}
@@ -601,6 +609,7 @@ void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<s
 		if (type == MsgType::NICKNAME_IN_USE && !client->getHasSentNick()){
 			updateNickname(client, generateUniqueNickname(nick_to_fd), " ");
 			client->setHasSentNick();
+			//tryRegisterClient(client);
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {param, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
 			return;
 		}

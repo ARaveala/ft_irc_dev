@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-
+#include <chrono>
 #include "IrcMessage.hpp"
 
 class Server;
@@ -25,6 +25,7 @@ class Client {
 		bool _hasSentNick = false;
 		bool _hasSentUser = false;
 		bool _registered = false;
+		bool _passwordValid = false; //PASWORD araveala
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _oldNick;
@@ -33,7 +34,7 @@ class Client {
 		std::string _fullName;
 		std::string _hostname; // todo check this is set during connection
 		bool _isOperator; // todo client can be many chanel operator
-
+		std::chrono::time_point<std::chrono::steady_clock> _pleaseWait;
 		std::map<std::string, std::function<void()>> _commandMap; // map out commands to their fucntion calls to avoid large if else
 		IrcMessage _msg;
 		std::map<std::string, std::weak_ptr<Channel>> _joinedChannels; // list of joined channels
@@ -63,6 +64,9 @@ class Client {
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUser = true;};
+
+		void setPasswordValid() {_passwordValid = true;}; //PASSWORD araveala
+
 		void setHasRegistered();
 
 		// clear out all the data 
@@ -81,6 +85,9 @@ class Client {
 		bool getHasSentNick() {return _hasSentNick;};
 		bool getHasSentUser() {return _hasSentUser;};
 		bool getHasRegistered() {return _registered;};
+
+		bool getPasswordValid() {return _passwordValid;}; // PASSWORD araveala
+
 		std::string getPrivateModeString(); // const and all that 
 		bool getQuit() {return _quit;};
 		bool get_acknowledged();
@@ -148,7 +155,9 @@ class Client {
     // For QUITTING, you might need a getter for all joined channels
     // const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
 
-
+//adedded extar feature to prevent user error on early nick or join 
+		void setRegisteredAt(std::chrono::time_point<std::chrono::steady_clock> start) {_pleaseWait = start;}
+		std::chrono::time_point<std::chrono::steady_clock> getRegisteredAt() {return _pleaseWait;}
 };
 
 

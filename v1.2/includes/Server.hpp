@@ -142,12 +142,15 @@ class Server {
 		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 
-
-
 		//whois
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);
 		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);
+
+	// new functions in the passwordhnalder cpp so we can navigate any issues easier
+		void tryRegisterClient(const std::shared_ptr<Client>& client);
+		void handlePassword(const std::shared_ptr<Client>& client, const int& client_fd, const std::string& password);
+
 };
 
 std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to_fd);

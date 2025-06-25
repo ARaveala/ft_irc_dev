@@ -29,10 +29,15 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;
         return;
     }
+	//_server->tryRegisterClient(client);
+
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
-	// command == "PASS" get the password and accept or dewcline based on getpassword()
+	if (command == "PASS") {
+		_server->handlePassword(client, client_fd, params[0]);
+	}
+
 	if (command == "CAP" && !client->getHasSentCap()) {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
@@ -40,19 +45,28 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleQuit(client);
 		return ;
 	}
-
 	if (command == "USER" && !client->getHasSentUser()) {
 		client->setClientUname(params[0]);
 		client->setRealname(params[3]);
 		client->setHasSentUser();
+		//_server->tryRegisterClient(client);
 	}
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
+		//_server->tryRegisterClient(client);
+
 	}
 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-		client->setHasRegistered();
-		client->getMsg().queueMessage(MessageBuilder::generatewelcome(client->getNickname()));
-		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+		
+		if (!client->getPasswordValid()) {
+			std::cout<<"DEBUG::PASSWORD NOT ACCPTED......... \n";
+			client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
+			client->setQuit();
+			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+			return;
+		}
+		_server->tryRegisterClient(client);
+		client->setRegisteredAt(std::chrono::steady_clock::now());
 	}
 	if (command == "PING"){
 		_server->handlePing(client);

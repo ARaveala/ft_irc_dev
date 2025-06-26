@@ -131,8 +131,8 @@ bool Server::validateTargetInChannel(const std::shared_ptr<Channel> channel, con
 	return true;
 }
 
-bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const std::string& sender_nickname, const std::string& target_nickname) {
-	if (!client) {
+bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const std::shared_ptr<Client>& target, const std::string& sender_nickname, const std::string& target_nickname) {
+	if (!target) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {sender_nickname, target_nickname}), client, nullptr, false, client);
         return false;
     }
@@ -601,7 +601,7 @@ void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<s
 		updateNickname(client, param, oldnick);
 		if (!client->getHasSentNick()) {
 			client->setHasSentNick();
-			//tryRegisterClient(client);
+			tryRegisterClient(client);
 		} else {
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {oldnick, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
 		}
@@ -609,7 +609,7 @@ void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<s
 		if (type == MsgType::NICKNAME_IN_USE && !client->getHasSentNick()){
 			updateNickname(client, generateUniqueNickname(nick_to_fd), " ");
 			client->setHasSentNick();
-			//tryRegisterClient(client);
+			tryRegisterClient(client);
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::RPL_NICK_CHANGE, {param, client->getUsername(), client->getNickname()}), client, nullptr, false, nullptr);
 			return;
 		}
@@ -989,7 +989,7 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
         return;
     }
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
-	if(!validateTargetExists(target_client_ptr, target_nickname, kicker_nickname)) { return; }
+	if(!validateTargetExists(client, target_client_ptr, target_nickname, kicker_nickname)) { return; }
     // Check if the target is on the specified channel (ERR_USERNOTINCHANNEL)
    	if (!validateIsClientInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::KICK, {client->getNickname(), client->getUsername(), channel_name, target_nickname, kick_reason}), client, channel_ptr, false, nullptr);
@@ -1102,15 +1102,20 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
     std::string channel_name = toLower(params[1]);
     // 2. Check if target nickname exists (is connected to the server)
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
-    if(!validateTargetExists(target_client_ptr, target_nickname, sender_nickname)) { return; }
+	std::cout << "SERVER: handleInviteCommand validateTargetExists " << client->getNickname() << std::endl;
+    if(!validateTargetExists(client, target_client_ptr, target_nickname, sender_nickname)) { return; }
     // 3. Check if channel exists
+	std::cout << "SERVER: handleInviteCommand validateChannelExists " << client->getNickname() << std::endl;
 	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     // 4. Check if sender is on the channel
+	std::cout << "SERVER: handleInviteCommand validateClientInChannel " << client->getNickname() << std::endl;
 	if (!validateIsClientInChannel (channel_ptr, client, channel_name, sender_nickname)) { return ;}
     // 5. Check if target client is already on the channel
+	std::cout << "SERVER: handleInviteCommand validateTargetInChannel " << client->getNickname() << std::endl;
 	if (!validateTargetInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
     // --- Privilege Check for Invite-Only Channel (+i mode) ---
+	std::cout << "SERVER: handleInviteCommand validateModes " << client->getNickname() << std::endl;
    	if (!validateModes(channel_ptr, client, Modes::INVITE_ONLY)) { return;}
 	/*if (channel_ptr->getClientModes(client->getNickname()).test(Modes::INVITE_ONLY) && !channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {sender_nickname, channel_name}), client, nullptr, false, client);

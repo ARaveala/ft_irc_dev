@@ -45,6 +45,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleQuit(client);
 		return ;
 	}
+	//handler needed
 	if (command == "USER" && !client->getHasSentUser()) {
 		client->setClientUname(params[0]);
 		client->setRealname(params[3]);
@@ -53,21 +54,9 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
-		_server->tryRegisterClient(client);
+		//_server->tryRegisterClient(client);
 
 	}
-	/*if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-		
-		if (!client->getPasswordValid()) {
-			std::cout<<"DEBUG::PASSWORD NOT ACCPTED......... \n";
-			client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
-			client->setQuit();
-			_server->updateEpollEvents(client_fd, EPOLLOUT, true);
-			return;
-		}
-		_server->tryRegisterClient(client);
-		client->setRegisteredAt(std::chrono::steady_clock::now());
-	}*/
 	if (command == "PING"){
 		_server->handlePing(client);
 		return;

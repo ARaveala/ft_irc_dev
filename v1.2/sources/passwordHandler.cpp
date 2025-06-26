@@ -34,26 +34,9 @@ void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
         return;
     }
     // Registration successful
-	//tryRegisterClient(client);
+	// time stamp to stop issue when nick command applied too quickly before registartion has managed to finnish
 	client->setRegisteredAt(std::chrono::steady_clock::now());
     client->setHasRegistered();
     broadcastMessage(MessageBuilder::generatewelcome(client->getNickname()), nullptr, nullptr, false , client);
     updateEpollEvents(fd, EPOLLOUT, true);
 }
-
-
-/**if (command == "NICK") {
-    _server->handleNickCommand(...);
-    _server->tryRegisterClient(client);
-}
-
-if (command == "USER") {
-    // set username, realname, etc.
-    _server->tryRegisterClient(client);
-}
-
-if (command == "PASS") {
-    // validate password, setPasswordValid(true) if correct
-    _server->tryRegisterClient(client);
-}
- */

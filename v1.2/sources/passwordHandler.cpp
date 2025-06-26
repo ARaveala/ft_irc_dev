@@ -17,7 +17,7 @@ void Server::handlePassword(const std::shared_ptr<Client>& client, const int& cl
 		client->setQuit();
 		updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
-	//tryRegisterClient(client);
+	tryRegisterClient(client);
 }
 
 void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
@@ -34,6 +34,8 @@ void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
         return;
     }
     // Registration successful
+	//tryRegisterClient(client);
+	client->setRegisteredAt(std::chrono::steady_clock::now());
     client->setHasRegistered();
     broadcastMessage(MessageBuilder::generatewelcome(client->getNickname()), nullptr, nullptr, false , client);
     updateEpollEvents(fd, EPOLLOUT, true);

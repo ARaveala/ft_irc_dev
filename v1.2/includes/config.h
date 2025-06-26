@@ -5,27 +5,28 @@
 #include <functional> // for short cuts
 #include <deque> // for short cuts
 #include <memory>
-// oof i dont know if we should seperate a bunch of these into their own .h files ??
+#include <array> // For std::array
+
 /**
- * @brief 
+ * @brief
  * this is a header file that contains global variables and constants
  *
  * @notes: inline tells the compiler that multiple definitions of this variable
  * are allowed across different translation units, otherwise it would cause linker errors.
- * 
- * constexpr tells the compiler that the value is a constant expression, which will be evaluated 
- * at compile time. 
- * 
+ *
+ * constexpr tells the compiler that the value is a constant expression, which will be evaluated
+ * at compile time.
+ *
  * combining inline with constexpr allows us to define a variable in a header file
- * as 1 global instance of that variable. 
- * 
+ * as 1 global instance of that variable.
+ *
  * choosing not to use #define is safer as #define is not type safe and can cause
  * unexpected behavior if not used carefully.
- * 
+ *
  * alternatily we could define extern const char * instead of inline constexpr
- * but this would require us to define the variable in a .cpp file , since our values 
+ * but this would require us to define the variable in a .cpp file , since our values
  * want to be imutable , this option is well suited for us.
- * 
+ *
  * this file could be seperated into config and error config, if we want to lower
  * inclusion ammounts in files, lets see
  */
@@ -34,7 +35,7 @@
 namespace Global {
 	inline Server* server = nullptr;
 }*/
-class Channel;
+class Channel; // Forward declaration for Channel class
 
 enum class ErrorType {
 	CLIENT_DISCONNECTED,
@@ -54,34 +55,35 @@ enum class ErrorType {
 };
 
 //HANDLE HERE seperate modes client and channel are seperate u twat
-// reconsider bitset to bool ??? 
+// reconsider bitset to bool ???
 namespace Modes {
 	enum ClientMode {
-   		OPERATOR,		// 0
-		FOUNDER,		// 1
-		CLIENT_NONE,	// 2
-
-
-
+   		OPERATOR,		// 0 (Channel operator status for a client)
+		VOICE,			// 1 (Client has voice privilege in a channel)
+		FOUNDER,		// 2 (Global client founder, if applicable)
+		CLIENT_NONE,	// 3 (No special client mode)
 	};
 	enum ChannelMode {
-    	USER_LIMIT,   	// 0
-    	INVITE_ONLY,    // 1 
-    	PASSWORD, 		// 2
-    	TOPIC,   		// 3
-		NONE			// 4 out of bounds saftey?
+    	USER_LIMIT,   	// 0 (+l)
+    	INVITE_ONLY,    // 1 (+i)
+    	KEY_NEEDED, 	// 2 (+k)
+		TOPIC,   		// 3 (+t)
+		NONE			// 4 (Default/No mode set)
 	};
 
 	constexpr std::array<char, 4> channelModeChars = {'l', 'i', 'k', 't'};
-	constexpr std::array<char, 2> clientModeChars = {'o', 'q'};
+	// If 'o' and 'q' are client-specific modes for channels, they should be managed via ClientMode
+	// The clientPrivModeChars are for global client modes (+i for invisible, +w for wallops/notices)
 }
 
 namespace clientPrivModes{
 	enum mode {
-		INVISABLE,		// 0
-		PLACEHOLDER		// 1
+		INVISABLE,		        // 0 (+i for global client invisibility)
+		RECEIVES_NOTICES_MODE,  // 1 (+w for wallops/notices) - ADDED
+		PLACEHOLDER		        // 2 (Shifted index)
 	};
-	constexpr std::array<char, 2> clientPrivModeChars = {'i'};
+	// Ensure this array corresponds to the enum values
+	constexpr std::array<char, 2> clientPrivModeChars = {'i', 'w'}; // Updated to include 'w'
 }
 
 
@@ -92,23 +94,24 @@ namespace IRCillegals
 // Function to determine mode type
 
 /**
- * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 
+ * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes
  * we can set it low to showcase how we error handle in the case of a client disconnect
- * 
+ *
  */
 namespace config {
 	constexpr int MAX_CLIENTS = 10;
 	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;
-	constexpr std::size_t CLIENT_NUM_MODES = 4;
-	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 1; // maybe if we want a bot this would be useful
-	constexpr std::size_t CHANNEL_NUM_MODES = 5;
+	constexpr std::size_t CLIENT_NUM_MODES = 4; // Updated for Modes::ClientMode
+	constexpr std::size_t CLIENT_PRIV_NUM_MODES = 3; // Updated to 3 for INVISABLE, RECEIVES_NOTICES_MODE, PLACEHOLDER
+	constexpr std::size_t CHANNEL_NUM_MODES = 5; // Updated for Modes::ChannelMode
 	constexpr std::size_t MSG_TYPE_NUM = 502;
-	constexpr int MAX_LEN_CHANNAME = 25;	
-	constexpr int MAX_LEN_CHANPASSWORD = 20;	
-	
+	constexpr int MAX_LEN_CHANNAME = 25;
+	constexpr int MAX_LEN_CHANPASSWORD = 20;
 
+	// ADDED: Max failed pings before disconnection
+	constexpr int MAX_FAILED_PINGS = 3; // For example, 3 failed pings
 }
 
 namespace errVal {
@@ -116,9 +119,9 @@ namespace errVal {
 	constexpr int SUCCESS = 0;
 }
 /**
- * @brief i do not know if all of these are needed but here 
- * is a list of some irc error codes  
- * 
+ * @brief i do not know if all of these are needed but here
+ * is a list of some irc error codes
+ *
  */
 namespace IRCerr {
 	constexpr int ERR_NOSUCHNICK = 401;
@@ -150,43 +153,18 @@ namespace IRCMessage {
 		std::stringstream ss;
         ss << "@localhost new nickname is now :" << nickname << "\r\n";
         return ss.str(); }
-	inline constexpr const char* nick_msg = "*:*!Client@localhost NICK :helooo\r\n";	
+	inline constexpr const char* nick_msg = "*:*!Client@localhost NICK :helooo\r\n";
 	//inline constexpr const char* nick_msg = ":NICK :helooo\r\n";
-	//inline constexpr const char* nick_msg = ":*!Client@localhost NICK :helooo\r\n";	
+	//inline constexpr const char* nick_msg = ":*!Client@localhost NICK :helooo\r\n";
 	//inline constexpr const char* nick_msg = "@localhost new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
 /**
- * @brief creating short cuts so that we dont have to use large lines in parameters 
+ * @brief creating short cuts so that we dont have to use large lines in parameters
  * (making it pretty i hope)
- * 
+ *
  */
 namespace FuncType {
 	using DequeRef1 = std::function<void(std::deque<std::string>&)>;
 	//using setMsgRef = std::function<void(MsgType, std::vector<std::string>&)>;
 }
-/*
-This is like global variables but its encapsulated in the Config, so its much harder to 
-mix variables of the same name. This is however using namespace , 2 questions: 
-1. do you want to learn them now when they are forbidden in the modules
-2. are they forbidden in this project .
-#ifndef CONFIG_H
-#define CONFIG_H
-
-#include <string>
-
-namespace Config {
-    constexpr int MAX_NUM = 0;
-    constexpr const char* PRIV = "!???";
-
-    // Example of a more complex configuration (bitmask permissions)
-    enum Permissions {
-        READ    = 1 << 0,
-        WRITE   = 1 << 1,
-        EXECUTE = 1 << 2
-    };
-}
-
-#endif // CONFIG_H
-this is used in code like this:
-Config::MAX_NUM */

@@ -1,327 +1,308 @@
+// sources/IrcMessage.cpp
+
 #include "IrcMessage.hpp"
+// #include "Client.hpp" // No longer directly needed here for nickname management
+// #include "Server.hpp" // No longer directly needed here for nickname management
+#include "config.h" // For MSG_TYPE_NUM and other constants
 #include <iostream>
 #include <sstream>
-#include <cstddef>
-#include <stdexcept>
-#include <algorithm> // Required for std::find
-//#include "epoll_utils.hpp"
+#include <algorithm>
+#include <cctype>
 
-#include "IrcResources.hpp"
-#include <unistd.h>
-#include <string.h>
+// Static member function definition for to_lowercase
+std::string IrcMessage::to_lowercase(const std::string& s) {
+    std::string lower_s = s;
+    std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
+                   [](unsigned char c){ return std::tolower(c); });
+    return lower_s;
+}
 
-// my added libs
-//#include "config.h"
-#include <sys/socket.h>
-#include "ServerError.hpp" // incase you want to use the exception class
-#include "Server.hpp"
-#include "SendException.hpp"
-#include "Client.hpp"
-#include "Channel.hpp"
-#include <regex>
-//#include "ChannelManager.hpp"
-// --- Constructor ---
-IrcMessage::IrcMessage() {}
-// --- Destructor ---
+// Removed the static initialization of _illegal_nicknames.
+// Nickname validation (including illegal names and uniqueness) should be handled by the Server.
+// const std::set<std::string> IrcMessage::_illegal_nicknames = {
+//     "anonymous", "root", "admin", "moderator", "operator", "sysop", "ircop", "services" // Example illegal nicks
+// };
+
+
+// Constructor
+IrcMessage::IrcMessage() :
+    _bytesSentForCurrentMessage(0),
+    _activeMsg(MsgType::NONE)
+{
+    _msgState.reset(); // Initialize all bits to 0
+}
+
+// Destructor
 IrcMessage::~IrcMessage() {}
 
-// --- Setters ---
-void IrcMessage::setPrefix(const std::string& prefix) { _prefix = prefix; }
-void IrcMessage::setCommand(const std::string& command) { _command = command; }
+// Parses raw incoming data from the client's buffer.
+// Extracts one complete IRC message (up to \r\n) and populates _prefix, _command, _params.
+bool IrcMessage::parseMessage(std::string& raw_data) {
+    size_t crlf_pos = raw_data.find("\r\n");
+    if (crlf_pos == std::string::npos) {
+        return false; // No complete message yet
+    }
 
-// --- Getters ---
-const std::string& IrcMessage::getPrefix() const { return _prefix; }
-const std::string& IrcMessage::getCommand() const { return _command; }
-const std::vector<std::string>& IrcMessage::getParams() const { return _paramsList; }
-const std::string IrcMessage::getParam(unsigned long index) const { 
-	// needs to check index is not out of bounds
-	//if (_paramsList.size() >= index)
-	//	return "";
-	return _paramsList[index];
- }
+    std::string message_line = raw_data.substr(0, crlf_pos);
+    raw_data.erase(0, crlf_pos + 2); // Consume the message and CRLF
 
-// definition of illegal nick_names ai
-std::set<std::string> const IrcMessage::_illegal_nicknames = {
-       "ping", "pong", "server", "root", "nick", "services", "god",
-    "admin", "operator", "op", "system", "console", "bot",
-    "null", "undefined", "localhost", "irc", "help", "whois"
-};
-void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
-    _msgState.reset();  // empty all messages before setting a new one
-    _msgState.set(static_cast<size_t>(msg));  //activate only one msg
-	_activeMsg = msg;
-	_params.clear();
-	_params = sendParams;
-}
+    _prefix.clear();
+    _command.clear();
+    _params.clear();
+    _paramsList.clear(); // Clear _paramsList if it's used for temporary storage during parsing
 
-void IrcMessage::advanceCurrentMessageOffset(ssize_t bytes_sent) {
-        _bytesSentForCurrentMessage += std::min(_bytesSentForCurrentMessage + bytes_sent, _messageQue.front().length());//bytes_sent;
-}
+    std::stringstream ss(message_line);
+    std::string token;
 
-size_t IrcMessage::getRemainingBytesInCurrentMessage() const {
-      		if (_messageQue.empty()) return 0;
-      	return  std::max((size_t)0, _messageQue.front().length() - _bytesSentForCurrentMessage); // prevent overflow and returning of neg values
-}
+    // Parse prefix (optional, starts with ':')
+    if (!message_line.empty() && message_line[0] == ':') { // Add empty check
+        ss >> token; // Read the prefix token
+        _prefix = token.substr(1); // Store without ':'
+    }
 
-const char* IrcMessage::getCurrentMessageCstrOffset() const {
-       if (_messageQue.empty()) return nullptr;
-        size_t safe_offset = std::min(_bytesSentForCurrentMessage, _messageQue.front().length());
-	    return _messageQue.front().c_str() + safe_offset;
-}
+    // Parse command (mandatory)
+    ss >> _command;
+    std::transform(_command.begin(), _command.end(), _command.begin(), ::toupper); // Commands are case-insensitive
 
-bool IrcMessage::isActive(MsgType type) {
-	    return _msgState.test(static_cast<size_t>(type));
-}
+    // Parse parameters
+    std::string remaining_line;
+    std::getline(ss, remaining_line); // Get the rest of the line (potentially with leading space)
 
-MsgType IrcMessage::getActiveMessageType() const {
-   		return _activeMsg;  // Returns the currently active message type
-}
+    std::stringstream ps(remaining_line);
+    std::string param_token;
 
-bool IrcMessage::isValidNickname(const std::string& nick) {
-    if (nick.empty() || nick.length() > 25) return false;
+    // Skip leading space if present from getline
+    if (!remaining_line.empty() && remaining_line[0] == ' ') {
+        ps.ignore(); // Consume the first space
+    }
 
-    const std::string allowedSpecial = "-[]\\`^{}_";
-
-    // first character: must be a letter or an allowed special character
-    char first = nick[0];
-    if (!std::isalpha(static_cast<unsigned char>(first)) && allowedSpecial.find(first) == std::string::npos)
-        return false;
-    // remaining characters alphanumerics or allowed special characters no emojis
-    for (char c : nick) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) &&
-            allowedSpecial.find(c) == std::string::npos)
-            return false;
+    while (ps >> param_token) {
+        if (!param_token.empty() && param_token[0] == ':') {
+            // This is the last parameter, can contain spaces
+            // Get the rest of the stream content, including spaces
+            _params.push_back(param_token.substr(1) + ps.str().substr(ps.tellg()));
+            break; // Stop parsing, rest is part of this last param
+        }
+        _params.push_back(param_token);
     }
     return true;
 }
 
-// we should enum values or alike or we can just send the correct error message straight from here ?
-// check_nickname definition, std::string& nickref
-MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd) {
-    auto toLower = [](const std::string& input) -> std::string {
-        std::string lower;
-        lower.reserve(input.size());
-        for (char c : input)
-            lower += std::tolower(static_cast<unsigned char>(c));
-        return lower;
-    };
-    std::string nickname_lower = toLower(nickname);
-    if (!isValidNickname(nickname)) { 
-        return MsgType::ERR_ERRONEUSNICKNAME; 
+// Queues an outgoing message to be sent to the client.
+void IrcMessage::queueMessage(const std::string& message) {
+    _messageQue.push_back(message); // Message should already include CRLF
+}
+
+// Retrieves the current message from the queue for sending (mutable reference).
+std::string& IrcMessage::getQueueMessage() {
+    return _messageQue.front();
+}
+
+// Removes the message at the front of the queue after it has been sent.
+void IrcMessage::removeQueueMessage() {
+    if (!_messageQue.empty()) {
+        _messageQue.pop_front();
+        _bytesSentForCurrentMessage = 0; // Reset offset for the next message
     }
-    if (_illegal_nicknames.count(nickname_lower) > 0) {
-        return MsgType::ERR_ERRONEUSNICKNAME;
+}
+
+// Updates the number of bytes sent for the current message.
+void IrcMessage::advanceCurrentMessageOffset(size_t bytes_sent) {
+    _bytesSentForCurrentMessage += bytes_sent;
+}
+
+// Returns the number of remaining bytes in the current message.
+size_t IrcMessage::getRemainingBytesInCurrentMessage() const {
+    if (_messageQue.empty()) {
+        return 0;
     }
-    auto nick_it = nick_to_fd.find(nickname_lower);
-    if (nick_it != nick_to_fd.end()) {
-        if (nick_it->second != fd) {
-            return MsgType::NICKNAME_IN_USE;
+    return _messageQue.front().length() - _bytesSentForCurrentMessage;
+}
+
+// Resets the offset for the current message.
+void IrcMessage::resetCurrentMessageOffset() {
+    _bytesSentForCurrentMessage = 0;
+}
+
+// Getters for parsed components
+const std::string& IrcMessage::getPrefix() const {
+    return _prefix;
+}
+
+const std::string& IrcMessage::getCommand() const {
+    return _command;
+}
+
+const std::vector<std::string>& IrcMessage::getParams() const {
+    return _params;
+}
+
+// Returns the message as a raw string (for debugging/reconstruction)
+std::string IrcMessage::toRawString() const {
+    std::string raw;
+    if (!_prefix.empty()) {
+        raw += ":" + _prefix + " ";
+    }
+    raw += _command;
+    for (size_t i = 0; i < _params.size(); ++i) {
+        if (i == _params.size() - 1 && _params[i].find(' ') != std::string::npos) {
+            raw += " :" + _params[i]; // Last param with spaces
         } else {
-            return MsgType::NONE;
+            raw += " " + _params[i];
         }
     }
-    return MsgType::RPL_NICK_CHANGE;
+    return raw;
+}
+
+// Setters for prefix and command
+void IrcMessage::setPrefix(const std::string& prefix) { _prefix = prefix; }
+void IrcMessage::setCommand(const std::string& command) { _command = command; }
+
+// Get a specific parameter by index (const version)
+const std::string IrcMessage::getParam(unsigned long index) const {
+    if (index < _params.size()) {
+        return _params[index];
+    }
+    return ""; // Or throw an out_of_range exception
+}
+
+// Queue message at the front (for urgent messages like PING responses)
+void IrcMessage::queueMessageFront(const std::string& msg) {
+    _messageQue.push_front(msg);
+}
+
+// Implementation for getQue()
+const std::deque<std::string>& IrcMessage::getQue() const {
+    return _messageQue;
+}
+
+// Clears the message queue
+void IrcMessage::clearQue() {
+    _messageQue.clear();
+}
+
+// Gets a message parameter by int index (overlaps with getParam, but matching decl)
+const std::string IrcMessage::getMsgParam(int index) const {
+    if (index >= 0 && static_cast<size_t>(index) < _params.size()) {
+        return _params[index];
+    }
+    return "";
+}
+
+// Changes a token param by index (referencing _paramsList, adjust if _params is the source)
+void IrcMessage::changeTokenParam(int index, const std::string& newValue) {
+    if (index >= 0 && static_cast<size_t>(index) < _paramsList.size()) {
+        _paramsList[index] = newValue;
+    } else if (index >= 0 && static_cast<size_t>(index) < _params.size()) {
+        // If _paramsList is not actively used for mutable token modification,
+        // you might want to modify _params directly.
+        _params[index] = newValue;
+    }
+}
+
+// Returns a reference to the parameters vector
+const std::vector<std::string>& IrcMessage::getMsgParams() {
+    return _params;
+}
+
+// --- Removed Nickname Validation and Management from IrcMessage ---
+// These functions are now expected to be handled by the Server class or a dedicated utility.
+/*
+bool IrcMessage::isValidNickname(const std::string& nick) {
+    if (nick.empty() || nick.length() > config::MAX_NICK_LENGTH) {
+        return false;
+    }
+    if (!std::isalpha(nick[0]) && nick[0] != '[' && nick[0] != ']' && nick[0] != '\\' && nick[0] != '`' && nick[0] != '_') {
+        return false;
+    }
+    for (size_t i = 1; i < nick.length(); ++i) {
+        if (!std::isalnum(nick[i]) && nick[i] != '-' && nick[i] != '[' && nick[i] != ']' && nick[i] != '\\' && nick[i] != '`' && nick[i] != '_') {
+            return false;
+        }
+    }
+    if (_illegal_nicknames.count(to_lowercase(nick))) { // to_lowercase is now IrcMessage::to_lowercase
+        return false;
+    }
+    return true;
+}
+
+MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd) {
+    if (nickname.empty()) {
+        return MsgType::ERR_NONICKNAMEGIVEN;
+    }
+    if (!isValidNickname(nickname)) {
+        return MsgType::ERR_ERRONEUSNICKNAME;
+    }
+    if (nick_to_fd.count(to_lowercase(nickname)) && nick_to_fd.at(to_lowercase(nickname)) != fd) {
+        return MsgType::ERR_NICKNAMEINUSE; // Corrected enum value
+    }
+    return MsgType::NONE;
+}
+
+std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
+    return _fd_to_nickname; // This map is not a member of IrcMessage. Remove this function.
+}
+
+void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
+    // This logic should be in Server.
 }
 
 std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {
-     auto it = fd_to_nick.find(fd);
-     if (it != fd_to_nick.end()) {
-         return it->second; // Return the nickname
-     }
-     return ""; //todo this looks odd - it returns nothing, but not eg null?
+    // This logic should be in Server.
+    return "";
 }
-
-/*std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
-	return _fd_to_nickname;
-}*/
 
 int IrcMessage::get_fd(const std::string& nickname) const {
-     std::string processed_nickname = to_lowercase(nickname);
+    // This logic should be in Server.
+    return -1;
+}
+*/
 
-     auto it = _nickname_to_fd.find(processed_nickname);
-     if (it != _nickname_to_fd.end()) {
-         return it->second;
-     }
-     return -1; // nickname not found
+// Sets the active message type and parameters for sending (for MessageBuilder)
+void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
+    _activeMsg = msg;
+    _params = sendParams; // Overwrite _params with sendParams for outgoing messages
+    _msgState.reset(); // Clear any previous state
+    _msgState.set(static_cast<size_t>(msg)); // Set the bit corresponding to the message type
 }
 
+// Clears all message-related state.
+void IrcMessage::clearAllMsg() {
+    // Removed clearing of nickname maps, as IrcMessage does not own them.
+    // _nickname_to_fd.clear();
+    // _fd_to_nickname.clear();
+    // nickname_to_fd.clear();
+    // fd_to_nickname.clear();
 
-/**
- * @brief Call this when a client disconnects to clean up their nickname entry.
- * @param fd file discriptor.
- * @param fd_to_nick map of fd<-nickname.
- * @return void
- */
-void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
-    auto it = fd_to_nick.find(fd);
-    if (it != fd_to_nick.end()) {
-		std::string old_nickname = it->second;
-		std::cout << "#### Removing fd " << fd << " and nickname '" << old_nickname << "' due to disconnect." << std::endl;
-        _nickname_to_fd.erase(old_nickname);
-		fd_to_nick.erase(it);
-        std::cout << "#### Cleaned up entries for fd " << fd << "." << std::endl;
-    } else {
-         std::cout << "#### No nickname found for fd " << fd << " upon disconnect." << std::endl;
-    }
-}
-
-//asdf
-bool IrcMessage::parse(const std::string& rawMessage)
-{
-    // 1. Clear previous state
+    _paramsList.clear();
+    _params.clear();
+    _msgState.reset();
+    _activeMsg = MsgType::NONE;
     _prefix.clear();
     _command.clear();
-    _paramsList.clear();
-
-    std::string message_content = rawMessage;
-	std::cout<<"¤¤¤¤¤¤¤ showing raw message= "<<rawMessage<<" showing message_content = "
-	<< message_content<<"\n";
-    // Remove any trailing \r or \n characters
-    // This makes the parsing more robust to different newline styles.
-    while (!message_content.empty() &&
-           (message_content.back() == '\r' || message_content.back() == '\n')) {
-        message_content.pop_back();
-    }
-
-    if (message_content.empty()) {
-        // Only newlines or empty message received
-        // std::cerr << "Debug: Received empty line or only newlines." << std::endl;
-        return false;
-    }
-
-    std::stringstream ss(message_content);
-
-    std::string current_token;
-
-    // 3. Check for prefix (starts with ':')
-    // Read the first token (will skip leading spaces, which is fine)
-    ss >> current_token;
-
-    if (current_token.empty()) {
-        // This should not happen if message_content is not empty, but good for robustness
-        return false;
-    }
-
-    if (current_token[0] == ':') {
-        _prefix = current_token.substr(1); // Store prefix (without the leading ':')
-
-        // Attempt to read the command - must exist after a prefix
-        if (!(ss >> _command) || _command.empty()) {
-             // std::cerr << "Error: Prefix present but no command found after it." << std::endl;
-             _prefix.clear(); // Clear prefix if command is missing
-             return false;
-        }
-    } else {
-        // No prefix, the first token is the command
-        _command = current_token;
-    }
-
-    // Command is mandatory as per IRC RFC.
-    if (_command.empty()) {
-         // This check is a bit redundant if previous checks pass, but harmless.
-         return false;
-    }
-
-    // 4. Process parameters
-    // After reading the command, the stream pointer is at the start of parameters or end of line.
-    // We need to get the rest of the line, including any leading spaces that follow the command
-    // and any internal spaces within a trailing parameter.
-
-    std::string remainder_of_line;
-    std::getline(ss, remainder_of_line); // Read all remaining characters on the line
-
-    // Trim leading whitespace from remainder_of_line
-    size_t first_non_space = remainder_of_line.find_first_not_of(" ");
-    if (first_non_space == std::string::npos) {
-        // No parameters or only whitespace after the command
-        return true; // Parsing successful, no parameters
-    }
-    remainder_of_line = remainder_of_line.substr(first_non_space);
-
-    // --- REVISED PARAMETER PARSING ---
-    std::stringstream params_ss(remainder_of_line);
-    std::string param_token;
-
-    // Loop through parameters
-    while (params_ss >> param_token) { // Read token by token
-        if (param_token[0] == ':') {
-            // Found a leading colon for a parameter. This means it's the trailing parameter.
-            // All remaining content in the stringstream, starting from the character
-            // after the colon, is part of this single parameter.
-
-            // Get the part AFTER the colon
-            std::string actual_trailing_content = param_token.substr(1);
-
-            // Append any remaining content from the stringstream
-            // (There might be a space after the ':token' if it's not at the end of the line)
-            std::string rest_of_trailing;
-            std::getline(params_ss, rest_of_trailing); // Get the rest of the line
-
-            // Concatenate the initial part (after colon) with the rest.
-            // If rest_of_trailing is not empty, it implies there was a space, so add it back.
-            if (!rest_of_trailing.empty()) {
-                actual_trailing_content += rest_of_trailing;
-            }
-            
-            _paramsList.push_back(actual_trailing_content);
-            break; // After processing the trailing parameter, we are done with parameters.
-        } else {
-            // Not a trailing parameter, just a regular middle parameter.
-            _paramsList.push_back(param_token);
-        }
-    }
-    // --- END REVISED PARAMETER PARSING ---
-
-    return true; // Parsing successful
+    _messageQue.clear(); // Ensure message queue is also cleared
+    _bytesSentForCurrentMessage = 0; // Reset offset
 }
 
-
-
-// --- toRawString Method (Same as before, should work correctly with fixed parsing) ---
-std::string IrcMessage::toRawString() const
-{
-    std::stringstream ss;
-
-    // 1. Add prefix if present
-    if (!_prefix.empty()) {
-        ss << ":" << _prefix << " ";
+// Prints the parsed message for debugging.
+void IrcMessage::printMessage(const IrcMessage& msg) {
+    std::cout << "IrcMessage Details:\n";
+    std::cout << "  Prefix: [" << msg.getPrefix() << "]\n";
+    std::cout << "  Command: [" << msg.getCommand() << "]\n";
+    std::cout << "  Parameters:\n";
+    for (const auto& param : msg.getParams()) {
+        std::cout << "    - [" << param << "]\n";
     }
-
-    // 2. Add command (command is mandatory according to structure)
-    ss << _command;
-
-// 3. Add parameters
-    for (size_t i = 0; i < _paramsList.size(); ++i) {
-        ss << " "; // All parameters are space-separated
-
-        // If this is the LAST parameter, it always gets a leading colon.
-        // This is the standard behavior for "trailing" parameters in IRC.
-        if (i == _paramsList.size() - 1) {
-            ss << ":" << _paramsList[i]; // Add the colon and the parameter value
-        } else {
-            // Otherwise, it's a middle parameter, just add its value
-            ss << _paramsList[i];
-        }
-    }
-
-    // 4. Add the CRLF terminator
-    ss << "\r\n";
-
-    return ss.str();
+    std::cout << "  Active MsgType: " << static_cast<int>(msg._activeMsg) << "\n";
+    std::cout << "  Message Queue Size: " << msg.getQue().size() << "\n";
 }
 
-void IrcMessage::printMessage(const IrcMessage& msg)
-{
-    std::cout << "  Prefix: '" << msg.getPrefix() << "'" << std::endl;
-    std::cout << "  Command: '" << msg.getCommand() << "'" << std::endl;
-    std::cout << "  Parameters:" << std::endl;
-    const std::vector<std::string>& params = msg.getParams();
-    if (params.empty()) {
-        std::cout << "    (No parameters)" << std::endl;
-    } else {
-        for (size_t i = 0; i < params.size(); ++i) {
-            std::cout << "    [" << i << "]: '" << params[i] << "'" << std::endl;
-        }
-    }
-    std::cout << "---" << std::endl; // Separator for messages
+// Checks if a specific message type is active (bitset check)
+bool IrcMessage::isActive(MsgType type) {
+    return _msgState.test(static_cast<size_t>(type));
+}
+
+// Returns the currently active message type
+MsgType IrcMessage::getActiveMessageType() const {
+    return _activeMsg;
 }

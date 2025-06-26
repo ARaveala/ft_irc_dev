@@ -8,20 +8,18 @@
 #include <map>
 #include <algorithm>
 #include <optional>
-#include <ctime>
+#include <ctime> // For std::time_t and std::time(NULL)
 
 #include "config.h"
-#include "Client.hpp"
+#include "Client.hpp" // For Client class definition
 
 /**
- * @brief a custome comparator, since we use weak_ptrs as keys and they do not 
- * have comparison operators defined, a map can not order the keys, this comparitor
- * allows for ordering as it utlaizes lock() to switch them to shared_ptrs for that.abs
- * 
- * if either left or right weak_ptr is expired it prevents us from comapring them . 
- * 
+ * @brief a custom comparator, since we use weak_ptrs as keys and they do not
+ * have comparison operators defined, a map can not order the keys, this comparator
+ * allows for ordering as it utilizes lock() to switch them to shared_ptrs for that.
+ *
+ * If either left or right weak_ptr is expired, it prevents us from comparing them.
  */
-
 struct WeakPtrCompare {
     bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
         // This provides a strict weak ordering for weak_ptrs (and shared_ptrs),
@@ -31,97 +29,87 @@ struct WeakPtrCompare {
     }
 };
 
-/**
- * @brief std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
-    if (auto clientPtr = weakClient.lock()) {  // ✅ Convert weak_ptr to shared_ptr safely
-        return clientPtr->getNickname();  // ✅ Get the current nickname live
-    }
-    return "";  // 🔥 Return empty string if the Client no longer exists
-}
- */
-
- class Channel {
+class Channel {
 	private:
 		int _ClientLimit = 0;
 		unsigned long _clientCount = 0;
 
-		unsigned long _ulimit;
+		// unsigned long _ulimit; // This seems unused, consider removing if not needed.
 
 		std::string _name;
 		std::string _topic;
-		std::string _password;
+		std::string _password; // Used as the channel key if +k mode is set
 		std::string _topicSetter; // Stores the nickname of the user who last set the topic
 		std::time_t _topicSetTime; // Stores the Unix timestamp (from <ctime>) when the topic was last set
 
 
-		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;  // Nicknames -> Bitset of modes
+		// ClientModes map: maps weak_ptr to Client to their modes (bitset) and maybe other info
+		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> _ClientModes;
 
 		std::bitset<config::CHANNEL_NUM_MODES> _ChannelModes;
 
-		std::deque<std::string> _invites;
+		std::deque<std::string> _invites; // List of nicknames invited to an invite-only channel
 
 	public:
 		Channel(const std::string& channelName);
 		~Channel();
 
+		// Getters for channel properties
 		const std::string& getName() const;
 		const std::string& getTopic() const;
-		const unsigned long& getClientCount() {return _clientCount;}; //const
-		std::vector<int> getAllfds();
-		const std::string getAllNicknames();
+		const unsigned long& getClientCount() const; // Added const
+		std::vector<int> getAllfds() const; // Added const
+		const std::string getAllNicknames() const; // Added const
 		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
-		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 
-		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); //ref
-		bool CheckChannelMode(Modes::ChannelMode comp) const {return _ChannelModes.test(static_cast<std::size_t>(comp));}; //ref
-		
-		std::string getCurrentModes() const;
-		std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient);
-		//std::vector<std::shared_ptr<Client>> getActiveClients() const;
+		// Corrected: Renamed getClients() to getAllClients() for consistency with existing declaration
+		// And added const to return type for safety
+		const std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare>& getAllClients() const;
 
-		std::vector<std::string> setChannelMode(char modeChar , bool enableMode, const std::string& target);
-		
-		Modes::ClientMode charToClientMode(const char& modeChar);
-		Modes::ChannelMode charToChannelMode(const char& modeChar); 
-		bool setModeBool(char onoff);
-		//bool canClientJoin(const std::string& nickname, const std::string& password );
+
+		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); // Use reference for modification
+		bool CheckChannelMode(Modes::ChannelMode comp) const; // Added const
+
+		std::string getChannelModeString() const; // Added for MODE command response
+		const std::string& getTopicSetter() const; // Getter for topic setter
+		std::time_t getTopicTime() const; // Getter for topic set time
+
+
+		// Channel mode management
+		void setMode(Modes::ChannelMode mode, bool enable); // Sets/unsets a channel mode
+		void setClientMode(const std::string& nickname, Modes::ClientMode mode, bool enable); // Sets/unsets a client mode within the channel
+
+		// For channel key (+k)
+		const std::string& getKey() const; // ADDED: Getter for the channel key (password)
+		void setKey(const std::string& key); // ADDED: Setter for the channel key
+
+		// Utility methods
+		std::string getCurrentModes() const; // Returns string representation of channel modes
+		// std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient); // Removed: This is a helper, not a Channel member
+		// std::vector<std::shared_ptr<Client>> getActiveClients() const; // Consider if really needed, getAllClients() is similar
+
+		// Client management in channel
 		std::optional<std::pair<MsgType, std::vector<std::string>>> canClientJoin(const std::string& nickname, const std::string& password);
 		int addClient(std::shared_ptr <Client> Client);
-		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
-		void setTopic(const std::string& newTopic);
-		bool removeClient(const std::string& nickname);
-	    void removeClientByNickname(const std::string& nickname);
+		void setTopic(const std::string& newTopic, const std::string& setter_nickname); // Corrected spelling and added setter
+		bool removeClient(const std::string& nickname); // Removes client and returns true if channel empty
+		void removeClientByNickname(const std::string& nickname); // Simpler client removal without empty check (if needed)
 
 		bool isClientInChannel(const std::string& nickname) const;
-		bool isClientOperator(const std::string& nickname);
+		bool isClientOperator(const std::string& nickname) const; // Added const
 		bool isValidChannelMode(char modeChar) const;
 		bool isValidClientMode(char modeChar) const;
 		bool channelModeRequiresParameter(char modeChar) const;
 
+		// Mode application/validation methods (might be better integrated into setMode or a helper)
 		std::pair<MsgType, std::vector<std::string>> initialModeValidation( const std::string& ClientNickname, size_t paramsSize);
 		std::pair<MsgType, std::vector<std::string>> modeSyntaxValidator( const std::string& requestingClientNickname, const std::vector<std::string>& params ) const;
-		std::vector<std::string> applymodes(std::vector<std::string> params);
+		// std::vector<std::string> applymodes(std::vector<std::string> params); // Consider if this is still needed or integrated
 
 	    bool isEmpty() const;
 
-		//void broadcast(const std::string& message, std::shared_ptr<Client> exclude_client = nullptr);
-// T O P I C 
-		//const std::string& getTopicSetter() const;
-		//std::time_t getTopicSetTime() const;
-		//void setTopicSetter(const std::string& setter_nickname);
-		//void setTopicSetTime(std::time_t set_time);
-
-// I N V I T E
-		void addInvite(const std::string& nickname);
+		// Invite list management
+		void addInvited(const std::string& nickname); // ADDED: To add a nickname to the invite list
 		bool isInvited(const std::string& nickname) const; // To check if a client is on the invite list
-		void removeInvite(const std::string& nickname); // To remove client from invite list after they join
-
-		
-		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
-		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;
-
-		void clearAllChannel() {
-			_ClientModes.clear();
-		};
+		void removeInvited(const std::string& nickname); // ADDED: To remove client from invite list after they join (or are kicked)
 };
-

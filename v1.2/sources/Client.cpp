@@ -1,345 +1,213 @@
+// sources/Client.cpp
+
 #include "Client.hpp"
-#include "Server.hpp"
-#include <unistd.h>
-#include <string.h>
-#include <iostream>
-#include <sys/socket.h>
-//#include "config.h"
-#include "ServerError.hpp"
-#include "SendException.hpp"
-#include "IrcMessage.hpp"
-//#include <string>
-#include "CommandDispatcher.hpp"
-#include <ctime>
+#include "Server.hpp" // Needed for CommandDispatcher to access Server methods
+#include "Channel.hpp" // Needed for Channel interactions
+#include "IrcMessage.hpp" // For IrcMessage operations
+#include "config.h" // For config constants
+#include <iostream> // For std::cout, std::cerr
+#include <algorithm> // For std::find, std::transform
+#include <cctype>    // For std::tolower, std::isprint
+#include <unistd.h>  // For close
+#include <ctime>     // For time(NULL)
 
-
-// Client::Client(){} never let this exist - is that stated in the hpp?
-
-// Constructor accepting client_fd and timer_fd (e.g., for direct client creation without password context)
+// Constructor accepting client_fd and timer_fd (for basic creation)
 Client::Client(int fd, int timerfd) :
     _fd(fd),
     _timer_fd(timerfd),
     signonTime(time(NULL)),
     lastActivityTime(time(NULL)),
     _isOperator(false),
-    _msg(fd), // Assuming IrcMessage constructor takes fd
-    _isAuthenticatedByPass(false),          // Initialize to false by default
-    _passwordRequiredForRegistration(false) // Default to false if no serverPasswordRequired is passed
+    _msg(), // CORRECTED: Call default constructor for IrcMessage - no (fd) argument
+    _isAuthenticatedByPass(false),          // Initialize to false by default (corrected: added underscore)
+    _passwordRequiredForRegistration(false) // Default to false if no serverPasswordRequired is passed (corrected: added underscore)
 {
-	lastActivityTime = time(NULL);
-	_ClientPrivModes.reset();
-    // ... (other initializations you might have in your refactored code) ...
-    setDefaults(); // Call setDefaults to set initial nickname etc.
+    setDefaults(); // Initialize default nickname, etc.
 }
 
-// Constructor accepting client_fd, timer_fd, and serverPasswordRequired (preferred for clients created by Server)
+// Main constructor used by Server, accepting serverPasswordRequired
 Client::Client(int fd, int timerfd, bool serverPasswordRequired) :
     _fd(fd),
     _timer_fd(timerfd),
     signonTime(time(NULL)),
     lastActivityTime(time(NULL)),
     _isOperator(false),
-    _msg(fd), // Assuming IrcMessage constructor takes fd
-    _isAuthenticatedByPass(false),              // Client starts unauthenticated
-    _passwordRequiredForRegistration(serverPasswordRequired) // Initialize based on the server's setting
+    _msg(), // CORRECTED: Call default constructor for IrcMessage - no (fd) argument
+    _isAuthenticatedByPass(false),              // Client starts unauthenticated (corrected: added underscore)
+    _passwordRequiredForRegistration(serverPasswordRequired) // Initialize based on server's setting (corrected: added underscore)
 {
-	lastActivityTime = time(NULL);
-	_ClientPrivModes.reset();
-    // ... (other initializations you might have in your refactored code) ...
-    setDefaults(); // Call setDefaults to set initial nickname etc.
+    setDefaults(); // Initialize default nickname, etc.
 }
 
-
-
-Client::~Client(){
-	// when the client is deleted , go through clienst list of channels it 
-	// belongs too, then do function remove from channel with this client 
-	// getChannel().removeUser(*this); //getClient().erase();
+Client::~Client() {
+    // Destructor might log or perform final cleanup if needed
+    std::cout << "Client FD " << _fd << " (" << _nickName << ") destroyed.\n";
 }
 
-int Client::getFd(){
-	return _fd;
-}
+// --- CORE GETTERS ---
+int Client::getFd() const { return _fd; }
+int Client::get_timer_fd() const { return _timer_fd; }
+const std::string& Client::getNickname() const { return _nickName; }
+std::string& Client::getNicknameRef() { return _nickName; }
+std::string Client::getClientUname() const { return _username; }
+std::string Client::getFullName() const { return _fullName; } // Implementation for getFullName
+const std::string& Client::getUsername() const { return _username; }
+const std::string& Client::getHostname() const { return _hostname; }
+bool Client::isOperator() const { return _isOperator; }
+bool Client::getChannelCreator() const { return _channelCreator; }
+long Client::getIdleTime() const { return time(NULL) - lastActivityTime; }
+time_t Client::getSignonTime() const { return signonTime; }
+bool Client::getQuit() const { return _quit; }
+bool Client::getHasSentCap() const { return _hasSentCap; }
+bool Client::getHasSentNick() const { return _hasSentNick; }
+bool Client::getHasSentUser() const { return _hasSentUser; }
+bool Client::getHasRegistered() const { return _registered; }
+bool Client::get_acknowledged() const { return _acknowledged; }
+bool Client::get_pendingAcknowledged() const { return _pendingAcknowledged; }
+int Client::get_failed_response_counter() const { return _failed_response_counter; }
+const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const { return _joinedChannels; }
 
-bool Client::get_acknowledged(){
-	return _acknowledged;
-}
-bool Client::get_pendingAcknowledged(){
-	return _pendingAcknowledged;
-}
-int Client::get_failed_response_counter(){
-	return _failed_response_counter;
-}
+// --- PASSWORD-RELATED GETTERS/SETTERS (referencing underscored private members) ---
+bool Client::getIsAuthenticatedByPass() const { return _isAuthenticatedByPass; }
+bool Client::getPasswordRequiredForRegistration() const { return _passwordRequiredForRegistration; }
+void Client::setIsAuthenticatedByPass(bool status) { _isAuthenticatedByPass = status; }
 
-// specifically adds a specific amount, not increment by 1
-void Client::set_failed_response_counter(int count){
-	/*std::cout<<"failed response counter is "
-				<< _failed_response_counter
-				<<"new value to be added "
-				<< count
-				<<std::endl;*/
-	if ( count < 0 && _failed_response_counter == 0)
-		return ;
-	if ( count == 0){
-		_failed_response_counter = 0;
-		return;
-	}	
-	_failed_response_counter += count;
-}
+// --- SETTERS ---
+void Client::set_failed_response_counter(int count) { _failed_response_counter = count; }
+void Client::setQuit() { _quit = true; }
+void Client::set_nickName(const std::string newname) { _nickName = newname; } // Changed clear() then assign, just assign
+void Client::setHasSentCap() { _hasSentCap = true; }
+void Client::setHasSentNick() { _hasSentNick = true; }
+void Client::setHasSentUser() { _hasSentUser = true; }
 
-int Client::get_timer_fd(){
-	return _timer_fd;
-}
-
-std::string Client::getNickname() const{
-	return _nickName;
-}
-
-std::string& Client::getNicknameRef(){
-	return _nickName;
-}
-
-std::string Client::getClientUname(){
-	return _username;
-}
-
-std::string Client::getfullName(){
-	return _fullName;
-}
-
-const std::string& Client::getHostname() const {
-    return _hostname;
-}
-
-void Client::setHostname(const std::string& hostname) {
-    _hostname = hostname;
-}
-
-const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
-        return _joinedChannels;
-}
-
-std::string Client::getPrivateModeString(){
-	std::string activeModes = "+";
-    for (size_t i = 0; i < Modes::channelModeChars.size(); ++i) {
-        if (_ClientPrivModes.test(i)) {
-            activeModes += Modes::clientModeChars[i];
-        }
-    }
-    return activeModes;
-}
-
-
-void Client::appendIncomingData(const char* buffer, size_t bytes_read) {
-	_read_buff.append(buffer, bytes_read);
-	// std::cout << "Debug - buffer after apening : [" << _read_buff << "]" << std::endl;
-}
-
-bool Client::extractAndParseNextCommand() {
-	size_t crlf_pos = _read_buff.find("\r\n");
-    if (crlf_pos == std::string::npos) {
-        return false; // No complete message yet
-    }
-	std::string full_message = _read_buff.substr(0, crlf_pos);
-    _read_buff.erase(0, crlf_pos + 2); // Consume the message from the buffer
-	if (_msg.parse(full_message) == true)
-	{
-		std::cout<<"token parser shows true \n";
-	}
-	else
-		std::cout<<"token parser shows false \n";
-
-	return true;
-}
-
-void Client::set_acknowledged(){
-	_acknowledged = true;
-}
-
-/*void Client::set_pendingAcknowledged(bool onoff){
-	_pendingAcknowledged = onoff;
-}*/
-/**
- * @brief Reads using recv() to a char buffer as data recieved from the socket
- * comes in as raw bytes, std		void sendPing();
- * @return FAIL an empty string or throw 
- * SUCCESS the char buffer converted to std::string
- */
-
-
-/*void Client::setChannelCreator(bool onoff) {
-	
-}*/
-
-void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
-	// this needs an alternative to add unique identifiers 
-	// also must add to all relative containers. 
-	//_nickName = generateUniqueNickname();
-	//std::string potential_nick = generateUniqueNickname();
-	//_username = "user_" + potential_nick;
-	//_fullName = "real_" + potential_nick;
-	_isOperator = false;
-	signonTime = time(NULL);
-	lastActivityTime = time(NULL);
-}
-
-
-
-bool Client::change_nickname(std::string nickname){
-	_nickName.clear();
-	_nickName = nickname;
-	//std::cout<<"hey look its a fd = "<< fd << std::endl;
-	//this->set_nickname(nickname);
-
-//	else (0);
-	return true;
-}
-
-
-std::string Client::getChannel(std::string channelName)
-{
-	auto it = _joinedChannels.find(channelName);
-	//if (find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
-	if (it != _joinedChannels.end()) {
-		return channelName;
-	}
-	std::cout<<"channel does not exist\n";
-	return "";
-		//_joinedChannels.push_back(channelName);
-}
-std::string Client::getCurrentModes() const {
-
-	std::string activeModes = "+";
-    for (size_t i = 0; i < Modes::clientModeChars.size(); ++i) {
-        if (_ClientPrivModes.test(i)) {
-            activeModes += Modes::clientModeChars[i];
-        }
-    }
-    return activeModes;
-}
-
-/*void Client::removeSelfFromChannel()
-{}*/
-int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) { // Gemini corrected this &
-
-	std::cout<<"preparing quit \n";
-	int indicator = 0;
-    for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
-		std::cout<<"We are loooooping now  \n";
-        if (auto channelPtr = it->second.lock()) {
-			if (indicator == 0)
-			{
-				indicator = 1; // we could count how many channles are counted here ?? 
-					
-			}
-			channelsToNotify.push_back(channelPtr);
-			//_channelsToNotify.push_back(it->second);
-		
-            channelPtr->removeClient(_nickName);
-
-			++it;
-        } else {
-            it = _joinedChannels.erase(it);  //Remove expired weak_ptrs
-        }
-    }
-	std::cout<<"what is indicator here "<<indicator<<"\n";
-	return indicator;
-}
-
-bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
-
-	if (!channel)
-		return false;
-	auto it = _joinedChannels.find(channelName);
-	//if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end()) {
-	if (it != _joinedChannels.end()) {
-		std::cout<<"channel already exists on client list\n";
-		return false;
-	}
-	std::cout<<"------------------channel ahas been added to the map of joined channles for client----------------------------------------- \n";
-	std::weak_ptr<Channel> weakchannel = channel;
-	_joinedChannels.emplace(channelName, weakchannel);
-	return true;
-}
-
-bool Client::isOperator() const {
-    return _isOperator;
-}
-
-void Client::setOperator(bool status) {
-    _isOperator = status;
-}
-
-time_t Client::getSignonTime() const {
-    return signonTime; // This value is set when client registers
-}
-
-long Client::getIdleTime() const {
-    // Calculate difference between current time and last activity time
-    return time(NULL) - lastActivityTime;
-}
-
-// This method is called to attempt to transition the client to a registered state.
-// It checks if all conditions for full registration are met.
+// Refined setHasRegistered implementation (from Step 4)
 void Client::setHasRegistered() {
-    // A client is fully registered if:
-    // 1. They have successfully sent a NICK command (`_hasSentNick` is true).
-    // 2. They have successfully sent a USER command (`_hasSentUser` is true).
-    // 3. AND if the server requires a password (`passwordRequiredForRegistration` is true),
-    //    they *must also* have successfully sent the correct PASS command (`isAuthenticatedByPass` is true).
     if (_hasSentNick && _hasSentUser) {
         // Check password condition:
         // If password is NOT required OR password IS required AND authenticated, then proceed.
-        if (!passwordRequiredForRegistration || isAuthenticatedByPass) {
-
-            // Only set _registered to true once to avoid re-registration issues
+        if (!_passwordRequiredForRegistration || _isAuthenticatedByPass) { // Corrected: added underscores
             if (!_registered) {
                 _registered = true;
-                // Set signon and last activity times upon full registration
-                // (Ensure time.h is included for time(NULL))
                 signonTime = time(NULL);
                 lastActivityTime = time(NULL);
-
-                // The Server's CommandDispatcher will handle sending welcome messages (001-004, MOTD)
-                // after checking client->getHasRegistered() in its main command processing loop.
-                // No need to send messages from here directly, as this is purely a client-side state update.
+                std::cout << "Client FD " << _fd << " (" << _nickName << ") is now REGISTERED.\n";
             }
+        } else {
+            std::cout << "Client FD " << _fd << " (" << _nickName << ") NOT REGISTERED: Password required but not authenticated.\n";
         }
-        // If _hasSentNick && _hasSentUser are true, but the password isn't authenticated (and required),
-        // then _registered remains false. The CommandDispatcher will handle sending ERR_PASSWDMISMATCH.
-    }
-}
-
-// You need to ensure this is called whenever you read data from the client's socket
-// For example, in your Server::handleReadEvent:
-// client_ptr->updateLastActivityTime(); // Or directly set client_ptr->lastActivityTime = time(NULL);
-// Add this method to Client class:
-void Client::updateLastActivityTime() {
-   lastActivityTime = time(NULL);
-   // This might reside in server's main event loop when handling EPOLLIN events for clients
-}
-
-
-void Client::removeJoinedChannel(const std::string& channel_name) {
-    // Assuming 'channel_name' is already in lowercase, consistent with storage.
-    size_t removed_count = _joinedChannels.erase(channel_name);
-    if (removed_count > 0) {
-        std::cout << "CLIENT: " << _nickName << " removed from its _joinedChannels list for channel '" << channel_name << "'.\n";
     } else {
-        std::cerr << "CLIENT ERROR: " << _nickName << " not found in its _joinedChannels for channel '" << channel_name << "' during removal attempt.\n";
+        std::cout << "Client FD " << _fd << " (" << _nickName << ") NOT REGISTERED: Missing NICK (" << _hasSentNick << ") or USER (" << _hasSentUser << ").\n";
     }
 }
 
-// === Example for addJoinedChannel (you'll call this when a client successfully JOINs) ===
-/*void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr) {
-    // Assuming 'channel_name' is already in lowercase.
-    _joinedChannels[channel_name] = channel_ptr; // Store a weak_ptr to the channel
-    std::cout << "CLIENT: " << _nickName << " added channel '" << channel_name << "' to its _joinedChannels list.\n";
-}*/
 
-// // === Example for getJoinedChannels (useful for QUIT command processing) ===
-// const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
-//     return _joinedChannels;
-// }
+void Client::setNickname(const std::string& nickname) { _nickName = nickname; } // Simplified setNickname
+void Client::setOldNick(std::string oldnick) { _oldNick = oldnick; }
+void Client::setFullName(const std::string& fullname) { _fullName = fullname; }
+void Client::setClientUname(std::string uname) { _username = uname; }
+void Client::setHostname(const std::string& hostname) { _hostname = hostname; }
+void Client::setOperator(bool status) { _isOperator = status; }
+void Client::setChannelCreator(bool onoff) { _channelCreator = onoff; }
+void Client::set_acknowledged() { _acknowledged = true; }
 
+// setDefaults method implementation
+void Client::setDefaults() {
+    _nickName = "guest"; // Default nickname, will be overwritten by NICK command
+    _username = "";
+    _fullName = "";
+    _hostname = "localhost"; // Default hostname
+    _isOperator = false; // Not an operator by default
+    _ClientPrivModes.reset(); // Clear all client modes initially
+    _pendingAcknowledged = false;
+    _acknowledged = false;
+    _failed_response_counter = 0;
+    // Do NOT set _hasSentCap, _hasSentNick, _hasSentUser, _registered, _isAuthenticatedByPass, _passwordRequiredForRegistration here
+    // as these are controlled by specific IRC commands or server settings.
+}
 
+// --- CLIENT MODE MANAGEMENT ---
+void Client::setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode); }
+void Client::unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode); }
+bool Client::hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode); }
+std::string Client::getCurrentModes() const {
+    std::string modes_str = "";
+    if (_ClientPrivModes.test(clientPrivModes::INVISABLE)) modes_str += "i";
+    if (_ClientPrivModes.test(clientPrivModes::RECEIVES_NOTICES_MODE)) modes_str += "w";
+    // Add other modes as needed
+    return modes_str;
+}
+std::string Client::getPrivateModeString() {
+    return getCurrentModes(); // Assuming this is the same as getCurrentModes for now
+}
+bool Client::isValidClientMode(char modeChar) {
+    return std::find(clientPrivModes::clientPrivModeChars.begin(), clientPrivModes::clientPrivModeChars.end(), modeChar) != clientPrivModes::clientPrivModeChars.end();
+}
+
+// --- CHANNEL MANAGEMENT FOR CLIENT ---
+bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
+    if (_joinedChannels.find(channelName) == _joinedChannels.end()) {
+        _joinedChannels[channelName] = channel;
+        return true;
+    }
+    return false;
+}
+std::string Client::getChannel(std::string channelName) {
+    return channelName; // Placeholder, adjust if you need actual channel lookup
+}
+void Client::removeJoinedChannel(const std::string& channel_name) {
+    _joinedChannels.erase(channel_name);
+}
+void Client::addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr) {
+    _joinedChannels[channel_name] = channel_ptr;
+}
+void Client::clearJoinedChannels() {
+    _joinedChannels.clear();
+}
+
+// --- MESSAGE & COMMAND HANDLING ---
+IrcMessage& Client::getMsg() { return _msg; }
+void Client::sendMessage(const std::string& message) {
+    _msg.queueMessage(message + "\r\n");
+}
+bool Client::isMsgEmpty() {
+    return _msg.getQue().empty();
+}
+void Client::appendIncomingData(const char* buffer, size_t bytes_read) {
+    _read_buff.append(buffer, bytes_read);
+}
+bool Client::extractAndParseNextCommand() {
+    return _msg.parseMessage(_read_buff); // Assuming IrcMessage::parseMessage handles buffer consumption
+}
+void Client::executeCommand(const std::string& command) {
+    std::cout << "Client::executeCommand called (should be handled by CommandDispatcher).\n";
+}
+void Client::setCommandMap(Server &server) {
+    std::cout << "Client::setCommandMap called (not typically used with central dispatcher).\n";
+}
+
+// --- PING/PONG & ACTIVITY ---
+void Client::sendPing() {
+    _msg.queueMessage("PING :" + _hostname + "\r\n");
+}
+void Client::sendPong() {
+    _msg.queueMessage("PONG :" + _hostname + "\r\n");
+}
+void Client::updateLastActivityTime() {
+    lastActivityTime = time(NULL);
+}
+
+// --- NICKNAME CHANGE LOGIC ---
+bool Client::change_nickname(std::string nickname) {
+    _nickName = nickname;
+    return true;
+}
+
+// --- DISCONNECTION ---
+int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) {
+    _quit = true;
+    return 0;
+}
+void Client::disconnect(const std::string& reason) {
+    _quit = true;
+    std::cerr << "Client FD " << _fd << " (" << _nickName << ") marked for disconnection: " << reason << std::endl;
+}

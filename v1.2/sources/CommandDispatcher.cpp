@@ -1,29 +1,19 @@
-#include <CommandDispatcher.hpp>
+// CommandDispatcher.cpp (or wherever dispatchCommand is implemented)
+
+#include "CommandDispatcher.hpp"
+#include "Server.hpp" // Ensure Server.hpp is included
+#include "Client.hpp" // Ensure Client.hpp is included
+#include "Channel.hpp" // Ensure Channel.hpp is included
+#include "MessageBuilder.hpp" // Ensure MessageBuilder.hpp is included
 #include <iostream>
-#include "Server.hpp"
-#include "Client.hpp"
-#include "IrcMessage.hpp"
-#include <cctype>
-#include <regex>
-#include "IrcResources.hpp"
-#include "MessageBuilder.hpp"
-#include "config.h"
+#include <vector>
+#include <string>
+#include <memory> // For shared_ptr
+#include <algorithm> // For std::transform
+#include <cctype> // For ::tolower
 
-
-// these where static but apparanetly that is not a good approach 
-CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
-	if (!_server) {
-        throw std::runtime_error("CommandDispatcher initialized with nullptr Server!");
-    }
-	// what if __server == null?
-}
-
-CommandDispatcher::~CommandDispatcher() {}
-
-#include <sys/socket.h>
-#include <iomanip>
-
-// ... (existing includes and other CommandDispatcher methods) ...
+// Constructor (if not already defined)
+CommandDispatcher::CommandDispatcher(Server* server) : _server(server) {}
 
 void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
 {
@@ -33,43 +23,44 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
     }
 
     // For debugging: print the raw parsed message
-    // client->getMsg().printMessage(client->getMsg()); // Keep this if you want debug logs
+    client->getMsg().printMessage(client->getMsg());
 
     std::string command = client->getMsg().getCommand();
-    const std::string& nickname = client->getNickname(); // Get current nickname
+    const std::string& nickname = client->getNickname(); // Get current nickname (could be default or set)
 
     // --- PHASE 1: Handle Commands Always Allowed (Pre-Registration) ---
-    // These commands are processed regardless of registration status.
-    // NICK, USER, CAP, PING, PONG do NOT return here, allowing flow to PHASE 2 for registration attempt.
-    // PASS and QUIT will explicitly return if they result in client disconnection.
+    // These commands can be sent by any client, regardless of registration status.
+    // They are typically used for establishing connection, initial capabilities, or disconnecting.
 
     if (command == "PASS") {
         _server->handlePassCommand(client, params);
-        // If handlePassCommand disconnected the client (e.g., wrong password/policy), stop.
-        if (client->getQuit()) {
-            _server->remove_Client(client->getFd());
-            return;
+        // IMPORTANT: If handlePassCommand decides to disconnect the client (e.g., wrong password or policy violation),
+        // it sets the client's _quit flag. We immediately remove the client here.
+        if (client->getQuit()) { // Check the _quit flag set by client->disconnect()
+            _server->remove_Client(client->getFd()); // Force immediate removal
+            return; // Stop processing for this client immediately
         }
+        // If PASS was accepted, continue to registration attempt.
     }
     else if (command == "CAP") {
+        // CAP command is often sent multiple times (LS, REQ, END). Handle it.
         _server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
     }
     else if (command == "NICK") {
         if (params.empty()) {
             client->sendMessage(":" + _server->getServerName() + " 461 " + nickname + " NICK :Not enough parameters");
-            return; // Stop if not enough parameters for NICK
+            return;
         }
-        // handleNickCommand does not disconnect, so flow continues to PHASE 2
         _server->handleNickCommand(client, _server->get_fd_to_nickname(), _server->get_nickname_to_fd(), params[0]);
     }
     else if (command == "USER") {
-        if (params.size() < 4) { // Standard USER format: <username> <mode> <unused> :<realname>
+        if (params.size() < 4) { // Changed to < 4 as per standard USER format
             client->sendMessage(":" + _server->getServerName() + " 461 " + nickname + " USER :Not enough parameters");
-            return; // Stop if not enough parameters for USER
+            return;
         }
         client->setClientUname(params[0]);
         std::string fullName = "";
-        for (size_t i = 3; i < params.size(); ++i) { // Combine realname parts from param 3 onwards
+        for (size_t i = 3; i < params.size(); ++i) { // Start from index 3 for realname
             if (i > 3) fullName += " ";
             fullName += params[i];
         }
@@ -84,49 +75,51 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
     }
     else if (command == "QUIT") {
         _server->handleQuit(client);
-        return; // QUIT always results in client removal, so exit immediately.
+        return; // Client will be removed, stop further processing.
     }
 
     // --- PHASE 2: Attempt Client Registration ---
-    // This attempts to register the client if NICK, USER (and correct PASS if required) are met.
+    // After processing any of the above commands, check if the client can now be registered.
     if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-        client->setHasRegistered(); // This method itself checks password requirements
+        client->setHasRegistered(); // This checks password too if required
 
         if (client->getHasRegistered()) {
-            // Successfully registered! Send welcome messages.
-            client->getMsg().queueMessage(MessageBuilder::generatewelcome(client->getNickname()));
-            // Add other required welcome messages (e.g., 002, 003, 004, MOTD)
-            // client->sendMessage(MessageBuilder::generateYourHost(...));
-            // client->sendMessage(MessageBuilder::generateCreated(...));
-            // client->sendMessage(MessageBuilder::generateMyInfo(...));
-            // client->sendMessage(MessageBuilder::generateMOTDStart(...));
-            // client->sendMessage(MessageBuilder::generateMOTD(...));
-            // client->sendMessage(MessageBuilder::generateMOTDEnd(...));
+            // Successfully registered, send welcome messages
+            client->getMsg().queueMessage(MessageBuilder::buildWelcomeMessage(client->getNickname())); // Corrected call here
+            // Add other welcome messages (002, 003, 004, MOTD) here
+            // Example calls:
+            // client->sendMessage(MessageBuilder::generateYourHost(_server->getServerName(), client->getNickname()));
+            // client->sendMessage(MessageBuilder::generateCreated(_server->getServerName(), client->getNickname(), "some_creation_date"));
+            // client->sendMessage(MessageBuilder::generateMyInfo(_server->getServerName(), client->getNickname(), "available_user_modes", "available_channel_modes"));
+            // client->sendMessage(MessageBuilder::generateMOTDStart(client->getNickname(), _server->getServerName()));
+            // client->sendMessage(MessageBuilder::generateMOTD("Welcome to ft_irc!", client->getNickname()));
+            // client->sendMessage(MessageBuilder::generateMOTDEnd(client->getNickname()));
 
-            _server->updateEpollEvents(client->getFd(), EPOLLOUT, true); // Ensure messages are sent
+            _server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
         } else {
-            // Registration failed after NICK/USER were sent (implies password issue if required)
+            // Failed to register even after NICK/USER (implies password mismatch if required)
+            // This condition specifically handles password failure if NICK/USER were already sent.
             if (client->getPasswordRequiredForRegistration() && !client->getIsAuthenticatedByPass()) {
                 client->sendMessage(":" + _server->getServerName() + " 464 " + nickname + " :Password incorrect");
-                _server->remove_Client(client->getFd()); // Disconnect on password mismatch
+                _server->remove_Client(client->getFd()); // Remove on password mismatch
                 return; // Client removed.
             }
+            // If there are other reasons setHasRegistered returns false (e.g., bad NICK/USER logic *within* that func)
+            // then it will fall through to the ERR_NOTREGISTERED check below.
         }
     }
 
     // --- PHASE 3: Enforce Registration for All Other Commands ---
-    // If the client is NOT fully registered at this point,
-    // any command not explicitly handled in PHASE 1 is disallowed.
+    // If the client is NOT yet registered after PHASE 1 & 2, any other command is disallowed.
     if (!client->getHasRegistered()) {
         client->sendMessage(":" + _server->getServerName() + " 451 " + nickname + " :You have not registered");
-        return; // Stop processing this command as the client is not registered.
+        return; // Stop processing this command.
     }
 
     // --- PHASE 4: Dispatch Commands for Registered Clients Only ---
-    // All commands in this block require the client to be fully registered.
-    // Use 'else if' to ensure only one command is dispatched per event.
+    // Only commands below this point should require the client to be registered.
     if (command == "KICK"){
-        std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleKickCommand." << std::endl;
+        std::cout << "COMMAND DISPATCHER: " << command << " command recieved. Calling Server::handleKickCommand." << std::endl;
         _server->handleKickCommand(client, params);
     }
     else if (command == "LEAVE" || command == "PART"){
@@ -157,6 +150,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
                                            channelName + " " +
                                            std::to_string(userCount) + " :" +
                                            "topic for channel = " + topic;
+
                     client->sendMessage(listLine);
                 }
             }
@@ -189,7 +183,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
             _server->broadcastMessage(full_msg_to_broadcast, client, channel, true, nullptr);
         }
         else { // Assume it's a user
-            auto it = _server->get_nickname_to_fd().find(toLower(target));
+            auto it = _server->get_nickname_to_fd().find(IrcMessage::to_lowercase(target)); // Use IrcMessage::to_lowercase
             if (it == _server->get_nickname_to_fd().end()) {
                 client->sendMessage(":" + _server->getServerName() + " 401 " + client->getNickname() + " " + target + " :No such nick/channel");
                 return ;
@@ -214,172 +208,3 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         client->sendMessage(":" + _server->getServerName() + " 421 " + client->getNickname() + " " + command + " :Unknown command");
     }
 }
-
-
-
-
-// This is the roll back version 
-// void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
-// {
-//     // ... (initial client null check, debug prints) ...
-// 	int client_fd = client->getFd();
-//     if (!client) {
-//         std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;
-//         return;
-//     }
-// 	client->getMsg().printMessage(client->getMsg());
-// 	std::string command = client->getMsg().getCommand();
-// 	const std::string& nickname = client->getNickname();
-	
-//     // --- PHASE 1: Handle Commands Always Allowed (Pre-Registration) ---
-// 	// command == "PASS" get the password and accept or dewcline based on getpassword()
-//     if (command == "PASS") {
-//         _server->handlePassCommand(client, params);
-//         // IMPORTANT: If handlePassCommand decides to disconnect the client (e.g., wrong password or policy violation),
-//         // it sets the client's _quit flag. We immediately remove the client here.
-//         if (client->getQuit()) { // Check the _quit flag set by client->disconnect()
-//             _server->remove_Client(client->getFd()); // Force immediate removal
-//             return; // Stop processing for this client immediately
-//         }
-//         // If PASS was accepted, continue to registration attempt (Phase 2).
-//     }
-//     // ... (rest of existing Phase 1 commands: CAP, NICK, USER, PING, PONG, QUIT) ...
-
-//     // --- PHASE 2: Attempt Client Registration ---
-//     // ... (existing code for this phase) ...
-
-//     // --- PHASE 3: Enforce Registration for All Other Commands ---
-//     // ... (existing code for this phase) ...
-
-//     // --- PHASE 4: Dispatch Commands for Registered Clients Only ---
-//     // ... (existing code for this phase) ...
-
-// 	if (command == "CAP" && !client->getHasSentCap()) {
-// 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
-// 	}
-// 	if (command == "QUIT") {
-// 		_server->handleQuit(client);
-// 		return ;
-// 	}
-
-// 	if (command == "USER" && !client->getHasSentUser()) {
-// 		client->setClientUname(params[0]);
-// 		client->setRealname(params[3]);
-// 		client->setHasSentUser();
-// 	}
-// 	if (command == "NICK") {
-// 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
-// 	}
-// 	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-// 		client->setHasRegistered();
-// 		client->getMsg().queueMessage(MessageBuilder::generatewelcome(client->getNickname()));
-// 		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
-// 	}
-// 	if (command == "PING"){
-// 		_server->handlePing(client);
-// 		return;
-// 	}
-// 	if (command == "PONG"){
-// 		_server->handlePong(client);
-// 		return;
-
-// 	}
-// 	if (command == "KICK"){
-// 		std::cout << "COMMAND DISPATCHER: " << command << " command recieved. Calling Server::handleKickCommand." << std::endl;
-// 		_server->handleKickCommand(client, params);
-// 		return;
-// 	}
-// 	if (command == "LEAVE" || command == "PART"){
-// 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handlePartCommand.\n";
-//         _server->handlePartCommand(client, params);
-//         return;
-// 	}
-
-// 	if (command == "TOPIC"){
-// 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleTopicCommand.\n";
-//         _server->handleTopicCommand(client, params);
-// 		return;
-// 	}
-
-// 	if (command == "INVITE"){
-// 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleInviteCommand.\n";
-//         _server->handleInviteCommand(client, params);
-// 		return;
-// 	}
-
-//     if (command == "JOIN"){
-
-// 		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
-// 		if (!params[0].empty())
-// 		{
-// 			_server->handleJoinChannel(client, params);
-// 		}
-// 		else
-// 		{
-// 			if (client->getHasSentCap() == true)
-// 			{
-// 				if (!_server->get_channels_map().empty())
-// 				{
-//         			for (auto it = _server->get_channels_map().begin(); it != _server->get_channels_map().end(); ++it)
-//         			{
-//         			    auto channel = it->second;
-//         			    std::string channelName = channel->getName();
-//         			    std::string topic = channel->getTopic();
-//         			    size_t userCount = channel->getClientCount(); // Or however you store this
-					
-//         			    std::string listLine = ":localhost 322 " + client->getNickname() + " " +
-//         			                           channelName + " " +
-//         			                           std::to_string(userCount) + " :" +
-//         			                           "topic for channel = " + topic + "\r\n";
-					
-//         			    client->getMsg().queueMessage(listLine);
-//         			}
-// 				}
-// 				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
-// 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
-// 			}
-// 		}
-// 	}
-
-// 	/**
-// 	 * @brief 
-// 	 * 
-// 	 * sudo tcpdump -A -i any port <port number>, this will show what irssi sends before being reecived on
-// 	 * _server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
-// 	 * irssi is sending the flags and users combined together into 1 string, where does flags end and user start? 
-// 	 * 
-// 	 * so no option but to not allow that format !
-// 	 * 
-// 	 */
-// 	if (command == "MODE") {
-// 		_server->handleModeCommand(client, params);
-// 	}
-// 	if (client->getMsg().getCommand() == "PRIVMSG")  {
-// 		if (!params[0].empty()) // && 1 !empty
-// 		{
-// 			std::string contents = ":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
-// 			if (params[0][0] == '#')
-// 			{
-// 				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
-// 				// is client in channel 
-// 				_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
-// 			}
-// 			else
-// 			{
-// 				int fd = _server->get_nickname_to_fd().find(params[0])->second;
-// 				// check against end()
-// 				if (fd < 0) {
-// 					// no user found by name
-// 					// no username provided
-// 					std::cout<<"no user here by that name \n"; 
-// 					return ;
-// 				}
-// 				_server->broadcastMessage(contents, client, nullptr, true, _server->get_Client(fd));				
-// 			}
-// 		}		
-// 	}
-// 	if (command == "WHOIS") {
-// 		_server->handleWhoIs(client, params[0]);
-// 	}
-// }

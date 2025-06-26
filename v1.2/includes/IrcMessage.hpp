@@ -3,10 +3,10 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include <deque> 
+#include <deque>
 #include <set>
 #include <algorithm>
-#include <cctype>    
+#include <cctype>
 #include <bitset>
 #include <functional>
 
@@ -21,23 +21,14 @@ class IrcMessage {
 		size_t _bytesSentForCurrentMessage = 0;
 
 		std::deque<std::string> _messageQue;
-		
+
 		std::string _prefix;
 		std::string _command;
 
-		static std::string to_lowercase(const std::string& s) {
-			std::string lower_s = s;
-			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
-			[](unsigned char c){ return std::tolower(c); });
-			return lower_s;
-		}
-		
-		std::map<std::string, int> _nickname_to_fd;
-		std::map<int, std::string> _fd_to_nickname;
-		std::map<std::string, int> nickname_to_fd;
-		std::map<int, std::string> fd_to_nickname;
-
-		static const std::set<std::string> _illegal_nicknames;
+		// Changed to_lowercase to public, as it's a utility function used externally.
+		// If you intend for it to be an internal helper, it should be part of MessageBuilder or Server.
+		// For now, making it public to resolve compilation issues.
+		// static const std::set<std::string> _illegal_nicknames; // Removed static initialization
 
 		std::vector<std::string> _paramsList;
 		std::vector<std::string> _params;
@@ -47,53 +38,47 @@ class IrcMessage {
 
 
 	public:
+		// Made public to allow external access (e.g., from Server.cpp)
+		static std::string to_lowercase(const std::string& s) {
+			std::string lower_s = s;
+			std::transform(lower_s.begin(), lower_s.end(), lower_s.begin(),
+			[](unsigned char c){ return std::tolower(c); });
+			return lower_s;
+		}
+
     	IrcMessage();
     	~IrcMessage();
-    	bool parse(const std::string& rawMessage);
-    	std::string toRawString() const;
-    	void setPrefix(const std::string& prefix);
-    	void setCommand(const std::string& command); 
-    	const std::string& getPrefix() const;
-    	const std::string& getCommand() const;
-    	const std::vector<std::string>& getParams() const;
-		const std::string getParam(unsigned long index) const ;
-		void printMessage(const IrcMessage& msg);
 
-		void queueMessage(const std::string& msg) { std::cout<< "[QUEUE] To: \n"; _messageQue.push_back(msg);};
-		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
-		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
-		std::deque<std::string>& getQue() { return _messageQue; };
-		std::string& getQueueMessage() { return _messageQue.front();}; //return _messageQue.empty() ? "" : _messageQue.front();
-		//void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		//void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
-		
-		void clearQue() {_messageQue.clear();};
-
-		const std::string getMsgParam(int index) const{ return _params[index]; };
-		void changeTokenParam(int index, const std::string& newValue) {_paramsList[index] = newValue;};
-		const std::vector<std::string>& getMsgParams() { return _params; };
-		
-		bool isValidNickname(const std::string& nick);
-		MsgType check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd);//, std::string& nickref);  // ai
-		std::map<int, std::string>& get_fd_to_nickname();
-		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick); // ai // we have remove client function , this could be called in there, to remove all new maps
-		std::string get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const;  // ai
-		int get_fd(const std::string& nickname) const;
-
-		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
-		
-		void clearAllMsg() {
-			_nickname_to_fd.clear();
-			_fd_to_nickname.clear();
-			nickname_to_fd.clear();
-			fd_to_nickname.clear();
-			//_illegal_nicknames.clear()
-		};
-
-		void advanceCurrentMessageOffset(ssize_t bytes_sent);
+		bool parseMessage(std::string& raw_data);
+		void queueMessage(const std::string& message);
+		std::string& getQueueMessage();
+		void removeQueueMessage();
+		void advanceCurrentMessageOffset(size_t bytes_sent);
 		size_t getRemainingBytesInCurrentMessage() const;
-		const char* getCurrentMessageCstrOffset() const;
+		size_t getBytesSentForCurrentMessage() const; // Added previously
+		void resetCurrentMessageOffset();
 
-		bool isActive(MsgType type);
-		MsgType getActiveMessageType() const;
+		const std::string& getPrefix() const;
+		const std::string& getCommand() const;
+		const std::vector<std::string>& getParams() const;
+		std::string toRawString() const; // For debugging/reconstruction
+
+		void setPrefix(const std::string& prefix);
+		void setCommand(const std::string& command);
+
+		const std::string getParam(unsigned long index) const; // Getter for specific param
+		void queueMessageFront(const std::string& msg);
+		const std::deque<std::string>& getQue() const; // Getter for message queue
+		void clearQue(); // Clear the message queue
+
+		const std::string getMsgParam(int index) const;
+		void changeTokenParam(int index, const std::string& newValue);
+		const std::vector<std::string>& getMsgParams(); // Returns a reference to the parameters vector
+
+		void setType(MsgType msg, std::vector<std::string> sendParams);
+		void clearAllMsg(); // Clears all message-related state
+		static void printMessage(const IrcMessage& msg); // Static print for debugging
+
+		bool isActive(MsgType type); // Checks if a specific message type is active
+		MsgType getActiveMessageType() const; // Returns the currently active message type
 };

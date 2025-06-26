@@ -180,6 +180,15 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 				paramIndex++;
 			}
 			messageData = setChannelMode(modeChar , setModeBool(sign), params[paramIndex]);
+			if (modeChar == 'o') {
+			    if (setModeBool(sign)) {
+			        ++_operatorCount;
+					_wasOpRemoved = false;
+			    } else {
+			        --_operatorCount;
+			        _wasOpRemoved = true;
+			    }
+			}
 			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";			
 			if (!messageData.empty()) {
 				modes += messageData[0] + " ";
@@ -306,6 +315,7 @@ int Channel::addClient(std::shared_ptr <Client> client) {
 		if (client->getChannelCreator() == true) {
 			setChannelMode('o', setModeBool('+'), client->getNickname());
 			setChannelMode('q', setModeBool('+'), client->getNickname()); // incase we want to know who created the channel
+			setOperatorCount(1);
 			// if we add any other here we must remeber to set to 0 or 1
 			client->setChannelCreator(false); // so we do not step inside here again
 		}
@@ -419,6 +429,22 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
         }
     }
     return MsgType::NONE;
+}
+
+std::pair<MsgType, std::vector<std::string>>
+Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient) {
+
+	if (_operatorCount > 0) {return {MsgType::NONE, std::vector<std::string>()};};
+	if (_ClientModes.size() < 2) {return {MsgType::NONE, std::vector<std::string>()};}; // Not enough clients to promote anyone
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
+        std::shared_ptr<Client> candidate = it->first.lock();
+        if (!candidate || candidate == removingClient) continue;
+        // Set operator bit (assume index 0 for +o mode)
+        it->second.first.set(Modes::OPERATOR, true);
+        // Optional: broadcast MODE change
+		return {MsgType::CHANNEL_MODE_CHANGED, {removingClient->getNickname(), removingClient->getUsername(), getName(), "+o", candidate->getNickname()}};
+	}
+	return {MsgType::NONE, std::vector<std::string>()};
 }
 
 std::pair<MsgType, std::vector<std::string>>

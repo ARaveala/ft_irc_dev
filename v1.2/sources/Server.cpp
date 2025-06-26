@@ -666,13 +666,24 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			messageParams.push_back(client->getNickname());
 			messageParams.push_back(client->getClientUname());
 			messageParams.push_back(channel->getName());
+			std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<params[1]<<"\n";
+			std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<modeparams[1]<<"\n";
 			if (!modeparams[0].empty())
 				messageParams.push_back(modeparams[0]);
-			if (!modeparams[1].empty())
-				messageParams.push_back(modeparams[1]);
+			//if(!modeparams[1].empty())
+			//	messageParams.push_back(modeparams[1]);
+			if (params.size() == 3)
+				messageParams.push_back(params[2]);
 			else
 				messageParams.push_back("");
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client, channel, false, nullptr);
+			if (channel->getwasOpRemoved()) {
+				std::pair<MsgType, std::vector<std::string>> result = channel->promoteFallbackOperator(client);
+				if (result.first != MsgType::NONE){
+					channel->setwasOpRemoved();
+					broadcastMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, result.second), client, channel, false, nullptr);
+				}
+			}
 		}
 	}
 	else { // Target is a client (private mode)

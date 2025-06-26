@@ -97,7 +97,7 @@ namespace IRCillegals
  * 
  */
 namespace config {
-	constexpr int MAX_CLIENTS = 10;
+	constexpr int MAX_CLIENTS = 100;
 	constexpr int TIMEOUT_CLIENT = 2000; // this should be larger than epoll timeout
 	constexpr int TIMEOUT_EPOLL = -1;
 	constexpr int BUFFER_SIZE = 1024;

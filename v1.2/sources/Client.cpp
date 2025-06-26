@@ -155,12 +155,6 @@ void Client::set_acknowledged(){
 }*/
 
 void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
-	// this needs an alternative to add unique identifiers 
-	// also must add to all relative containers. 
-	//_nickName = generateUniqueNickname();
-	//std::string potential_nick = generateUniqueNickname();
-	//_username = "user_" + potential_nick;
-	//_fullName = "real_" + potential_nick;
 	_isOperator = false;
 	signonTime = time(NULL);
 	lastActivityTime = time(NULL);
@@ -171,10 +165,6 @@ void Client::setDefaults(){ //todo check these are really called - or woudl we c
 bool Client::change_nickname(std::string nickname){
 	_nickName.clear();
 	_nickName = nickname;
-	//std::cout<<"hey look its a fd = "<< fd << std::endl;
-	//this->set_nickname(nickname);
-
-//	else (0);
 	return true;
 }
 
@@ -182,13 +172,11 @@ bool Client::change_nickname(std::string nickname){
 std::string Client::getChannel(std::string channelName)
 {
 	auto it = _joinedChannels.find(channelName);
-	//if (find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
 	if (it != _joinedChannels.end()) {
 		return channelName;
 	}
 	std::cout<<"channel does not exist\n";
 	return "";
-		//_joinedChannels.push_back(channelName);
 }
 std::string Client::getCurrentModes() const {
 
@@ -201,8 +189,6 @@ std::string Client::getCurrentModes() const {
     return activeModes;
 }
 
-/*void Client::removeSelfFromChannel()
-{}*/
 int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) { // Gemini corrected this &
 
 	std::cout<<"preparing quit \n";
@@ -215,17 +201,14 @@ int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) 
 				indicator = 1; // we could count how many channles are counted here ?? 
 					
 			}
-			channelsToNotify.push_back(channelPtr);
-			//_channelsToNotify.push_back(it->second);
-		
+			channelsToNotify.push_back(channelPtr);	
             channelPtr->removeClient(_nickName);
 
 			++it;
         } else {
-            it = _joinedChannels.erase(it);  //Remove expired weak_ptrs
+            it = _joinedChannels.erase(it);
         }
     }
-	std::cout<<"what is indicator here "<<indicator<<"\n";
 	return indicator;
 }
 
@@ -234,7 +217,6 @@ bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Ch
 	if (!channel)
 		return false;
 	auto it = _joinedChannels.find(channelName);
-	//if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end()) {
 	if (it != _joinedChannels.end()) {
 		std::cout<<"channel already exists on client list\n";
 		return false;
@@ -269,14 +251,6 @@ void Client::setHasRegistered() {
     lastActivityTime = time(NULL); // Also set initial last activity time
 }
 
-// You need to ensure this is called whenever you read data from the client's socket
-// For example, in your Server::handleReadEvent:
-// client_ptr->updateLastActivityTime(); // Or directly set client_ptr->lastActivityTime = time(NULL);
-// Add this method to Client class:
-void Client::updateLastActivityTime() {
-   lastActivityTime = time(NULL);
-   // This might reside in server's main event loop when handling EPOLLIN events for clients
-}
 
 
 void Client::removeJoinedChannel(const std::string& channel_name) {

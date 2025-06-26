@@ -142,8 +142,6 @@ class Client {
 		void appendIncomingData(const char* buffer, size_t bytes_read);
 		bool extractAndParseNextCommand();
 
-		void updateLastActivityTime();
-
     // Removes a channel from the client's internal list of joined channels.
     // Assumes channel_name is already lowercase.
     void removeJoinedChannel(const std::string& channel_name);

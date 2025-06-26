@@ -19,6 +19,7 @@ enum class MsgType {
 	CLIENT_QUIT,
 	CLIENT_MODE_CHANGED,
 	PASSWORD_APPLIED,
+	PRIV_MSG,
 	RPL_UMODEIS = 221,        // User mode list
     RPL_CHANNELMODEIS = 324, // Channel modes list
 	RPL_NOTOPIC = 331,

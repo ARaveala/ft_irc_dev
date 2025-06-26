@@ -59,32 +59,23 @@ std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname)
     const std::string& target_nickname = nickname; // Use a const reference for clarity
 
     std::weak_ptr<Client> found_weak_ptr; // To store the weak_ptr of the client we're looking for
-
-    // Use a non-const iterator so we can modify the map (erase elements)
     for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
         if (auto clientPtr = it->first.lock()) {
-            // Client is still active.
             // We assume clientPtr->getNickname() also returns a lowercase string.
             if (clientPtr->getNickname() == target_nickname) {
                 // Found a direct match (case-sensitive due to invariant).
                 found_weak_ptr = it->first; // Get the actual weak_ptr key from the map
                 ++it; // Move to the next element
-                // We've found our match, but we continue iterating to clean up any *other*
-                // expired entries in the rest of the map. If we only cared about finding the first
-                // and leaving, we could 'break' here. For cleanup, full iteration is good.
             } else {
-                // Not the client we're looking for, just move to the next element.
                 ++it;
             }
         } else {
-            // Found an expired weak_ptr! Clean it up.
             std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
                       << "' during nickname lookup. Removing stale entry.\n";
             it = _ClientModes.erase(it); // Erase stale element and advance iterator
-            // No need to increment 'it' here, as erase already advanced it.
         }
     }
-    return found_weak_ptr; // Will be empty if no active client with the given nickname was found
+    return found_weak_ptr;
 }
 
 
@@ -124,66 +115,6 @@ bool Channel::isClientInChannel(const std::string& nickname) const {
 	return false;
 }
 
-// will add this back in a little later once my code is cleaner and my comments are greener, incase debugging required
-/*std::bitset<config::CLIENT_NUM_MODES> Channel::getClientModes(const std::string nickname) const {
-    std::string lower_nickname_param = nickname;
-    std::transform(lower_nickname_param.begin(), lower_nickname_param.end(), lower_nickname_param.begin(),
-                   [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-    for (const auto& entry : _ClientModes) { // Note: const auto& is fine here
-        if (auto clientPtr = entry.first.lock()) {
-            std::string stored_lower_nickname = clientPtr->getNickname();
-            std::transform(stored_lower_nickname.begin(), stored_lower_nickname.end(), stored_lower_nickname.begin(),
-                           [](unsigned char c){ return static_cast<unsigned char>(std::tolower(c)); });
-
-            if (stored_lower_nickname == lower_nickname_param) {
-                // This will now return a copy of the bitset, which is correct
-                return entry.second.first;
-            }
-        }
-    }
-    // This will return a new, default-constructed bitset by value, which is correct
-    return std::bitset<config::CLIENT_NUM_MODES>();
-}*/
-
-// hold on to this, i dont think we need it, worth keeping incase of subtle issue
-/*void Channel::buildWhoReplyFor(std::shared_ptr<Client> requestingClient) {
-    if (!requestingClient)
-        return;
-
-    const std::string& channelName = this->getName();
-    const std::string& targetNick = requestingClient->getNickname();
-
-    for (std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare>::const_iterator it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
-        std::shared_ptr<Client> member = it->first.lock();
-        if (!member)
-            continue;
-
-        const std::bitset<config::CLIENT_NUM_MODES>& clientModes = it->second.first;
-
-        std::string nickname   = member->getNickname();
-        std::string username   = member->getClientUname();
-        std::string host       = "localhost";//member->getHost(); // or "localhost"
-        std::string realname   = member->getfullName();
-        std::string status     = "H"; // Assume the user is "here"
-
-        // Append "@" for operator if applicable
-        if (clientModes[Modes::OPERATOR])
-            status += "@";
-
-        // Build the 352 WHO reply line
-        std::string whoLine = ":localhost 352 " + targetNick + " " + channelName + " " +
-                              username + " " + host + " localhost " + nickname + " " +
-                              status + " :0 " + realname + "\r\n";
-
-        requestingClient->getMsg().queueMessage(whoLine);
-    }
-
-    // Final 315: End of /WHO list
-    std::string endLine = ":localhost 315 " + targetNick + " " + channelName + " :End of /WHO list\r\n";
-    requestingClient->getMsg().queueMessage(endLine);
-}*/
-
 
 std::string Channel::getCurrentModes() const {
 
@@ -204,7 +135,6 @@ Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
 	switch (modeChar) {
 		case 'o': return Modes::OPERATOR;
 		case 'q': return Modes::FOUNDER;
-		//case 'i': return Modes::INVITE_ONLY;
 		default : return Modes::CLIENT_NONE;
 	}
 
@@ -224,7 +154,7 @@ bool Channel::setModeBool(char onoff) {
 	return onoff == '+'; 
 }
 
-std::vector<std::string> Channel::applymodes(std::vector<std::string> params) // applyModes?
+std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 {
 	std::string modes;
 	std::string targets;
@@ -250,8 +180,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params) //
 				paramIndex++;
 			}
 			messageData = setChannelMode(modeChar , setModeBool(sign), params[paramIndex]);
-			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";
-			
+			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";			
 			if (!messageData.empty()) {
 				modes += messageData[0] + " ";
 				if (messageData.size() > 1)
@@ -281,21 +210,10 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 		cmodeType = charToChannelMode(modeChar);
 		std::cout<<"is mode not changing here "<< static_cast<int>(cmodeType) << std::endl;
 	}
-    
 	if (isValidClientMode(modeChar)) {
 		modeType = charToClientMode(modeChar);
 	}
-
-	if (cmodeType == Modes::NONE && modeType == Modes::CLIENT_NONE) {
-        return {};
-    }
-
-	if(_ChannelModes.test(cmodeType) == true ) {
-		std::cout<<"mode already set----\n";
-	} else {
-		std::cout<<"mode is false----\n";
-	}
-
+	if (cmodeType == Modes::NONE && modeType == Modes::CLIENT_NONE) {return {};};
 	if (cmodeType!= Modes::NONE) {
 		if(_ChannelModes.test(cmodeType) != enableMode) {
 			_ChannelModes.set(cmodeType, enableMode);
@@ -313,36 +231,33 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 	}
 
  	switch (cmodeType) {
-            case Modes::USER_LIMIT:
-                if (enableMode) {
-					_ulimit = std::stoul(target);
-				} else {
-					_ulimit = 0;
-				}
-				if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
-                    response.push_back(target);
-				}
-				break;
-            
-            case Modes::PASSWORD:
-                if (enableMode) {
-					_password = target;
-				} else {
-					_password.clear();
-				}
-				if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
-                    response.push_back(target);
-                }
-				break;
+        case Modes::USER_LIMIT:
+            if (enableMode) {
+				_ulimit = std::stoul(target);
+			} else {
+				_ulimit = 0;
+			}
+			if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
+                response.push_back(target);
+			}
+			break;
 
-            case Modes::TOPIC:
-				break;
-
-            case Modes::INVITE_ONLY:
-				break;
-
-            default:
-                break;
+        case Modes::PASSWORD:
+            if (enableMode) {
+				_password = target;
+			} else {
+				_password.clear();
+			}
+			if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
+                response.push_back(target);
+            }
+			break;
+        case Modes::TOPIC:
+			break;
+        case Modes::INVITE_ONLY:
+			break;
+        default:
+            break;
     }
 	 if (modeType != Modes::CLIENT_NONE) {
 		if(getClientModes(target).test(modeType) != enableMode) {
@@ -404,14 +319,6 @@ int Channel::addClient(std::shared_ptr <Client> client) {
 		std::cout << "Client already exists in channel!" << std::endl;
 		return 1;
 	}
-	/*for (auto it = _ClientModes.begin(); it != _ClientModes.end(); it++)
-	{
-		std::cout<<"show me the fds in the clientmodes map = "<<it->second.second<<"\n";
-	}*/
-
-	/*if (result.second) {
-        if (Client) std::cout << Client->getNickname() << " joined channel " << _name << std::endl;
-    }*/
     return 2; // Return true if insertion happened (Client was not already there)
 }
 
@@ -492,7 +399,7 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
 	if (mode == 'o') {
         if (param.empty() || !isClientInChannel(param)) {
             std::cout << "DEBUG: Invalid or missing client '" << param << "' for +o.\n";
-            return MsgType::ERR_NOSUCHNICK;
+            return MsgType::NOT_ON_CHANNEL;
         }
     }
     else if (mode == 'l' && sign == '+') {
@@ -518,28 +425,22 @@ std::pair<MsgType, std::vector<std::string>>
 Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::string>& params) const {
     size_t idx = 1;
     char sign = ' ';
-
     while (idx < params.size()) {
         const std::string& token = params[idx];
-
         if (token.empty() || (token[0] != '+' && token[0] != '-')) {
             std::cout << "DEBUG: Syntax Error: Unexpected token '" << token << "'." << std::endl;
             return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
         }
-
         sign = token[0];
         for (size_t i = 1; i < token.size(); ++i) {
             char mode = token[i];
-
             if (!isValidChannelMode(mode) && !isValidClientMode(mode)) {
-                std::cout << "DEBUG: Unknown mode char '" << mode << "'." << std::endl;
+//                std::cout << "DEBUG: Unknown mode char '" << mode << "'." << std::endl;
                 return {MsgType::UNKNOWN_MODE, {std::string(1, mode), nick, getName()}};
             }
-
             if (!channelModeRequiresParameter(mode)) continue;
-
             if (idx + 1 >= params.size()) {
-                std::cout << "DEBUG: Missing parameter for mode '" << mode << "'." << std::endl;
+//                std::cout << "DEBUG: Missing parameter for mode '" << mode << "'." << std::endl;
                 return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
             }
 
@@ -547,14 +448,15 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
 
             MsgType checkResult = checkModeParameter(nick, mode, param, sign);
             if (checkResult != MsgType::NONE) {
-                return {checkResult, {nick, "MODE", std::string(1, mode), param}};
+				if (checkResult == MsgType::NOT_ON_CHANNEL){
+					return {checkResult, {param, params[0]}};
+				}
+				return {checkResult, {nick, "MODE", std::string(1, mode), param}};
             }
-
             ++idx; // consumed parameter
         }
         ++idx;
     }
-
     return {MsgType::NONE, {}};
 }
 
@@ -603,40 +505,6 @@ Proceed with this version of isClientOperator. It will correctly implement the l
 
 */
 
-// this is not needed at all !!
-bool Channel::isClientOperator(const std::string& nickname) {
-    std::cout << "CHANNEL: Checking if '" << nickname << "' is operator in '" << _name << "' (case-sensitive)\n";
-
-    // No std::tolower / std::transform here.
-    // The 'nickname' parameter is used as-is for comparison.
-    // This implies that client->getNickname() and all other nickname strings
-    // used for comparison must also maintain their exact original casing.
-
-    // Iterate through the _ClientModes map to find the Client by nickname
-    for (const auto& entry : _ClientModes) {
-        std::shared_ptr<Client> client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
-
-        if (client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
-            // Compare the nickname directly, strictly case-sensitive.
-            // client_sptr->getNickname() MUST return the nickname in its exact original casing.
-            if (client_sptr->getNickname() == nickname) { // DIRECT CASE-SENSITIVE COMPARISON
-                const std::bitset<config::CLIENT_NUM_MODES>& modes = entry.second.first; // The bitset of client modes
-
-                // Check if the OPERATOR bit is set
-                if (modes[Modes::OPERATOR]) {
-                    std::cout << "CHANNEL: '" << nickname << "' IS operator in '" << _name << "'.\n";
-                    return true;
-                } else {
-                    std::cout << "CHANNEL: '" << nickname << "' is in channel '" << _name << "' but is NOT an operator.\n";
-                    return false;
-                }
-            }
-        }
-    }
-
-    std::cout << "CHANNEL: '" << nickname << "' not found in channel members for '" << _name << "'. Not an operator.\n";
-    return false; // Client not found in this channel's members, so definitely not an operator
-}
 
 void Channel::removeClientByNickname(const std::string& nickname) {
     std::cout << "CHANNEL: Attempting to remove client '" << nickname << "' from channel '" << _name << "' (case-sensitive).\n";
@@ -660,36 +528,6 @@ void Channel::removeClientByNickname(const std::string& nickname) {
 bool Channel::isEmpty() const {
     return _ClientModes.empty();
 }
-
-// this function is too woke and should be deleted
-// void Channel::broadcast(const std::string& message, std::shared_ptr<Client> exclude_client) {
-//     // For logging, just show the first part of the message to avoid super long console lines
-//     std::cout << "CHANNEL: Broadcasting message in '" << _name << "': " << message.substr(0, message.find("\r\n")) << std::endl;
-
-//     for (const auto& entry : _ClientModes) {
-//         std::shared_ptr<Client> current_client_sptr = entry.first.lock(); // Try to get shared_ptr from weak_ptr
-
-//         if (current_client_sptr) { // Check if the weak_ptr is still valid (client is still connected)
-//             // If an exclude_client is provided, skip sending the message to them.
-//             // We compare file descriptors (fds) as a robust way to identify shared_ptr<Client> instances.
-//             if (exclude_client && current_client_sptr->getFd() == exclude_client->getFd()) {
-//                 continue; // Skip this client if they are the one to be excluded
-//             }
-
-//             // Queue the message for the current client to be sent later by the main loop
-//             current_client_sptr->getMsg().queueMessage(message);
-
-//             // Important: You might also need to signal your epoll loop that this client
-//             // now has data to send (i.e., add EPOLLOUT to their monitored events).
-//             // This is often done by a method in Server, like:
-//             // server_instance->updateEpollEvents(current_client_sptr->getFd(), EPOLLOUT, true);
-//             // If your server design doesn't easily allow Channel to call Server methods directly,
-//             // then your main epoll loop will need to regularly check if any client has queued messages
-//             // and update their EPOLLOUT events accordingly. For now, just queueing is the first step.
-//         }
-//     }
-// }
-
 
 void Channel::addInvite(const std::string& nickname) {
     // Check if already invited to avoid duplicates

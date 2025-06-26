@@ -29,8 +29,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;
         return;
     }
-	//_server->tryRegisterClient(client);
-
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
@@ -119,7 +117,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				}
 				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
 			}
 		}
 	}
@@ -140,7 +137,9 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (client->getMsg().getCommand() == "PRIVMSG")  {
 		if (!params[0].empty()) // && 1 !empty
 		{
-			std::string contents = ":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+			std::shared_ptr<Client> target = _server->getClientByNickname(params[1]);
+			
 			if (params[0][0] == '#')
 			{
 				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
@@ -149,6 +148,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			}
 			else
 			{
+				if (!_server->validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
 				int fd = _server->get_nickname_to_fd().find(params[0])->second;
 				// check against end()
 				if (fd < 0) {
@@ -163,5 +163,18 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 	if (command == "WHOIS") {
 		_server->handleWhoIs(client, params[0]);
+	}
+	// only because tester
+	if (command == "NOTICE"){
+    // IRC spec says NOTICE must not reply to sender
+	    if (params.size() < 2) return;
+
+	    std::string target = params[0];
+	    std::string message = params[1];
+	    // Construct a notice message and send it silently
+	    std::string prefix = client->getNickname() + "!" + client->getUsername() + "@localhost\r\n"; //(client); // nick!user@host
+	    std::string notice = prefix + " NOTICE " + target + " :" + message + "\r\n";
+		std::shared_ptr<Channel> channel = _server->get_Channel(target);
+		_server->broadcastMessage((notice), client, channel, true, nullptr); // you define this
 	}
 }

@@ -115,8 +115,10 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	        case MsgType::PART:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildPart), params);
 			case MsgType::KICK:
-			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildKick), params);
-	        // Add more cases here...
+				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildKick), params);
+			case MsgType::PRIV_MSG:
+			return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildPrivMessage), params);
+			// Add more cases here...
 			default:
 		        return "Error: Unknown message type";
 		}
@@ -220,11 +222,11 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	//return SERVER_PREFIX + " CAP * LS :multi-prefix sasl\r\nconst std::string&ender_prefix is "nick!user@host".
 	std::string buildJoinChannel(const std::string& nickname, const std::string& username, const std::string& channelName, const std::string& clientList, const std::string& topic) {
 		(void) topic;
-		std::string joinLine =  prefix(nickname, username) + " JOIN " + channelName + "\r\n";
+		std::string name =  prefix(nickname, username) + " JOIN " + channelName + "\r\n";
     	std::string namesReply = SERVER_PREFIX + " 353 " + nickname + " = " + channelName + " :" + clientList + "\r\n";
     	std::string endOfNames = SERVER_PREFIX + " 366 " + nickname + " " + channelName + " :End of /NAMES list\r\n";
     	std::string topicReply = SERVER_PREFIX + " 332 " + nickname + " " + channelName + " :Welcome to " + channelName + "!\r\n";;
-	    return joinLine + topicReply + namesReply + endOfNames ;
+	    return name + topicReply + namesReply + endOfNames ;
 	}
 
     std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList) {
@@ -347,7 +349,10 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	std::string buildKick(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& target, const std::string& kickReason) {
 	    return prefix(clientNickname, username) + " KICK " + channelName + " " + target + " :" + kickReason + "\r\n";
 	}
-
+	std::string buildPrivMessage(const std::string& clientNickname, const std::string& username, const std::string& where, const std::string& msg){
+		return ":" + prefix(clientNickname, username)+ " PRIVMSG " + where + " " + msg +"\r\n";  
+	}
+ //":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 	/*std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
 	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";

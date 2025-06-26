@@ -1,0 +1,497 @@
+server is listening on port6667
+✅ FD 3 successfully added to epoll!
+seting up epoll signal fd------
+signal fd created = 5
+✅ FD 5 successfully added to epoll!
+✅ FD 6 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 6
+1
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 6
+DEBUG: Full message sent for FD 6. Moving to next message.
+client messages should be sent by now !!!!
+✅ FD 8 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 8
+2
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 8
+DEBUG: Full message sent for FD 8. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [PASS pass
+NICK NoticeChanSender
+USER ncsender 0 * :Notice Channel Sender
+]
+¤¤¤¤¤¤¤ showing raw message= PASS pass showing message_content = PASS pass
+token parser shows true 
+  Prefix: ''
+  Command: 'PASS'
+  Parameters:
+    [0]: 'pass'
+---
+DEBUG::PASSWORD BEING BEING ACTUATED......... 
+DEBUG::PASSWORD ACCEPTED......... 
+[QUEUE] To: 
+¤¤¤¤¤¤¤ showing raw message= NICK NoticeChanSender showing message_content = NICK NoticeChanSender
+token parser shows true 
+  Prefix: ''
+  Command: 'NICK'
+  Parameters:
+    [0]: 'NoticeChanSender'
+---
+=== [NICK UPDATE] FD: 8 | Old: '' → New: 'NoticeChanSender'
+    Cleaning up old entry: ''
+    Inserting new entry: 'noticechansender' for FD: 8
+    ✅ Nickname update complete.
+¤¤¤¤¤¤¤ showing raw message= USER ncsender 0 * :Notice Channel Sender showing message_content = USER ncsender 0 * :Notice Channel Sender
+token parser shows true 
+  Prefix: ''
+  Command: 'USER'
+  Parameters:
+    [0]: 'ncsender'
+    [1]: '0'
+    [2]: '*'
+    [3]: 'Notice Channel Sender'
+---
+[QUEUE] To: 
+DEBUG: Message queued for FD 8 (NoticeChanSender)
+checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 8
+DEBUG: Full message sent for FD 8. Moving to next message.
+checking the message from que before send [:localhost 001 NoticeChanSender :Welcome to the IRC server NoticeChanSender!
+:localhost 002 NoticeChanSender :Your host is localhost, running version 1.0
+:localhost 003 NoticeChanSender :This server was created today
+:localhost 004 NoticeChanSender localhost 1.0 o o
+:localhost 375 NoticeChanSender :- ~ Meowdy, traveler! ~
+:localhost 372 NoticeChanSender :- Here's your good-luck cat butt:
+:localhost 372 NoticeChanSender :-     /\_/\
+:localhost 372 NoticeChanSender :-    ( o.o )
+:localhost 372 NoticeChanSender :-     > ^ <    🍑
+:localhost 372 NoticeChanSender :-     Cat butt initialized.
+:localhost 376 NoticeChanSender :End of /MOTD
+] and the fd = 8
+DEBUG: Full message sent for FD 8. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [JOIN #notchan
+]
+¤¤¤¤¤¤¤ showing raw message= JOIN #notchan showing message_content = JOIN #notchan
+token parser shows true 
+  Prefix: ''
+  Command: 'JOIN'
+  Parameters:
+    [0]: '#notchan'
+---
+JOIN CAUGHT LETS HANDLE IT 
+Channel '#notchan' created.
+Channel '#notchan' created.
+------------------channel ahas been added to the map of joined channles for client----------------------------------------- 
+SET CHANNEL MODE ACTIVATED -------------------------mode char = o
+mode is false----
+should report activated ----
+Total Clients: 1
+whats thje name we looking at now = [NoticeChanSender]
+Total Clients: 1
+whats thje name we looking at now = [NoticeChanSender]
+SET CHANNEL MODE ACTIVATED -------------------------mode char = q
+mode is false----
+should report activated ----
+Total Clients: 1
+whats thje name we looking at now = [NoticeChanSender]
+Total Clients: 1
+whats thje name we looking at now = [NoticeChanSender]
+MsgType numeric value: 5
+[QUEUE] To: 
+it was empty yeah !!!!---------------
+DEBUG: Message queued for FD 8 (NoticeChanSender)
+MsgType numeric value: 7
+checking the message from que before send [:NoticeChanSender!ncsender@localhost JOIN #notchan
+:localhost 332 NoticeChanSender #notchan :Welcome to #notchan!
+:localhost 353 NoticeChanSender = #notchan :NoticeChanSender!NoticeChanSender@localhost 
+:localhost 366 NoticeChanSender #notchan :End of /NAMES list
+] and the fd = 8
+DEBUG: Full message sent for FD 8. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: []
+Client FD 6 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client  marked for disconnection, epollout will trigger removal.
+Debug - Raw Buffer Data: []
+Client FD 8 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client NoticeChanSender marked for disconnection, epollout will trigger removal.
+✅ FD 10 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 10
+3
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 10
+DEBUG: Full message sent for FD 10. Moving to next message.
+client messages should be sent by now !!!!
+✅ FD 12 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 12
+4
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 12
+DEBUG: Full message sent for FD 12. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [PASS pass
+NICK NoticeSender
+USER notsend 0 * :Notice Sender
+]
+¤¤¤¤¤¤¤ showing raw message= PASS pass showing message_content = PASS pass
+token parser shows true 
+  Prefix: ''
+  Command: 'PASS'
+  Parameters:
+    [0]: 'pass'
+---
+DEBUG::PASSWORD BEING BEING ACTUATED......... 
+DEBUG::PASSWORD ACCEPTED......... 
+[QUEUE] To: 
+¤¤¤¤¤¤¤ showing raw message= NICK NoticeSender showing message_content = NICK NoticeSender
+token parser shows true 
+  Prefix: ''
+  Command: 'NICK'
+  Parameters:
+    [0]: 'NoticeSender'
+---
+=== [NICK UPDATE] FD: 12 | Old: '' → New: 'NoticeSender'
+    Cleaning up old entry: ''
+    Inserting new entry: 'noticesender' for FD: 12
+    ✅ Nickname update complete.
+¤¤¤¤¤¤¤ showing raw message= USER notsend 0 * :Notice Sender showing message_content = USER notsend 0 * :Notice Sender
+token parser shows true 
+  Prefix: ''
+  Command: 'USER'
+  Parameters:
+    [0]: 'notsend'
+    [1]: '0'
+    [2]: '*'
+    [3]: 'Notice Sender'
+---
+[QUEUE] To: 
+DEBUG: Message queued for FD 12 (NoticeSender)
+checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 12
+DEBUG: Full message sent for FD 12. Moving to next message.
+checking the message from que before send [:localhost 001 NoticeSender :Welcome to the IRC server NoticeSender!
+:localhost 002 NoticeSender :Your host is localhost, running version 1.0
+:localhost 003 NoticeSender :This server was created today
+:localhost 004 NoticeSender localhost 1.0 o o
+:localhost 375 NoticeSender :- ~ Meowdy, traveler! ~
+:localhost 372 NoticeSender :- Here's your good-luck cat butt:
+:localhost 372 NoticeSender :-     /\_/\
+:localhost 372 NoticeSender :-    ( o.o )
+:localhost 372 NoticeSender :-     > ^ <    🍑
+:localhost 372 NoticeSender :-     Cat butt initialized.
+:localhost 376 NoticeSender :End of /MOTD
+] and the fd = 12
+DEBUG: Full message sent for FD 12. Moving to next message.
+client messages should be sent by now !!!!
+✅ FD 14 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 14
+5
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 14
+DEBUG: Full message sent for FD 14. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [PASS pass
+NICK NoticeRecipient
+USER notrecip 0 * :Notice Recipient
+]
+¤¤¤¤¤¤¤ showing raw message= PASS pass showing message_content = PASS pass
+token parser shows true 
+  Prefix: ''
+  Command: 'PASS'
+  Parameters:
+    [0]: 'pass'
+---
+DEBUG::PASSWORD BEING BEING ACTUATED......... 
+DEBUG::PASSWORD ACCEPTED......... 
+[QUEUE] To: 
+¤¤¤¤¤¤¤ showing raw message= NICK NoticeRecipient showing message_content = NICK NoticeRecipient
+token parser shows true 
+  Prefix: ''
+  Command: 'NICK'
+  Parameters:
+    [0]: 'NoticeRecipient'
+---
+=== [NICK UPDATE] FD: 14 | Old: '' → New: 'NoticeRecipient'
+    Cleaning up old entry: ''
+    Inserting new entry: 'noticerecipient' for FD: 14
+    ✅ Nickname update complete.
+¤¤¤¤¤¤¤ showing raw message= USER notrecip 0 * :Notice Recipient showing message_content = USER notrecip 0 * :Notice Recipient
+token parser shows true 
+  Prefix: ''
+  Command: 'USER'
+  Parameters:
+    [0]: 'notrecip'
+    [1]: '0'
+    [2]: '*'
+    [3]: 'Notice Recipient'
+---
+[QUEUE] To: 
+DEBUG: Message queued for FD 14 (NoticeRecipient)
+checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 14
+DEBUG: Full message sent for FD 14. Moving to next message.
+checking the message from que before send [:localhost 001 NoticeRecipient :Welcome to the IRC server NoticeRecipient!
+:localhost 002 NoticeRecipient :Your host is localhost, running version 1.0
+:localhost 003 NoticeRecipient :This server was created today
+:localhost 004 NoticeRecipient localhost 1.0 o o
+:localhost 375 NoticeRecipient :- ~ Meowdy, traveler! ~
+:localhost 372 NoticeRecipient :- Here's your good-luck cat butt:
+:localhost 372 NoticeRecipient :-     /\_/\
+:localhost 372 NoticeRecipient :-    ( o.o )
+:localhost 372 NoticeRecipient :-     > ^ <    🍑
+:localhost 372 NoticeRecipient :-     Cat butt initialized.
+:localhost 376 NoticeRecipient :End of /MOTD
+] and the fd = 14
+DEBUG: Full message sent for FD 14. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [NOTICE NoticeRecipient :This is a private notice!
+]
+¤¤¤¤¤¤¤ showing raw message= NOTICE NoticeRecipient :This is a private notice! showing message_content = NOTICE NoticeRecipient :This is a private notice!
+token parser shows true 
+  Prefix: ''
+  Command: 'NOTICE'
+  Parameters:
+    [0]: 'NoticeRecipient'
+    [1]: 'This is a private notice!'
+---
+Debug - Raw Buffer Data: []
+Client FD 10 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client  marked for disconnection, epollout will trigger removal.
+Debug - Raw Buffer Data: []
+Client FD 14 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client NoticeRecipient marked for disconnection, epollout will trigger removal.
+Debug - Raw Buffer Data: []
+Client FD 12 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client NoticeSender marked for disconnection, epollout will trigger removal.
+✅ FD 16 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 16
+6
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 16
+DEBUG: Full message sent for FD 16. Moving to next message.
+client messages should be sent by now !!!!
+✅ FD 18 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 18
+7
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+DEBUG: Full message sent for FD 18. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [PASS pass
+]
+¤¤¤¤¤¤¤ showing raw message= PASS pass showing message_content = PASS pass
+token parser shows true 
+  Prefix: ''
+  Command: 'PASS'
+  Parameters:
+    [0]: 'pass'
+---
+DEBUG::PASSWORD BEING BEING ACTUATED......... 
+DEBUG::PASSWORD ACCEPTED......... 
+[QUEUE] To: 
+Debug - Raw Buffer Data: [NICK ChannelSender
+USER user_ChannelSender 0 * :Channel Sender
+]
+¤¤¤¤¤¤¤ showing raw message= NICK ChannelSender showing message_content = NICK ChannelSender
+token parser shows true 
+  Prefix: ''
+  Command: 'NICK'
+  Parameters:
+    [0]: 'ChannelSender'
+---
+=== [NICK UPDATE] FD: 18 | Old: '' → New: 'ChannelSender'
+    Cleaning up old entry: ''
+    Inserting new entry: 'channelsender' for FD: 18
+    ✅ Nickname update complete.
+¤¤¤¤¤¤¤ showing raw message= USER user_ChannelSender 0 * :Channel Sender showing message_content = USER user_ChannelSender 0 * :Channel Sender
+token parser shows true 
+  Prefix: ''
+  Command: 'USER'
+  Parameters:
+    [0]: 'user_ChannelSender'
+    [1]: '0'
+    [2]: '*'
+    [3]: 'Channel Sender'
+---
+[QUEUE] To: 
+DEBUG: Message queued for FD 18 (ChannelSender)
+checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+DEBUG: Full message sent for FD 18. Moving to next message.
+checking the message from que before send [:localhost 001 ChannelSender :Welcome to the IRC server ChannelSender!
+:localhost 002 ChannelSender :Your host is localhost, running version 1.0
+:localhost 003 ChannelSender :This server was created today
+:localhost 004 ChannelSender localhost 1.0 o o
+:localhost 375 ChannelSender :- ~ Meowdy, traveler! ~
+:localhost 372 ChannelSender :- Here's your good-luck cat butt:
+:localhost 372 ChannelSender :-     /\_/\
+:localhost 372 ChannelSender :-    ( o.o )
+:localhost 372 ChannelSender :-     > ^ <    🍑
+:localhost 372 ChannelSender :-     Cat butt initialized.
+:localhost 376 ChannelSender :End of /MOTD
+] and the fd = 18
+DEBUG: Full message sent for FD 18. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [JOIN #testchannel
+]
+¤¤¤¤¤¤¤ showing raw message= JOIN #testchannel showing message_content = JOIN #testchannel
+token parser shows true 
+  Prefix: ''
+  Command: 'JOIN'
+  Parameters:
+    [0]: '#testchannel'
+---
+JOIN CAUGHT LETS HANDLE IT 
+Channel '#testchannel' created.
+Channel '#testchannel' created.
+------------------channel ahas been added to the map of joined channles for client----------------------------------------- 
+SET CHANNEL MODE ACTIVATED -------------------------mode char = o
+mode is false----
+should report activated ----
+Total Clients: 1
+whats thje name we looking at now = [ChannelSender]
+Total Clients: 1
+whats thje name we looking at now = [ChannelSender]
+SET CHANNEL MODE ACTIVATED -------------------------mode char = q
+mode is false----
+should report activated ----
+Total Clients: 1
+whats thje name we looking at now = [ChannelSender]
+Total Clients: 1
+whats thje name we looking at now = [ChannelSender]
+MsgType numeric value: 5
+[QUEUE] To: 
+it was empty yeah !!!!---------------
+DEBUG: Message queued for FD 18 (ChannelSender)
+MsgType numeric value: 7
+checking the message from que before send [:ChannelSender!user_ChannelSender@localhost JOIN #testchannel
+:localhost 332 ChannelSender #testchannel :Welcome to #testchannel!
+:localhost 353 ChannelSender = #testchannel :ChannelSender!ChannelSender@localhost 
+:localhost 366 ChannelSender #testchannel :End of /NAMES list
+] and the fd = 18
+DEBUG: Full message sent for FD 18. Moving to next message.
+client messages should be sent by now !!!!
+✅ FD 20 successfully added to epoll!
+[QUEUE] To: 
+New Client created , fd value is  == 20
+8
+checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 20
+DEBUG: Full message sent for FD 20. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [PASS pass
+NICK ChannelRecipient1
+USER crecip1 0 * :Channel Recipient 1
+]
+¤¤¤¤¤¤¤ showing raw message= PASS pass showing message_content = PASS pass
+token parser shows true 
+  Prefix: ''
+  Command: 'PASS'
+  Parameters:
+    [0]: 'pass'
+---
+DEBUG::PASSWORD BEING BEING ACTUATED......... 
+DEBUG::PASSWORD ACCEPTED......... 
+[QUEUE] To: 
+¤¤¤¤¤¤¤ showing raw message= NICK ChannelRecipient1 showing message_content = NICK ChannelRecipient1
+token parser shows true 
+  Prefix: ''
+  Command: 'NICK'
+  Parameters:
+    [0]: 'ChannelRecipient1'
+---
+=== [NICK UPDATE] FD: 20 | Old: '' → New: 'ChannelRecipient1'
+    Cleaning up old entry: ''
+    Inserting new entry: 'channelrecipient1' for FD: 20
+    ✅ Nickname update complete.
+¤¤¤¤¤¤¤ showing raw message= USER crecip1 0 * :Channel Recipient 1 showing message_content = USER crecip1 0 * :Channel Recipient 1
+token parser shows true 
+  Prefix: ''
+  Command: 'USER'
+  Parameters:
+    [0]: 'crecip1'
+    [1]: '0'
+    [2]: '*'
+    [3]: 'Channel Recipient 1'
+---
+[QUEUE] To: 
+DEBUG: Message queued for FD 20 (ChannelRecipient1)
+checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 20
+DEBUG: Full message sent for FD 20. Moving to next message.
+checking the message from que before send [:localhost 001 ChannelRecipient1 :Welcome to the IRC server ChannelRecipient1!
+:localhost 002 ChannelRecipient1 :Your host is localhost, running version 1.0
+:localhost 003 ChannelRecipient1 :This server was created today
+:localhost 004 ChannelRecipient1 localhost 1.0 o o
+:localhost 375 ChannelRecipient1 :- ~ Meowdy, traveler! ~
+:localhost 372 ChannelRecipient1 :- Here's your good-luck cat butt:
+:localhost 372 ChannelRecipient1 :-     /\_/\
+:localhost 372 ChannelRecipient1 :-    ( o.o )
+:localhost 372 ChannelRecipient1 :-     > ^ <    🍑
+:localhost 372 ChannelRecipient1 :-     Cat butt initialized.
+:localhost 376 ChannelRecipient1 :End of /MOTD
+] and the fd = 20
+DEBUG: Full message sent for FD 20. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: [JOIN #testchannel
+]
+¤¤¤¤¤¤¤ showing raw message= JOIN #testchannel showing message_content = JOIN #testchannel
+token parser shows true 
+  Prefix: ''
+  Command: 'JOIN'
+  Parameters:
+    [0]: '#testchannel'
+---
+JOIN CAUGHT LETS HANDLE IT 
+------------------channel ahas been added to the map of joined channles for client----------------------------------------- 
+SET CHANNEL MODE ACTIVATED -------------------------mode char = o
+mode is false----
+Total Clients: 2
+whats thje name we looking at now = [ChannelSender]
+whats thje name we looking at now = [ChannelRecipient1]
+MsgType numeric value: 5
+[QUEUE] To: 
+it was empty yeah !!!!---------------
+DEBUG: Message queued for FD 20 (ChannelRecipient1)
+MsgType numeric value: 7
+[QUEUE] To: 
+it was empty yeah !!!!---------------
+DEBUG: Message queued for FD 18 (ChannelSender)
+checking the message from que before send [:ChannelRecipient1!crecip1@localhost JOIN #testchannel
+:localhost 332 ChannelRecipient1 #testchannel :Welcome to #testchannel!
+:localhost 353 ChannelRecipient1 = #testchannel :ChannelSender!ChannelSender@localhost ChannelRecipient1!ChannelRecipient1@localhost 
+:localhost 366 ChannelRecipient1 #testchannel :End of /NAMES list
+] and the fd = 20
+DEBUG: Full message sent for FD 20. Moving to next message.
+client messages should be sent by now !!!!
+checking the message from que before send [:ChannelRecipient1!crecip1@localhost JOIN #testchannel
+] and the fd = 18
+DEBUG: Full message sent for FD 18. Moving to next message.
+client messages should be sent by now !!!!
+Debug - Raw Buffer Data: []
+Client FD 16 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+SERVER: Client  marked for disconnection, epollout will trigger removal.
+Debug - Raw Buffer Data: []
+Client FD 20 disconnected gracefully (recv returned 0).
+MsgType numeric value: 12
+[QUEUE] To: 
+it was empty yeah !!!!---------------
+DEBUG: Message queued for FD 18 (ChannelSender)
+SERVER: Client ChannelRecipient1 marked for disconnection, epollout will trigger removal.
+Debug - Raw Buffer Data: [an exception has been caught in main:: basic_string::_M_create
+Channel '#testchannel' destroyed.
+Channel '#notchan' destroyed.

@@ -106,7 +106,10 @@ MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<
         return lower;
     };
     std::string nickname_lower = toLower(nickname);
-    if (!isValidNickname(nickname)) { 
+    if (nickname.empty()){
+        return MsgType::NEED_MORE_PARAMS; 
+	}
+	if (!isValidNickname(nickname)) { 
         return MsgType::ERR_ERRONEUSNICKNAME; 
     }
     if (_illegal_nicknames.count(nickname_lower) > 0) {

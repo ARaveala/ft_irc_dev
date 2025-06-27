@@ -30,8 +30,8 @@ namespace MessageBuilder {
 	std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList);
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName);
     // Note: CHANNEL_TOPIC macro is missing a 'topic' parameter. This will be added correctly.
-    std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
-
+    //std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
+	std::string buildTopicChange(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& topic);
     // Client related messages
 	//std::string buildNickChange2(const std::string& oldnick, const std::string& newnick);
     std::string buildNickChange(const std::string& oldnick, const std::string& username, const std::string& newnick);

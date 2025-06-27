@@ -1,9 +1,0 @@
-[2025-06-26 19:30:09.578] --> Connected to localhost:6667
-[2025-06-26 19:30:09.578] C: PASS pass
-[2025-06-26 19:30:09.578] C: NICK tester1
-[2025-06-26 19:30:09.578] C: USER t1 test test test
-[2025-06-26 19:30:09.578] S: :localhost NOTICE * :initilization has begun.......
-[2025-06-26 19:30:09.578] S: :localhost NOTICE * :Password accepted. Continuing registration.
-[2025-06-26 19:30:16.586] S: Receive timeout after 6.999416351318359s.
-[2025-06-26 19:30:16.587] C: QUIT :Test script finished.
-[2025-06-26 19:30:16.787] <-- Disconnected.

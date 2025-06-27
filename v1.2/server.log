@@ -1,0 +1,18 @@
+[15:28:02][NOTICE::] handleInviteCommand entered for ggg
+[15:28:23][NOTICE::] Notifying and removing client ggg from channel #bbq due to disconnect.
+
+[15:28:23][NOTICE::] Notifying and removing client ooo from channel #bbq due to disconnect.
+
+[16:00:39][DEBUG::] handleTopicCommand entered for ooo
+[16:00:39][DEBUG::] validateIsClientInChannel checking nickname = ooo
+[16:00:39][DEBUG::] TOPIC:: mode if false, should get not operator
+[16:00:43][DEBUG::] handleTopicCommand entered for ggg
+[16:00:43][DEBUG::] validateIsClientInChannel checking nickname = ggg
+[16:00:43][DEBUG::] TOPIC - Set topic for #bbq to: cats
+[16:00:54][DEBUG::] handleTopicCommand entered for ooo
+[16:00:54][DEBUG::] validateIsClientInChannel checking nickname = ooo
+[16:00:54][DEBUG::] TOPIC - Set topic for #bbq to: cats with hats
+[16:01:05][NOTICE::] Notifying and removing client ooo from channel #bbq due to disconnect.
+
+[16:01:05][NOTICE::] Notifying and removing client ggg from channel #bbq due to disconnect.
+

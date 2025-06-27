@@ -29,7 +29,24 @@
  * this file could be seperated into config and error config, if we want to lower
  * inclusion ammounts in files, lets see
  */
+#include <iostream>    // for std::cerr or std::cout
+#include <fstream>     // for std::ofstream (log file writing)
+#include <string>      // for std::string
+#include <ctime>       // for std::time_t, std::localtime, std::strftime
+#define LOG_DEBUG(msg) log_inline("DEBUG::", msg)
+#define LOG_ERROR(msg) log_inline("ERROR::", msg)
+#define LOG_WARN(msg)  log_inline("WARN::", msg)
+#define LOG_NOTICE(msg) log_inline("NOTICE::", msg)
+#define LOG_MISC(msg) log_inline("MISC::", msg)
+// In logger.hpp or a logger.cpp if you split
+static std::ofstream logfile("server.log", std::ios::app);
 
+inline void log_inline(const std::string& level, const std::string& message) {
+    std::time_t t = std::time(nullptr);
+    char timeBuf[20];
+    std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", std::localtime(&t));
+    logfile << "[" << timeBuf << "][" << level << "] " << message << std::endl;
+}
 /*class Server;
 namespace Global {
 	inline Server* server = nullptr;

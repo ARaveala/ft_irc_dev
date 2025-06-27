@@ -93,7 +93,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	        case MsgType::CLIENT_QUIT:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildClientQuit), params);
 	        case MsgType::RPL_TOPIC:
-	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelTopic), params);
+	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildTopicChange), params);
 			
 			/*case MsgType::SERVER_NOTICE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildServerNoticeNickChange), params);
@@ -341,7 +341,9 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+l)\r\n";
 	}
 
-
+	std::string buildTopicChange(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& topic) {
+		return prefix(clientNickname, username) +  " TOPIC " + channelName + " :" + topic + "\r\n";
+	}
 	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason) {
 	    return prefix(clientNickname, username) + " PART " + channelName + " :" + partReason + "\r\n";
 	}

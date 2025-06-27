@@ -108,6 +108,11 @@ class Server {
 		bool validateTargetInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& target_nickname);
 		bool validateTargetExists(const std::shared_ptr<Client>& client, const std::shared_ptr<Client>& target, const std::string& sender_nickname, const std::string& target_nickname);
 		bool validateModes(const std::shared_ptr<Channel> Channel, const std::shared_ptr<Client>& client, Modes::ChannelMode comp);
+		bool validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison);
+		bool validateClientNotEmpty(std::shared_ptr<Client> client);
+		
+		
+		
 		void handle_client_connection_error(ErrorType err_type);
 		void shutDown();
 		bool checkTimers(int fd);

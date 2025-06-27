@@ -189,28 +189,6 @@ std::string Client::getCurrentModes() const {
     return activeModes;
 }
 
-int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) { // Gemini corrected this &
-
-	std::cout<<"preparing quit \n";
-	int indicator = 0;
-    for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
-		std::cout<<"We are loooooping now  \n";
-        if (auto channelPtr = it->second.lock()) {
-			if (indicator == 0)
-			{
-				indicator = 1; // we could count how many channles are counted here ?? 
-					
-			}
-			channelsToNotify.push_back(channelPtr);	
-            channelPtr->removeClient(_nickName);
-
-			++it;
-        } else {
-            it = _joinedChannels.erase(it);
-        }
-    }
-	return indicator;
-}
 
 bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
 

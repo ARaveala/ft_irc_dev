@@ -332,59 +332,6 @@ int Channel::addClient(std::shared_ptr <Client> client) {
     return 2; // Return true if insertion happened (Client was not already there)
 }
 
-// In sources/Channel.cpp
-
-// Make sure your Channel class has a _ClientModes member like:
-// std::map<std::weak_ptr<Client>, int, std::owner_less<std::weak_ptr<Client>>> _ClientModes;
-// And that you have a private helper function:
-// std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
-// (Or a client pointer, or an iterator to the map entry)
-
-bool Channel::removeClient(const std::string& nickname) {
-    // We assume 'nickname' is already in lowercase as per the program's invariant.
-    std::cout << "CHANNEL: Attempting to remove client '" << nickname << "' from channel '" << _name << "'\n";
-
-    // 1. Get the weak_ptr for the client from our internal map using the helper.
-    //    This helper *must* handle finding the exact (lowercase) nickname and cleaning up expired weak_ptrs.
-    std::weak_ptr<Client> client_weak_ptr_to_remove = getWeakPtrByNickname(nickname);
-
-    // 2. Check if the weak_ptr obtained is valid (i.e., not empty).
-    if (client_weak_ptr_to_remove.expired()) {
-        std::cerr << "CHANNEL ERROR: Client '" << nickname << "' not found or already disconnected from channel '" << _name << "' for removal.\n";
-        // Client not found or already gone, return current emptiness status.
-        return _ClientModes.empty();
-    }
-
-    // 3. Attempt to erase the client's entry using the obtained weak_ptr.
-    //    std::map::erase(key) should work correctly with std::weak_ptr keys and std::owner_less.
-    size_t removed_count = _ClientModes.erase(client_weak_ptr_to_remove);
-
-    if (removed_count > 0) {
-        // Successfully removed the client from _ClientModes.
-        std::cout << "CHANNEL: Client '" << nickname << "' successfully removed from channel '" << _name << "'.\n";
-
-        // IMPORTANT: If you have any other channel-specific lists (e.g., separate operator set)
-        // that are keyed by weak_ptr, you'd remove the client_weak_ptr_to_remove from those here too.
-        // For example:
-        // if (_operators.erase(client_weak_ptr_to_remove)) {
-        //     std::cout << "CHANNEL: Client was also an operator, removed from _operators list.\n";
-        // }
-    } else {
-        // This case indicates that getWeakPtrByNickname found a valid weak_ptr,
-        // but erase() didn't remove anything. This could point to a subtle issue with
-        // how weak_ptr equality is handled by map::erase or if the map was modified
-        // by another thread (unlikely in a single-threaded epoll loop).
-        // Or perhaps a transient state where the weak_ptr became expired *between*
-        // getWeakPtrByNickname returning and erase being called.
-        std::cerr << "CHANNEL ERROR: Failed to erase client '" << nickname << "' from channel '" << _name << "' "
-                  << "(getWeakPtrByNickname returned valid but erase failed).\n";
-    }
-
-    // 4. Return true if the channel's member list is now empty.
-    return _ClientModes.empty();
-}
-
-
 std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
         const std::string& ClientNickname,
         size_t paramsSize)  {
@@ -430,12 +377,13 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
     }
     return MsgType::NONE;
 }
-
+//NEWNEW add a bool so we know if calling from a remove client
 std::pair<MsgType, std::vector<std::string>>
-Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient) {
-
-	if (_operatorCount > 0) {return {MsgType::NONE, std::vector<std::string>()};};
-	if (_ClientModes.size() < 2) {return {MsgType::NONE, std::vector<std::string>()};}; // Not enough clients to promote anyone
+Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving) {
+	std::cout<<"DEBUD:: promoteFallbackoperator-------- operator count = "<<_operatorCount<<" clientmode size = "<<_ClientModes.size()<<"\n";
+	if (!isLeaving && _operatorCount > 0) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE count big\n";return {MsgType::NONE, std::vector<std::string>()};};
+	if (isLeaving && _operatorCount == 1) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE count big\n";return {MsgType::NONE, std::vector<std::string>()};};
+	if (_ClientModes.size() == 1) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE client size\n";return {MsgType::NONE, std::vector<std::string>()};}; // Not enough clients to promote anyone
     for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
         std::shared_ptr<Client> candidate = it->first.lock();
         if (!candidate || candidate == removingClient) continue;
@@ -444,6 +392,8 @@ Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient) 
         // Optional: broadcast MODE change
 		return {MsgType::CHANNEL_MODE_CHANGED, {removingClient->getNickname(), removingClient->getUsername(), getName(), "+o", candidate->getNickname()}};
 	}
+	std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE\n";
+
 	return {MsgType::NONE, std::vector<std::string>()};
 }
 
@@ -485,7 +435,7 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
     }
     return {MsgType::NONE, {}};
 }
-
+//NEWNEW check to see if fcuntion needed anywhere
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {
     if (!client) {
         return ""; // Or handle as an error if a null shared_ptr is passed
@@ -530,25 +480,33 @@ User Experience: Be aware that most IRC clients and many servers are case-insens
 Proceed with this version of isClientOperator. It will correctly implement the logic given your team's chosen approach to case sensitivity.
 
 */
-
-
-void Channel::removeClientByNickname(const std::string& nickname) {
-    std::cout << "CHANNEL: Attempting to remove client '" << nickname << "' from channel '" << _name << "' (case-sensitive).\n";
-
-    // Iterate through _ClientModes to find the client by nickname
-    // Remember, `_ClientModes` uses `weak_ptr<Client>` as keys, so we iterate and compare nicknames.
-    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
-        std::shared_ptr<Client> client_sptr = it->first.lock(); // Get shared_ptr from weak_ptr
-
-        // Check if the weak_ptr is still valid AND the nickname matches
-        if (client_sptr && client_sptr->getNickname() == nickname) {
-            _ClientModes.erase(it); // Remove the entry from the map
-            std::cout << "CHANNEL: Successfully removed '" << nickname << "' from channel '" << _name << "'.\n";
-            return; // Client found and removed, exit function
+//NEWNEW add this and call where relevant
+/*void Channel::cleanExpiredClients() {
+    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
+        if (it->first.expired()) {
+            it = _ClientModes.erase(it);
+        } else {
+            ++it;
         }
     }
-    std::cout << "CHANNEL: Client '" << nickname << "' not found in channel '" << _name << "' for removal.\n";
+}*/
+
+//TOLOWER
+bool Channel::removeClientByNickname(const std::string& nickname) {
+    
+	for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
+        std::shared_ptr<Client> client_sptr = it->first.lock();
+        if (client_sptr && client_sptr->getNickname() == nickname) {
+            _ClientModes.erase(it);
+			_clientCount--;
+            std::cout << "CHANNEL: Removed '" << nickname << "' from channel '" << _name << "'.\n";
+            return _ClientModes.empty();
+        }
+    }
+    std::cerr << "CHANNEL ERROR: Could not find client '" << nickname << "' to remove from '" << _name << "'.\n";
+    return  _ClientModes.empty(); // Still return status in all cases
 }
+
 
 // Helper function to check if the channel has any members left
 bool Channel::isEmpty() const {

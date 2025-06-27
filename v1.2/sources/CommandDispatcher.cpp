@@ -134,20 +134,24 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "MODE") {
 		_server->handleModeCommand(client, params);
 	}
-	if (client->getMsg().getCommand() == "PRIVMSG")  {
+	if (command == "PRIVMSG")  {
 		if (!params[0].empty()) // && 1 !empty
 		{
 			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
-			std::shared_ptr<Client> target = _server->getClientByNickname(params[1]);
 			
 			if (params[0][0] == '#')
 			{
+				std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
 				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
+				//std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+
 				// is client in channel 
 				_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
 			}
 			else
 			{
+				std::shared_ptr<Client> target = _server->getClientByNickname(params[1]);
+
 				if (!_server->validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
 				int fd = _server->get_nickname_to_fd().find(params[0])->second;
 				// check against end()

@@ -99,8 +99,9 @@ struct WeakPtrCompare {
 		int addClient(std::shared_ptr <Client> Client);
 		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
 		void setTopic(const std::string& newTopic);
-		bool removeClient(const std::string& nickname);
-	    void removeClientByNickname(const std::string& nickname);
+		//bool removeClient(const std::string& nickname);
+	    //NEWNEW void removeClientByNickname(const std::string& nickname);
+		bool removeClientByNickname(const std::string& nickname);
 
 		bool isClientInChannel(const std::string& nickname) const;
 		//bool isClientOperator(const std::string& nickname);
@@ -129,7 +130,7 @@ struct WeakPtrCompare {
 		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;
-		std::pair<MsgType, std::vector<std::string>> promoteFallbackOperator(const std::shared_ptr<Client>& removingClient);
+		std::pair<MsgType, std::vector<std::string>> promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving);
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};

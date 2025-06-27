@@ -116,6 +116,7 @@ bool Server::validateChannelExists(const std::shared_ptr<Client>& client, const 
 }
 
 bool Server::validateIsClientInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& nickname){
+	std::cout<<"DEBUGGIN:: VALIDATE CLIENT IN CHANNEL what is nickn name"<<nickname<<"\n";
 	if (!channel->isClientInChannel(nickname)) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_ON_CHANNEL, {nickname, channel_name}), client, nullptr, false, client);
         return false;
@@ -211,6 +212,12 @@ void Server::remove_Client(int client_fd) {
         std::shared_ptr<Channel> channel_ptr;
         try {
             channel_ptr = get_Channel(channel_name);
+			std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(client_to_remove, true);
+			//VALIDATE
+			if (result.first != MsgType::NONE){
+	    		//std::cout<<"DEBUGGIN::: breoadcasting message of new operator\n";
+				broadcastMessage(MessageBuilder::generateMessage(result.first, result.second), client_to_remove, channel_ptr, true, nullptr);
+			}
         } catch (const ServerException& e) {
             if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
                 // This means the channel was already cleaned up by another client's action (e.g., last PART/QUIT).
@@ -223,7 +230,8 @@ void Server::remove_Client(int client_fd) {
         if (channel_ptr) { // Ensure the channel pointer is valid
             std::cout << "SERVER: Notifying and removing client " << client_to_remove->getNickname()
                       << " from channel " << channel_name << " due to disconnect.\n";
-            bool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
+            bool channel_became_empty = channel_ptr->removeClientByNickname(client_to_remove->getNickname());
+			//NEWNEWbool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
 
             // D) If the channel became empty after this client left, remove it from the server's map.
             if (channel_became_empty) {
@@ -544,6 +552,8 @@ void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vecto
 			broadcastMessage(MessageBuilder::generateMessage(validation.first, validation.second), client, nullptr, false, client);
 			continue;
 		}
+		std::cout<<"DEBUGGIN HANDLE JOIN EDITION :: before validate channel , name of the channel evaluated = "<<lower<<"\n";
+
 		if (!channelExists(lower)) { 
 			createChannel(chanNameRaw);
 			client->setChannelCreator(true);
@@ -625,18 +635,18 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
     }
 	std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
 	broadcastMessage(quit_message, client, nullptr, true, nullptr);
-    client->setQuit();
+	client->setQuit();
     std::cout << "SERVER: Client " << client->getNickname() << " marked for disconnection, epollout will trigger removal.\n";
     // closure of the socket will happen in your main epoll loop's cleanup phase.
 }
 
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
- 	if (params.empty()) {
+ 	/*if (params.empty()) {
         client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
 		updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		return;
-    }
+    }*/
     std::string target = params[0];
     bool targetIsChannel = (target[0] == '#');
     if (targetIsChannel) {
@@ -651,12 +661,12 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 		}
 		std::pair<MsgType, std::vector<std::string>> validationResult = channel->initialModeValidation(client->getNickname(), params.size());
 		if (validationResult.first != MsgType::NONE) {
-			broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second),client, channel, false, nullptr);
+			broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second),nullptr, nullptr, false, client);
 			return;
         }
 		validationResult = channel->modeSyntaxValidator(client->getNickname(), params);
 		if (validationResult.first != MsgType::NONE) {
-           broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second), client, nullptr, false, client);
+           broadcastMessage(MessageBuilder::generateMessage(validationResult.first, validationResult.second), nullptr, nullptr, false, client);
 			return;
     	}
 		std::vector<std::string> modeparams = channel->applymodes(params);
@@ -666,8 +676,8 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			messageParams.push_back(client->getNickname());
 			messageParams.push_back(client->getClientUname());
 			messageParams.push_back(channel->getName());
-			std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<params[1]<<"\n";
-			std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<modeparams[1]<<"\n";
+			//std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<params[1]<<"\n";
+			//std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<modeparams[1]<<"\n";
 			if (!modeparams[0].empty())
 				messageParams.push_back(modeparams[0]);
 			//if(!modeparams[1].empty())
@@ -678,7 +688,7 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 				messageParams.push_back("");
 			broadcastMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, messageParams), client, channel, false, nullptr);
 			if (channel->getwasOpRemoved()) {
-				std::pair<MsgType, std::vector<std::string>> result = channel->promoteFallbackOperator(client);
+				std::pair<MsgType, std::vector<std::string>> result = channel->promoteFallbackOperator(client, false);
 				if (result.first != MsgType::NONE){
 					channel->setwasOpRemoved();
 					broadcastMessage(MessageBuilder::generateMessage(MsgType::CHANNEL_MODE_CHANGED, result.second), client, channel, false, nullptr);
@@ -755,9 +765,7 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
         new_mask = current_mask & ~flag_to_toggle; // Remove the flag (turn it OFF)
     }
     // Optimization: Only call epoll_ctl if the mask has actually changed
-    if (new_mask == current_mask) {
-        return; // No change needed this checks if epollout was already triggered and avoids doing it again 
-    }
+    if (new_mask == current_mask) {return; }// No change needed this checks if epollout was already triggered and avoids doing it again 
     it->second.events = new_mask;
     // Now, tell the kernel about the updated event set, passing a pointer to the stored struct.
     if (epoll_ctl(this->_epoll_fd, EPOLL_CTL_MOD, fd, &it->second) == -1) {
@@ -948,15 +956,19 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
 	        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}), client, nullptr, false, client);
             continue; // Move to the next channel in the list
         }
-
         std::shared_ptr<Channel> channel_ptr = it->second;
-
         // Check if the client is actually in the channel
         // Your Channel::isClientInChannel *must* also rely on the assumption
         // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
-        if (!validateIsClientInChannel (channel_ptr, client, lower_ch_name, nickname)) { return ;}
-       	broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), client, channel_ptr, false, nullptr);
-        bool channel_is_empty = channel_ptr->removeClient(nickname);
+        if (!validateIsClientInChannel (channel_ptr, client, lower_ch_name, nickname)) { return ;}		
+		broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), nullptr, channel_ptr, false, nullptr);
+		std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(client, true);
+		//VALIDATE
+		if (result.first != MsgType::NONE){
+	       	//std::cout<<"DEBUGGIN::: breoadcasting message of new operator\n";
+			broadcastMessage(MessageBuilder::generateMessage(result.first, result.second), client, channel_ptr, true, nullptr);
+		}
+		bool channel_is_empty = channel_ptr->removeClientByNickname(nickname);
         client->removeJoinedChannel(lower_ch_name);
         if (channel_is_empty) {
             std::cout << "SERVER: Channel '" << lower_ch_name << "' is now empty. Deleting channel.\n";
@@ -990,15 +1002,18 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
     std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name_lower);
     if (!validateIsClientInChannel (channel_ptr, client, channel_name, kicker_nickname)) { return ;}
 	if (!validateModes(channel_ptr, client, Modes::NONE)) { return ;}
-	/*if (!channel_ptr->getClientModes(client->getNickname()).test(Modes::OPERATOR)) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NOT_OPERATOR, {kicker_nickname, channel_ptr->getName()}), client, nullptr, false, client);
-        return;
-    }*/
+
     std::shared_ptr<Client> target_client_ptr = getClientByNickname(target_nickname);
 	if(!validateTargetExists(client, target_client_ptr, target_nickname, kicker_nickname)) { return; }
    	if (!validateIsClientInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::KICK, {client->getNickname(), client->getUsername(), channel_name, target_nickname, kick_reason}), client, channel_ptr, false, nullptr);
-    channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
+    std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(target_client_ptr, true);
+	//VALIDATE
+	if (result.first != MsgType::NONE){
+	    //std::cout<<"DEBUGGIN::: breoadcasting message of new operator\n";
+		broadcastMessage(MessageBuilder::generateMessage(result.first, result.second), target_client_ptr, channel_ptr, true, nullptr);
+	}
+	channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
     target_client_ptr->removeJoinedChannel(channel_name_lower); // Needs to be implemented in Client
     if (channel_ptr->isEmpty()) { // Needs to be implemented in Channel
         _channels.erase(channel_name_lower); // Remove the channel from Server's map

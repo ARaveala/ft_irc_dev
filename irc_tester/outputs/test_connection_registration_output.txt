@@ -1,7 +1,9 @@
 test_missing_nick_after_user (test_connection_registration.TestConnectionRegistration.test_missing_nick_after_user)
-Tests successful USER registration but missing NICK, then sending a command. ... ERROR
+Tests successful USER registration but missing NICK, then sending a command. ... Test: Sending PRIVMSG without NICK after USER (should fail with ERR_NOTREGISTERED)...
+FAIL
 test_missing_user_params (test_connection_registration.TestConnectionRegistration.test_missing_user_params)
-Tests sending USER command with missing parameters. ... ERROR
+Tests sending USER command with missing parameters. ... Test: Sending USER with missing parameters (should fail)...
+FAIL
 test_nick_change_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_change_after_registration)
 Tests changing nickname after successful registration. ... ERROR
 test_nick_change_to_empty (test_connection_registration.TestConnectionRegistration.test_nick_change_to_empty)
@@ -14,24 +16,6 @@ test_registration_order_user_first (test_connection_registration.TestConnectionR
 Tests registration when USER is sent before NICK. ... ERROR
 test_user_command_after_registration (test_connection_registration.TestConnectionRegistration.test_user_command_after_registration)
 Tests sending the USER command again after successful registration. ... ERROR
-
-======================================================================
-ERROR: test_missing_nick_after_user (test_connection_registration.TestConnectionRegistration.test_missing_nick_after_user)
-Tests successful USER registration but missing NICK, then sending a command.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
-ERROR: test_missing_user_params (test_connection_registration.TestConnectionRegistration.test_missing_user_params)
-Tests sending USER command with missing parameters.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
 
 ======================================================================
 ERROR: test_nick_change_after_registration (test_connection_registration.TestConnectionRegistration.test_nick_change_after_registration)
@@ -87,7 +71,31 @@ Traceback (most recent call last):
     self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
 ConnectionRefusedError: [Errno 111] Connection refused
 
+======================================================================
+FAIL: test_missing_nick_after_user (test_connection_registration.TestConnectionRegistration.test_missing_nick_after_user)
+Tests successful USER registration but missing NICK, then sending a command.
 ----------------------------------------------------------------------
-Ran 8 tests in 0.001s
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_connection_registration.py", line 280, in test_missing_nick_after_user
+    self.assert_irc_reply(response, ERR_NOTREGISTERED)
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 451 not found in response:
+[':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 401  someuser :No such nick/channel']
 
-FAILED (errors=8)
+======================================================================
+FAIL: test_missing_user_params (test_connection_registration.TestConnectionRegistration.test_missing_user_params)
+Tests sending USER command with missing parameters.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_connection_registration.py", line 255, in test_missing_user_params
+    self.assert_irc_reply(response, ERR_NEEDMOREPARAMS, "USER")
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 461 not found in response:
+[]
+
+----------------------------------------------------------------------
+Ran 8 tests in 5.014s
+
+FAILED (failures=2, errors=6)

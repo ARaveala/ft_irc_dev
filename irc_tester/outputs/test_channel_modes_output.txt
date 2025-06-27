@@ -1,61 +1,36 @@
 test_mode_invite_only (test_channel_modes.TestChannelModes.test_mode_invite_only)
-Test setting/unsetting invite-only mode (+i) and its effects. ... ERROR
+Test setting/unsetting invite-only mode (+i) and its effects. ... DEBUG: Client proposed 'OpUser', server assigned 'OpUser'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 OpUser :Welcome to the IRC server OpUser!', ':localhost 002 OpUser :Your host is localhost, running version 1.0', ':localhost 003 OpUser :This server was created today', ':localhost 004 OpUser localhost 1.0 o o', ':localhost 375 OpUser :- ~ Meowdy, traveler! ~', ":localhost 372 OpUser :- Here's your good-luck cat butt:", ':localhost 372 OpUser :-     /\\_/\\', ':localhost 372 OpUser :-    ( o.o )', ':localhost 372 OpUser :-     > ^ <    🍑', ':localhost 372 OpUser :-     Cat butt initialized.', ':localhost 376 OpUser :End of /MOTD']
+Test: OpUser setting #inviteonly to +i...
+FAIL
 test_mode_key (test_channel_modes.TestChannelModes.test_mode_key)
-Test setting/unsetting channel key mode (+k) and its effects. ... ERROR
+Test setting/unsetting channel key mode (+k) and its effects. ... DEBUG: Client proposed 'KeyOp', server assigned 'KeyOp'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 KeyOp :Welcome to the IRC server KeyOp!', ':localhost 002 KeyOp :Your host is localhost, running version 1.0', ':localhost 003 KeyOp :This server was created today', ':localhost 004 KeyOp localhost 1.0 o o', ':localhost 375 KeyOp :- ~ Meowdy, traveler! ~', ":localhost 372 KeyOp :- Here's your good-luck cat butt:", ':localhost 372 KeyOp :-     /\\_/\\', ':localhost 372 KeyOp :-    ( o.o )', ':localhost 372 KeyOp :-     > ^ <    🍑', ':localhost 372 KeyOp :-     Cat butt initialized.', ':localhost 376 KeyOp :End of /MOTD']
+Test: KeyOp setting #keychan to +k secretpass...
+FAIL
 test_mode_missing_parameters_for_o (test_channel_modes.TestChannelModes.test_mode_missing_parameters_for_o)
-Test attempting to set +o mode without providing a nickname. ... ERROR
+Test attempting to set +o mode without providing a nickname. ... DEBUG: Client proposed 'ParamTester', server assigned 'ParamTester'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 ParamTester :Welcome to the IRC server ParamTester!', ':localhost 002 ParamTester :Your host is localhost, running version 1.0', ':localhost 003 ParamTester :This server was created today', ':localhost 004 ParamTester localhost 1.0 o o', ':localhost 375 ParamTester :- ~ Meowdy, traveler! ~', ":localhost 372 ParamTester :- Here's your good-luck cat butt:", ':localhost 372 ParamTester :-     /\\_/\\', ':localhost 372 ParamTester :-    ( o.o )', ':localhost 372 ParamTester :-     > ^ <    🍑', ':localhost 372 ParamTester :-     Cat butt initialized.', ':localhost 376 ParamTester :End of /MOTD']
+Test: ParamTester attempting to set +o without target nick...
+Test: ParamTester correctly received ERR_NEEDMOREPARAMS.
+ok
 test_mode_operator_grant_revoke (test_channel_modes.TestChannelModes.test_mode_operator_grant_revoke)
-Test granting and revoking channel operator status (+o / -o). ... ERROR
+Test granting and revoking channel operator status (+o / -o). ... DEBUG: Client proposed 'AdminOp', server assigned 'AdminOp'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 AdminOp :Welcome to the IRC server AdminOp!', ':localhost 002 AdminOp :Your host is localhost, running version 1.0', ':localhost 003 AdminOp :This server was created today', ':localhost 004 AdminOp localhost 1.0 o o', ':localhost 375 AdminOp :- ~ Meowdy, traveler! ~', ":localhost 372 AdminOp :- Here's your good-luck cat butt:", ':localhost 372 AdminOp :-     /\\_/\\', ':localhost 372 AdminOp :-    ( o.o )', ':localhost 372 AdminOp :-     > ^ <    🍑', ':localhost 372 AdminOp :-     Cat butt initialized.', ':localhost 376 AdminOp :End of /MOTD']
+DEBUG: Client proposed 'TargetUser', server assigned 'TargetUser'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 TargetUser :Welcome to the IRC server TargetUser!', ':localhost 002 TargetUser :Your host is localhost, running version 1.0', ':localhost 003 TargetUser :This server was created today', ':localhost 004 TargetUser localhost 1.0 o o', ':localhost 375 TargetUser :- ~ Meowdy, traveler! ~', ":localhost 372 TargetUser :- Here's your good-luck cat butt:", ':localhost 372 TargetUser :-     /\\_/\\', ':localhost 372 TargetUser :-    ( o.o )', ':localhost 372 TargetUser :-     > ^ <    🍑', ':localhost 372 TargetUser :-     Cat butt initialized.', ':localhost 376 TargetUser :End of /MOTD']
+Test: AdminOp granting +o to TargetUser in #opchan...
+FAIL
 test_mode_topic_op_only (test_channel_modes.TestChannelModes.test_mode_topic_op_only)
-Test setting topic operator-only mode (+t) and its effects. ... ERROR
+Test setting topic operator-only mode (+t) and its effects. ... Error during recv: [Errno 104] Connection reset by peer
+ERROR
 test_mode_unknown_mode_flag (test_channel_modes.TestChannelModes.test_mode_unknown_mode_flag)
 Test attempting to set an unknown mode flag. ... ERROR
 test_mode_user_limit (test_channel_modes.TestChannelModes.test_mode_user_limit)
 Test setting/unsetting user limit mode (+l) and its effects. ... ERROR
 
 ======================================================================
-ERROR: test_mode_invite_only (test_channel_modes.TestChannelModes.test_mode_invite_only)
-Test setting/unsetting invite-only mode (+i) and its effects.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
-ERROR: test_mode_key (test_channel_modes.TestChannelModes.test_mode_key)
-Test setting/unsetting channel key mode (+k) and its effects.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
-ERROR: test_mode_missing_parameters_for_o (test_channel_modes.TestChannelModes.test_mode_missing_parameters_for_o)
-Test attempting to set +o mode without providing a nickname.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
-ERROR: test_mode_operator_grant_revoke (test_channel_modes.TestChannelModes.test_mode_operator_grant_revoke)
-Test granting and revoking channel operator status (+o / -o).
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
 ERROR: test_mode_topic_op_only (test_channel_modes.TestChannelModes.test_mode_topic_op_only)
 Test setting topic operator-only mode (+t) and its effects.
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_channel_modes.py", line 239, in test_mode_topic_op_only
+    op_sock.connect((self.SERVER_HOST, self.SERVER_PORT))
 ConnectionRefusedError: [Errno 111] Connection refused
 
 ======================================================================
@@ -76,7 +51,44 @@ Traceback (most recent call last):
     self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
 ConnectionRefusedError: [Errno 111] Connection refused
 
+======================================================================
+FAIL: test_mode_invite_only (test_channel_modes.TestChannelModes.test_mode_invite_only)
+Test setting/unsetting invite-only mode (+i) and its effects.
 ----------------------------------------------------------------------
-Ran 7 tests in 0.003s
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_channel_modes.py", line 95, in test_mode_invite_only
+    self.assert_irc_reply(op_mode_set_response, RPL_CHANNELMODEIS, f"{channel_name} +i")
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 324 not found in response:
+[':OpUser!opuser@localhost MODE #inviteonly +i']
 
-FAILED (errors=7)
+======================================================================
+FAIL: test_mode_key (test_channel_modes.TestChannelModes.test_mode_key)
+Test setting/unsetting channel key mode (+k) and its effects.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_channel_modes.py", line 172, in test_mode_key
+    self.assert_irc_reply(op_mode_set_response, RPL_CHANNELMODEIS, f"{channel_name} +k") # Should contain +k, might not show key
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 324 not found in response:
+[':KeyOp!keyop@localhost MODE #keychan +k  secretpass']
+
+======================================================================
+FAIL: test_mode_operator_grant_revoke (test_channel_modes.TestChannelModes.test_mode_operator_grant_revoke)
+Test granting and revoking channel operator status (+o / -o).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_channel_modes.py", line 392, in test_mode_operator_grant_revoke
+    self.assert_message_received(op_mode_set_response, op_actual_nick, "MODE", f"{channel_name} +o {target_actual_nick}")
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 283, in assert_message_received
+    self.assertTrue(found, f"Expected message from '{sender_nick}' with command '{command}' to '{target}' not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected message from 'AdminOp' with command 'MODE' to '#opchan +o TargetUser' not found in response:
+[':TargetUser!targetu@localhost JOIN #opchan', ':AdminOp!adminop@localhost MODE #opchan +o  o']
+
+----------------------------------------------------------------------
+Ran 7 tests in 28.046s
+
+FAILED (failures=3, errors=3)

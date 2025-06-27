@@ -1,60 +1,71 @@
 test_notice_to_existing_user (test_messaging.TestMessaging.test_notice_to_existing_user)
-Tests sending a NOTICE to another online user. (NOTICE does not trigger automatic replies). ... ERROR
+Tests sending a NOTICE to another online user. (NOTICE does not trigger automatic replies). ... Test: David registered. Responses:
+[':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 David :Welcome to the IRC server David!', ':localhost 002 David :Your host is localhost, running version 1.0', ':localhost 003 David :This server was created today', ':localhost 004 David localhost 1.0 o o', ':localhost 375 David :- ~ Meowdy, traveler! ~', ":localhost 372 David :- Here's your good-luck cat butt:", ':localhost 372 David :-     /\\_/\\', ':localhost 372 David :-    ( o.o )', ':localhost 372 David :-     > ^ <    🍑', ':localhost 372 David :-     Cat butt initialized.', ':localhost 376 David :End of /MOTD']
+FAIL
 test_privmsg_no_recipient (test_messaging.TestMessaging.test_privmsg_no_recipient)
-Tests sending a PRIVMSG without specifying a recipient. ... ERROR
+Tests sending a PRIVMSG without specifying a recipient. ... FAIL
 test_privmsg_no_text_to_send (test_messaging.TestMessaging.test_privmsg_no_text_to_send)
-Tests sending a PRIVMSG without any message text. ... ERROR
+Tests sending a PRIVMSG without any message text. ... FAIL
 test_privmsg_to_existing_user (test_messaging.TestMessaging.test_privmsg_to_existing_user)
-Tests sending a PRIVMSG to another online user. ... ERROR
+Tests sending a PRIVMSG to another online user. ... Test: Bob registered. Responses:
+[':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 Bob :Welcome to the IRC server Bob!', ':localhost 002 Bob :Your host is localhost, running version 1.0', ':localhost 003 Bob :This server was created today', ':localhost 004 Bob localhost 1.0 o o', ':localhost 375 Bob :- ~ Meowdy, traveler! ~', ":localhost 372 Bob :- Here's your good-luck cat butt:", ':localhost 372 Bob :-     /\\_/\\', ':localhost 372 Bob :-    ( o.o )', ':localhost 372 Bob :-     > ^ <    🍑', ':localhost 372 Bob :-     Cat butt initialized.', ':localhost 376 Bob :End of /MOTD']
+FAIL
 test_privmsg_to_nonexistent_user (test_messaging.TestMessaging.test_privmsg_to_nonexistent_user)
-Tests sending a PRIVMSG to a user that does not exist. ... ERROR
+Tests sending a PRIVMSG to a user that does not exist. ... Test: PRIVMSG to non-existent user rejected. Responses:
+[':localhost 401 anon_the_evil_77 NonExistentUser :No such nick/channel']
+ok
 
 ======================================================================
-ERROR: test_notice_to_existing_user (test_messaging.TestMessaging.test_notice_to_existing_user)
+FAIL: test_notice_to_existing_user (test_messaging.TestMessaging.test_notice_to_existing_user)
 Tests sending a NOTICE to another online user. (NOTICE does not trigger automatic replies).
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_messaging.py", line 117, in test_notice_to_existing_user
+    self.assert_message_received(response_d_msg, client_c_nick, "NOTICE", "David", message)
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 283, in assert_message_received
+    self.assertTrue(found, f"Expected message from '{sender_nick}' with command '{command}' to '{target}' not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected message from 'Charlie' with command 'NOTICE' to 'David' not found in response:
+[]
 
 ======================================================================
-ERROR: test_privmsg_no_recipient (test_messaging.TestMessaging.test_privmsg_no_recipient)
+FAIL: test_privmsg_no_recipient (test_messaging.TestMessaging.test_privmsg_no_recipient)
 Tests sending a PRIVMSG without specifying a recipient.
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_messaging.py", line 71, in test_privmsg_no_recipient
+    self.assert_irc_reply(response, ERR_NORECIPIENT, "No recipient given") # Server should respond with "No recipient given"
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 411 not found in response:
+[':localhost 401 SenderNick Hello :No such nick/channel']
 
 ======================================================================
-ERROR: test_privmsg_no_text_to_send (test_messaging.TestMessaging.test_privmsg_no_text_to_send)
+FAIL: test_privmsg_no_text_to_send (test_messaging.TestMessaging.test_privmsg_no_text_to_send)
 Tests sending a PRIVMSG without any message text.
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_messaging.py", line 84, in test_privmsg_no_text_to_send
+    self.assert_irc_reply(response, ERR_NOTEXTTOSEND, "No text to send") # Server should respond with "No text to send"
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 412 not found in response:
+[':localhost 401 anon_the_lucky_83 SomeUser :No such nick/channel']
 
 ======================================================================
-ERROR: test_privmsg_to_existing_user (test_messaging.TestMessaging.test_privmsg_to_existing_user)
+FAIL: test_privmsg_to_existing_user (test_messaging.TestMessaging.test_privmsg_to_existing_user)
 Tests sending a PRIVMSG to another online user.
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
-
-======================================================================
-ERROR: test_privmsg_to_nonexistent_user (test_messaging.TestMessaging.test_privmsg_to_nonexistent_user)
-Tests sending a PRIVMSG to a user that does not exist.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 173, in setUp
-    self.sock.connect((self.SERVER_HOST, self.SERVER_PORT))
-ConnectionRefusedError: [Errno 111] Connection refused
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_messaging.py", line 42, in test_privmsg_to_existing_user
+    self.assert_message_received(response_b_msg, client_a_nick, "PRIVMSG", "Bob", message)
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 283, in assert_message_received
+    self.assertTrue(found, f"Expected message from '{sender_nick}' with command '{command}' to '{target}' not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected message from 'Alice' with command 'PRIVMSG' to 'Bob' not found in response:
+[]
 
 ----------------------------------------------------------------------
-Ran 5 tests in 0.001s
+Ran 5 tests in 28.548s
 
-FAILED (errors=5)
+FAILED (failures=4)

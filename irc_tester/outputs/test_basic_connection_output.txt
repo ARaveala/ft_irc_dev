@@ -1,35 +1,17 @@
 test_client_connects_and_receives_welcome (test_basic_connection.TestBasicConnection.test_client_connects_and_receives_welcome)
 Tests that a client can connect and receives initial welcome messages (001-004). ... Test: Client successfully connected and registered. Responses:
-['USER user_anonthe_luckyn 0 * :real_anonthe_luckyn', ':localhost 001 anonthe_luckyn :Welcome to the IRC server anonthe_luckyn!', ':localhost 002 anonthe_luckyn :Your host is localhost, running version 1.0', ':localhost 003 anonthe_luckyn :This server was created today', ':localhost 004 anonthe_luckyn localhost 1.0 o o', ':localhost 375 anonthe_luckyn :- ~ Meowdy, traveler! ~', ":localhost 372 anonthe_luckyn :- Here's your good-luck cat butt:", ':localhost 372 anonthe_luckyn :-     /\\_/\\', ':localhost 372 anonthe_luckyn :-    ( o.o )', ':localhost 372 anonthe_luckyn :-     > ^ <    🍑', ':localhost 372 anonthe_luckyn :-     Cat butt initialized.', ':localhost 376 anonthe_luckyn :End of /MOTD']
+[':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 test_client :Welcome to the IRC server test_client!', ':localhost 002 test_client :Your host is localhost, running version 1.0', ':localhost 003 test_client :This server was created today', ':localhost 004 test_client localhost 1.0 o o', ':localhost 375 test_client :- ~ Meowdy, traveler! ~', ":localhost 372 test_client :- Here's your good-luck cat butt:", ':localhost 372 test_client :-     /\\_/\\', ':localhost 372 test_client :-    ( o.o )', ':localhost 372 test_client :-     > ^ <    🍑', ':localhost 372 test_client :-     Cat butt initialized.', ':localhost 376 test_client :End of /MOTD']
 ok
 test_connect_with_invalid_password (test_basic_connection.TestBasicConnection.test_connect_with_invalid_password)
-Tests that a client is denied connection with an incorrect password. ... FAIL
+Tests that a client is denied connection with an incorrect password. ... Test: Client denied with invalid password. Responses:
+[':localhost NOTICE * :initilization has begun.......', ':localhost 464 * :Password incorrect', ':localhost 464 * :Password incorrect']
+ok
 test_connect_without_password_when_required (test_basic_connection.TestBasicConnection.test_connect_without_password_when_required)
-Tests that a client is denied connection if no password is provided when required. ... FAIL
-
-======================================================================
-FAIL: test_connect_with_invalid_password (test_basic_connection.TestBasicConnection.test_connect_with_invalid_password)
-Tests that a client is denied connection with an incorrect password.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_basic_connection.py", line 51, in test_connect_with_invalid_password
-    self.assert_irc_reply(response, ERR_PASSWDMISMATCH, "Password incorrect") # Using constant
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
-    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
-AssertionError: False is not true : Expected IRC reply 464 not found in response:
-[':localhost NOTICE * :initilization has begun.......', '::localhost CAP * LS :multi-prefix sasl', 'USER user_anonthe_wildb 0 * :real_anonthe_wildb', ':localhost 001 anonthe_wildb :Welcome to the IRC server anonthe_wildb!', ':localhost 002 anonthe_wildb :Your host is localhost, running version 1.0', ':localhost 003 anonthe_wildb :This server was created today', ':localhost 004 anonthe_wildb localhost 1.0 o o', ':localhost 375 anonthe_wildb :- ~ Meowdy, traveler! ~', ":localhost 372 anonthe_wildb :- Here's your good-luck cat butt:", ':localhost 372 anonthe_wildb :-     /\\_/\\', ':localhost 372 anonthe_wildb :-    ( o.o )', ':localhost 372 anonthe_wildb :-     > ^ <    🍑', ':localhost 372 anonthe_wildb :-     Cat butt initialized.', ':localhost 376 anonthe_wildb :End of /MOTD']
-
-======================================================================
-FAIL: test_connect_without_password_when_required (test_basic_connection.TestBasicConnection.test_connect_without_password_when_required)
-Tests that a client is denied connection if no password is provided when required.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_basic_connection.py", line 70, in test_connect_without_password_when_required
-    self.assertTrue(any(ERR_PASSWDMISMATCH in line or ERR_NOTREGISTERED in line for line in response),
-AssertionError: False is not true : Expected ERR_PASSWDMISMATCH (464) or ERR_NOTREGISTERED (451) not found: [':localhost NOTICE * :initilization has begun.......', '::localhost CAP * LS :multi-prefix sasl', 'USER user_anonthe_braveb 0 * :real_anonthe_braveb', ':localhost 001 anonthe_braveb :Welcome to the IRC server anonthe_braveb!', ':localhost 002 anonthe_braveb :Your host is localhost, running version 1.0', ':localhost 003 anonthe_braveb :This server was created today', ':localhost 004 anonthe_braveb localhost 1.0 o o', ':localhost 375 anonthe_braveb :- ~ Meowdy, traveler! ~', ":localhost 372 anonthe_braveb :- Here's your good-luck cat butt:", ':localhost 372 anonthe_braveb :-     /\\_/\\', ':localhost 372 anonthe_braveb :-    ( o.o )', ':localhost 372 anonthe_braveb :-     > ^ <    🍑', ':localhost 372 anonthe_braveb :-     Cat butt initialized.', ':localhost 376 anonthe_braveb :End of /MOTD']
+Tests that a client is denied connection if no password is provided when required. ... Test: Client denied without password. Responses:
+[':localhost NOTICE * :initilization has begun.......', ':localhost 464 * :Password incorrect']
+ok
 
 ----------------------------------------------------------------------
-Ran 3 tests in 7.013s
+Ran 3 tests in 5.110s
 
-FAILED (failures=2)
+OK

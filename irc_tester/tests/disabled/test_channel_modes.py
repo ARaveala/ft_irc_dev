@@ -11,7 +11,7 @@ from irc_tester_utils import IrcTestBase, SERVER_HOST, SERVER_PORT, SERVER_PASSW
                              ERR_NEEDMOREPARAMS, ERR_NOSUCHCHANNEL, ERR_UNKNOWNMODE, \
                              ERR_CHANOPRIVSNEEDED, ERR_CHANNELISFULL, ERR_INVITEONLYCHAN, \
                              ERR_BANNEDFROMCHAN, ERR_BADCHANNELKEY, ERR_USERNOTINCHANNEL, \
-                             ERR_NOTONCHANNEL, ERR_UMODEUNKNOWNFLAG, ERR_NOSUCHNICK # Ensure ERR_NOSUCHNICK is imported
+                             ERR_NOTONCHANNEL, ERR_UMODEUNKNOWNFLAG, ERR_NOSUCHNICK
 
 
 class TestChannelModes(IrcTestBase):

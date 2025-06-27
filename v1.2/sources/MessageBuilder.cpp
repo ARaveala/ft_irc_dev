@@ -133,8 +133,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	
 
     // Helper for common server prefix (you can make this a constant or pass it)
-    const std::string SERVER = "localhost";
-	const std::string SERVER_PREFIX = ":" + SERVER; // Or ":localhost" as used in some of your macros
+    const std::string SERVER = "ft_irc";
+	const std::string SERVER_PREFIX = ":" + SERVER; // Or ":ft_irc" as used in some of your macros
 	const std::string SERVER_AT = "@" + SERVER;
 	const std::string QUIT_MSG = "Client disconnected";
 	
@@ -285,7 +285,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
    	std::string buildChanUpdate(const std::string& clientNickname, const std::string& username, const std::string& channelName) {
         return prefix(clientNickname, username) + " JOIN " +  channelName + "\r\n";
     }
-	//std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
+	//std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@ft_irc JOIN " + currentChannel->getName() + "\r\n"; 
     std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString) {
         return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::RPL_UMODEIS)) + " " + clientNickname + " " + modeString + "\r\n";
     }

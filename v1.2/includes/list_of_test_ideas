@@ -37,7 +37,7 @@ when testing with netcat, send irssi to server, add \r\n press cntrlv then cntrl
 import socket
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(("localhost", 6668))
+client.connect(("ft_irc", 6668))
 
 # Send a huge message to fill up the buffer
 long_message = "A" * 100000  # 100,000 characters

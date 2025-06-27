@@ -39,7 +39,7 @@ const std::string Channel::getAllNicknames() {
 	std::string list;
 	for (const auto& entry : _ClientModes) {
 		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
-			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@localhost ";
+			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@ft_irc ";
 		}
 	}
 	return list;

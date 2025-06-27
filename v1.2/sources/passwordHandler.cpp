@@ -7,13 +7,13 @@ void Server::handlePassword(const std::shared_ptr<Client>& client, const int& cl
 	if (password == get_password())
 	{
 		std::cout<<"DEBUG::PASSWORD ACCEPTED......... \n";
-		client->getMsg().queueMessage(":localhost NOTICE * :Password accepted. Continuing registration.\r\n");
+		client->getMsg().queueMessage(":ft_irc NOTICE * :Password accepted. Continuing registration.\r\n");
 		client->setPasswordValid();
 		updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
 	else {
 		std::cout<<"DEBUG::PASSWORD NOT ACCPTED......... \n";
-		client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
+		client->getMsg().queueMessage(":ft_irc 464 * :Password incorrect\r\n");
 		client->setQuit();
 		updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
@@ -28,7 +28,7 @@ void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
         return;
     if (!client->getPasswordValid()) {
         std::cout << "DEBUG::PASSWORD NOT ACCEPTED.........\n";
-        client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
+        client->getMsg().queueMessage(":ft_irc 464 * :Password incorrect\r\n");
         client->setQuit();
         updateEpollEvents(fd, EPOLLOUT, true);
         return;

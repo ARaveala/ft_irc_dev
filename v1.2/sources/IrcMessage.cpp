@@ -44,7 +44,7 @@ const std::string IrcMessage::getParam(unsigned long index) const {
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
        "ping", "pong", "server", "root", "nick", "services", "god",
     "admin", "operator", "op", "system", "console", "bot",
-    "null", "undefined", "localhost", "irc", "help", "whois"
+    "null", "undefined", "ft_irc", "irc", "help", "whois"
 };
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one

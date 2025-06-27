@@ -578,17 +578,9 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
     const int& fd = client->getFd();
     std::string old_lc = toLower(oldNick);
     std::string new_lc = toLower(newNick);
-
-    std::cout << "=== [NICK UPDATE] FD: " << fd << " | Old: '" << oldNick << "' → New: '" << newNick << "'\n";
-    std::cout << "    Cleaning up old entry: '" << old_lc << "'\n";
     _nickname_to_fd.erase(old_lc);
-
     client->setNickname(newNick);
-
-    std::cout << "    Inserting new entry: '" << new_lc << "' for FD: " << fd << "\n";
     _nickname_to_fd[new_lc] = fd;
-
-    std::cout << "    ✅ Nickname update complete.\n";
 }
 
 
@@ -597,7 +589,7 @@ void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<s
 	// new function here , can use it all kinds of ways, this will help prevent segv on early attemps to chnage things before registartion
 	auto now = std::chrono::steady_clock::now();
 	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before changing nick\r\n");
+		    client->getMsg().queueMessage(":ft_irc 439 "+client->getNickname()+" :Please wait a moment before changing nick\r\n");
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		    return;
 	}
@@ -676,12 +668,8 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			messageParams.push_back(client->getNickname());
 			messageParams.push_back(client->getClientUname());
 			messageParams.push_back(channel->getName());
-			//std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<params[1]<<"\n";
-			//std::cout<<"DEBUGGUS::Assus:: what the shiz show me params 1"<<modeparams[1]<<"\n";
 			if (!modeparams[0].empty())
 				messageParams.push_back(modeparams[0]);
-			//if(!modeparams[1].empty())
-			//	messageParams.push_back(modeparams[1]);
 			if (params.size() == 3)
 				messageParams.push_back(params[2]);
 			else
@@ -725,8 +713,8 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 
 void Server::handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent){
 		(void)nickname;
-        que.push_back(":localhost CAP * ACK :multi-prefix\r\n");
-		que.push_back(":localhost CAP * ACK :END\r\n");
+        que.push_back(":ft_irc CAP * ACK :multi-prefix\r\n");
+		que.push_back(":ft_irc CAP * ACK :END\r\n");
 		capSent = true;
 }
 
@@ -815,7 +803,7 @@ std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to
     if (configFile.is_open()) {
         configFile << "servers = (\n";
         configFile << "  {\n";
-        configFile << "    address = \"localhost\";\n";
+        configFile << "    address = \"ft_irc\";\n";
         configFile << "    port = 6669;\n";
         configFile << "    nick = \"" << newNick << "\";\n";  // ✅ Ensures Irssi uses generated nickname
         configFile << "    user = \"user_" << newNick << "\";\n";  // ✅ Explicit user field
@@ -860,14 +848,11 @@ std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to
 
 void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
     // 1. Find the target client
+	std::cout << "WHOIS: incoming.\n";
     std::shared_ptr<Client> target_client = getClientByNickname(target_nick); // tolower?
 
     // 2. Handle Nick Not Found (ERR_NOSUCHNICK)
     if (!validateTargetExists(requester_client, target_client, requester_client->getNickname() , target_nick)) {return ;}
-	/*if (!target_client) {
-		broadcastMessage(MessageBuilder::generateMessage(MsgType::ERR_NOSUCHNICK, {requester_client->getNickname(), target_nick}), requester_client, nullptr, false, requester_client);
-        return; // Important: stop here if nick not found
-    }*/
 
     // 3. Construct and queue WHOIS replies for the TARGET CLIENT
 

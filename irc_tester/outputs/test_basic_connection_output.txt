@@ -12,6 +12,6 @@ Tests that a client is denied connection if no password is provided when require
 ok
 
 ----------------------------------------------------------------------
-Ran 3 tests in 5.110s
+Ran 3 tests in 5.109s
 
 OK

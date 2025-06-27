@@ -1,17 +1,3 @@
-test_notice_channel_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_notice_channel_success)
-Tests sending a NOTICE to a channel where sender is a member. ... DEBUG: Client proposed 'NoticeChanSender', server assigned 'NoticeChanSender' with user 'user_NoticeChanSender' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 NoticeChanSender :Welcome to the IRC server NoticeChanSender!', ':localhost 002 NoticeChanSender :Your host is localhost, running version 1.0', ':localhost 003 NoticeChanSender :This server was created today', ':localhost 004 NoticeChanSender localhost 1.0 o o', ':localhost 375 NoticeChanSender :- ~ Meowdy, traveler! ~', ":localhost 372 NoticeChanSender :- Here's your good-luck cat butt:", ':localhost 372 NoticeChanSender :-     /\\_/\\', ':localhost 372 NoticeChanSender :-    ( o.o )', ':localhost 372 NoticeChanSender :-     > ^ <    🍑', ':localhost 372 NoticeChanSender :-     Cat butt initialized.', ':localhost 376 NoticeChanSender :End of /MOTD']
-FAIL
-test_notice_user_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_notice_user_success)
-Tests sending a NOTICE to another user successfully. ... DEBUG: Client proposed 'NoticeSender', server assigned 'NoticeSender' with user 'user_NoticeSender' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 NoticeSender :Welcome to the IRC server NoticeSender!', ':localhost 002 NoticeSender :Your host is localhost, running version 1.0', ':localhost 003 NoticeSender :This server was created today', ':localhost 004 NoticeSender localhost 1.0 o o', ':localhost 375 NoticeSender :- ~ Meowdy, traveler! ~', ":localhost 372 NoticeSender :- Here's your good-luck cat butt:", ':localhost 372 NoticeSender :-     /\\_/\\', ':localhost 372 NoticeSender :-    ( o.o )', ':localhost 372 NoticeSender :-     > ^ <    🍑', ':localhost 372 NoticeSender :-     Cat butt initialized.', ':localhost 376 NoticeSender :End of /MOTD']
-DEBUG: Client proposed 'NoticeRecipient', server assigned 'NoticeRecipient' with user 'user_NoticeRecipient' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 NoticeRecipient :Welcome to the IRC server NoticeRecipient!', ':localhost 002 NoticeRecipient :Your host is localhost, running version 1.0', ':localhost 003 NoticeRecipient :This server was created today', ':localhost 004 NoticeRecipient localhost 1.0 o o', ':localhost 375 NoticeRecipient :- ~ Meowdy, traveler! ~', ":localhost 372 NoticeRecipient :- Here's your good-luck cat butt:", ':localhost 372 NoticeRecipient :-     /\\_/\\', ':localhost 372 NoticeRecipient :-    ( o.o )', ':localhost 372 NoticeRecipient :-     > ^ <    🍑', ':localhost 372 NoticeRecipient :-     Cat butt initialized.', ':localhost 376 NoticeRecipient :End of /MOTD']
-Test: NoticeSender sending NOTICE to NoticeRecipient...
-ERROR
-test_privmsg_channel_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_channel_success)
-Tests sending a private message to a channel where sender is a member. ... DEBUG: Client proposed 'ChannelSender', server assigned 'ChannelSender' with user 'user_ChannelSender' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 ChannelSender :Welcome to the IRC server ChannelSender!', ':localhost 002 ChannelSender :Your host is localhost, running version 1.0', ':localhost 003 ChannelSender :This server was created today', ':localhost 004 ChannelSender localhost 1.0 o o', ':localhost 375 ChannelSender :- ~ Meowdy, traveler! ~', ":localhost 372 ChannelSender :- Here's your good-luck cat butt:", ':localhost 372 ChannelSender :-     /\\_/\\', ':localhost 372 ChannelSender :-    ( o.o )', ':localhost 372 ChannelSender :-     > ^ <    🍑', ':localhost 372 ChannelSender :-     Cat butt initialized.', ':localhost 376 ChannelSender :End of /MOTD']
-FAIL
-test_privmsg_not_on_channel (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_not_on_channel)
-Tests sending a private message to a channel where the sender is not a member. ... DEBUG: Client proposed 'ChannelMember', server assigned 'ChannelMember' with user 'user_ChannelMember' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 ChannelMember :Welcome to the IRC server ChannelMember!', ':localhost 002 ChannelMember :Your host is localhost, running version 1.0', ':localhost 003 ChannelMember :This server was created today', ':localhost 004 ChannelMember localhost 1.0 o o', ':localhost 375 ChannelMember :- ~ Meowdy, traveler! ~', ":localhost 372 ChannelMember :- Here's your good-luck cat butt:", ':localhost 372 ChannelMember :-     /\\_/\\', ':localhost 372 ChannelMember :-    ( o.o )', ':localhost 372 ChannelMember :-     > ^ <    🍑', ':localhost 372 ChannelMember :-     Cat butt initialized.', ':localhost 376 ChannelMember :End of /MOTD']
-FAIL
 test_privmsg_to_nonexistent_channel (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_to_nonexistent_channel)
 Tests sending a private message to a non-existent channel. ... DEBUG: Client proposed 'SenderNoChannel', server assigned 'SenderNoChannel' with user 'user_SenderNoChannel' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 SenderNoChannel :Welcome to the IRC server SenderNoChannel!', ':localhost 002 SenderNoChannel :Your host is localhost, running version 1.0', ':localhost 003 SenderNoChannel :This server was created today', ':localhost 004 SenderNoChannel localhost 1.0 o o', ':localhost 375 SenderNoChannel :- ~ Meowdy, traveler! ~', ":localhost 372 SenderNoChannel :- Here's your good-luck cat butt:", ':localhost 372 SenderNoChannel :-     /\\_/\\', ':localhost 372 SenderNoChannel :-    ( o.o )', ':localhost 372 SenderNoChannel :-     > ^ <    🍑', ':localhost 372 SenderNoChannel :-     Cat butt initialized.', ':localhost 376 SenderNoChannel :End of /MOTD']
 Test: SenderNoChannel sending PRIVMSG to #nowhere :Is anyone listening?
@@ -22,87 +8,8 @@ Tests sending a private message to a non-existent user. ... DEBUG: Client propos
 Test: SenderNoUser sending PRIVMSG to NoSuchUser (should fail)...
 Test: SenderNoUser correctly received ERR_NOSUCHNICK.
 ok
-test_privmsg_user_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_user_success)
-Tests sending a private message to another user successfully. ... DEBUG: Client proposed 'Sender1', server assigned 'Sender1' with user 'user_Sender1' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 Sender1 :Welcome to the IRC server Sender1!', ':localhost 002 Sender1 :Your host is localhost, running version 1.0', ':localhost 003 Sender1 :This server was created today', ':localhost 004 Sender1 localhost 1.0 o o', ':localhost 375 Sender1 :- ~ Meowdy, traveler! ~', ":localhost 372 Sender1 :- Here's your good-luck cat butt:", ':localhost 372 Sender1 :-     /\\_/\\', ':localhost 372 Sender1 :-    ( o.o )', ':localhost 372 Sender1 :-     > ^ <    🍑', ':localhost 372 Sender1 :-     Cat butt initialized.', ':localhost 376 Sender1 :End of /MOTD']
-DEBUG: Client proposed 'Recipient1', server assigned 'Recipient1' with user 'user_Recipient1' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 Recipient1 :Welcome to the IRC server Recipient1!', ':localhost 002 Recipient1 :Your host is localhost, running version 1.0', ':localhost 003 Recipient1 :This server was created today', ':localhost 004 Recipient1 localhost 1.0 o o', ':localhost 375 Recipient1 :- ~ Meowdy, traveler! ~', ":localhost 372 Recipient1 :- Here's your good-luck cat butt:", ':localhost 372 Recipient1 :-     /\\_/\\', ':localhost 372 Recipient1 :-    ( o.o )', ':localhost 372 Recipient1 :-     > ^ <    🍑', ':localhost 372 Recipient1 :-     Cat butt initialized.', ':localhost 376 Recipient1 :End of /MOTD']
-Test: Sender1 sending PRIVMSG to Recipient1...
-FAIL
-
-======================================================================
-ERROR: test_notice_user_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_notice_user_success)
-Tests sending a NOTICE to another user successfully.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 365, in test_notice_user_success
-    self._assert_message_received_flexible_prefix(recipient_response, sender_actual_nick, "NOTICE", recipient_actual_nick, message,
-                                                  ^^^^^^^^^^^^^^^^^^
-NameError: name 'recipient_response' is not defined. Did you mean: 'recv_irc_response'?
-
-======================================================================
-FAIL: test_notice_channel_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_notice_channel_success)
-Tests sending a NOTICE to a channel where sender is a member.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 388, in test_notice_channel_success
-    self._assert_message_received_flexible_prefix(join_responses, sender_actual_nick, "JOIN", channel_name,
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 128, in _assert_message_received_flexible_prefix
-    self.assertTrue(found,
-AssertionError: False is not true : Expected message not found with flexible prefixing.
-Expected (full, with colon): ':NoticeChanSender!user_NoticeChanSender@localhost JOIN #notchan'
-Expected (full, without colon): ':NoticeChanSender!user_NoticeChanSender@localhost JOIN #notchan'
-Expected (simplified, with colon): ':NoticeChanSender JOIN #notchan'
-Expected (simplified, without colon): ':NoticeChanSender JOIN #notchan'
-Actual responses: [':NoticeChanSender!ncsender@localhost JOIN #notchan', ':localhost 332 NoticeChanSender #notchan :Welcome to #notchan!', ':localhost 353 NoticeChanSender = #notchan :NoticeChanSender!NoticeChanSender@localhost', ':localhost 366 NoticeChanSender #notchan :End of /NAMES list']
-
-======================================================================
-FAIL: test_privmsg_channel_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_channel_success)
-Tests sending a private message to a channel where sender is a member.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 214, in test_privmsg_channel_success
-    self._assert_message_received_flexible_prefix(join_responses, sender_actual_nick, "JOIN", channel_name,
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 128, in _assert_message_received_flexible_prefix
-    self.assertTrue(found,
-AssertionError: False is not true : Expected message not found with flexible prefixing.
-Expected (full, with colon): ':ChannelSender!user_ChannelSender@localhost JOIN #testchannel'
-Expected (full, without colon): ':ChannelSender!user_ChannelSender@localhost JOIN #testchannel'
-Expected (simplified, with colon): ':ChannelSender JOIN #testchannel'
-Expected (simplified, without colon): ':ChannelSender JOIN #testchannel'
-Actual responses: [':ChannelSender!csender@localhost JOIN #testchannel', ':localhost 332 ChannelSender #testchannel :Welcome to #testchannel!', ':localhost 353 ChannelSender = #testchannel :ChannelSender!ChannelSender@localhost', ':localhost 366 ChannelSender #testchannel :End of /NAMES list']
-
-======================================================================
-FAIL: test_privmsg_not_on_channel (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_not_on_channel)
-Tests sending a private message to a channel where the sender is not a member.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 308, in test_privmsg_not_on_channel
-    self._assert_message_received_flexible_prefix(join_responses, channel_member_actual_nick, "JOIN", target_channel,
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 128, in _assert_message_received_flexible_prefix
-    self.assertTrue(found,
-AssertionError: False is not true : Expected message not found with flexible prefixing.
-Expected (full, with colon): ':ChannelMember!user_ChannelMember@localhost JOIN #restrictedchan'
-Expected (full, without colon): ':ChannelMember!user_ChannelMember@localhost JOIN #restrictedchan'
-Expected (simplified, with colon): ':ChannelMember JOIN #restrictedchan'
-Expected (simplified, without colon): ':ChannelMember JOIN #restrictedchan'
-Actual responses: [':ChannelMember!cmember@localhost JOIN #restrictedchan', ':localhost 332 ChannelMember #restrictedchan :Welcome to #restrictedchan!', ':localhost 353 ChannelMember = #restrictedchan :ChannelMember!ChannelMember@localhost', ':localhost 366 ChannelMember #restrictedchan :End of /NAMES list']
-
-======================================================================
-FAIL: test_privmsg_user_success (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_user_success)
-Tests sending a private message to another user successfully.
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_privmsg_channelmsg.py", line 163, in test_privmsg_user_success
-    self.assertEqual(sender_response, [], "Sender should not receive a direct response for PRIVMSG success.")
-AssertionError: Lists differ: [':localhost 401 Sender1 Recipient1 :No such nick/channel'] != []
-
-First list contains 1 additional elements.
-First extra element 0:
-':localhost 401 Sender1 Recipient1 :No such nick/channel'
-
-- [':localhost 401 Sender1 Recipient1 :No such nick/channel']
-+ [] : Sender should not receive a direct response for PRIVMSG success.
 
 ----------------------------------------------------------------------
-Ran 7 tests in 39.469s
+Ran 2 tests in 10.013s
 
-FAILED (failures=4, errors=1)
+OK

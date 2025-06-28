@@ -1,0 +1,20 @@
+test_server_maintains_connection_and_responds (test_stability.TestStability.test_server_maintains_connection_and_responds)
+Tests if the IRC server maintains a connection and consistently responds ... 
+--- Running Server Stability Test ---
+Test: Attempting to establish and maintain connection with StabilityProber for stability check.
+Test: Client StabilityProber (originally StabilityProber) registered successfully. Ready to probe stability.
+Test: Sending PING command (ping #1)...
+Test: Server responded to PING with PONG. Still stable.
+Test: Sending PING command (ping #2)...
+Test: Server responded to PING with PONG. Still stable.
+Test: Sending PING command (ping #3)...
+Test: Server responded to PING with PONG. Still stable.
+Test: Sustained connection for 10 seconds. Performing final check (NICK change).
+Test: Server allowed NICK change to stillalive. Server appears to be fully stable.
+--- Server Stability Test COMPLETED SUCCESSFULLY. ---
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 14.106s
+
+OK

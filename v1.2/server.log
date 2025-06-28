@@ -783,3 +783,40 @@
 [22:50:37][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
 ] and the fd = 18
 [22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::]  SERVER:: Message queued for FD 18 (jack)
+[23:51:52][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:52][DEBUG::] checking the message from que before send [:localhost 001 jack :Welcome to the IRC server jack!
+:localhost 002 jack :Your host is localhost, running version 1.0
+:localhost 003 jack :This server was created today
+:localhost 004 jack localhost 1.0 o o
+:localhost 375 jack :- ~ Meowdy, traveler! ~
+:localhost 372 jack :- Here's your good-luck cat butt:
+:localhost 372 jack :-     /\_/\
+:localhost 372 jack :-    ( o.o )
+:localhost 372 jack :-     > ^ <    🍑
+:localhost 372 jack :-     Cat butt initialized.
+:localhost 376 jack :End of /MOTD
+] and the fd = 18
+[23:51:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:51:55][DEBUG::] checking the message from que before send [:**:jack MODE jack :+i
+**] and the fd = 18
+[23:51:55][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:52:00][DEBUG::]  SERVER:: Message queued for FD 18 (jack)
+[23:52:00][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[23:52:00][DEBUG::] Full message sent for FD 18. Moving to next message.
+[23:52:12][DEBUG::] handleQuit:: Client jack marked for disconnection, epollout will trigger removal

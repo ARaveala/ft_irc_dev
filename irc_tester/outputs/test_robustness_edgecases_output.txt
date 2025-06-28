@@ -1,0 +1,43 @@
+test_empty_command (test_robustness_edgecases.TestRobustnessEdgeCases.test_empty_command)
+Tests sending an empty line to the server. Server should ignore or handle gracefully. ... Test: Sending empty command...
+Test: Server ignored empty command correctly.
+ok
+test_invalid_nick_characters (test_robustness_edgecases.TestRobustnessEdgeCases.test_invalid_nick_characters)
+Tests attempting to register with an invalid nickname (e.g., containing '#'). ... Test: Attempting to register with invalid nick 'Inv#lidNick' (should fail)...
+FAIL
+test_registered_client_disconnect (test_robustness_edgecases.TestRobustnessEdgeCases.test_registered_client_disconnect)
+Tests that the server handles a registered client disconnecting gracefully. ... DEBUG: Client proposed 'DisconnectUser', server assigned 'DisconnectUser' with user 'user_DisconnectUser' and host 'localhost'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 DisconnectUser :Welcome to the IRC server DisconnectUser!', ':localhost 002 DisconnectUser :Your host is localhost, running version 1.0', ':localhost 003 DisconnectUser :This server was created today', ':localhost 004 DisconnectUser localhost 1.0 o o', ':localhost 375 DisconnectUser :- ~ Meowdy, traveler! ~', ":localhost 372 DisconnectUser :- Here's your good-luck cat butt:", ':localhost 372 DisconnectUser :-     /\\_/\\', ':localhost 372 DisconnectUser :-    ( o.o )', ':localhost 372 DisconnectUser :-     > ^ <    🍑', ':localhost 372 DisconnectUser :-     Cat butt initialized.', ':localhost 376 DisconnectUser :End of /MOTD']
+Test: Registered client disconnecting...
+Test: Server handled registered client disconnect gracefully (no crash).
+ok
+test_too_long_line (test_robustness_edgecases.TestRobustnessEdgeCases.test_too_long_line)
+Tests sending a very long line to the server. Server should handle gracefully, ... Test: Sending a very long line (should be handled gracefully)...
+Test: Server response to long line: []
+Test: Server handled very long line gracefully.
+ok
+test_too_long_nick (test_robustness_edgecases.TestRobustnessEdgeCases.test_too_long_nick)
+Tests attempting to register with a nickname that is too long. ... Test: Attempting to register with too long nick 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' (should fail)...
+Test: Server correctly rejected too long nickname.
+ok
+test_unregistered_client_disconnect (test_robustness_edgecases.TestRobustnessEdgeCases.test_unregistered_client_disconnect)
+Tests that the server handles an unregistered client disconnecting gracefully. ... Test: Unregistered client disconnecting...
+Test: Server handled unregistered client disconnect gracefully (no crash).
+ok
+test_whitespace_only_command (test_robustness_edgecases.TestRobustnessEdgeCases.test_whitespace_only_command)
+Tests sending a line with only whitespace characters. Server should ignore. ... Test: Sending whitespace only command...
+Test: Server ignored whitespace-only command correctly.
+ok
+
+======================================================================
+FAIL: test_invalid_nick_characters (test_robustness_edgecases.TestRobustnessEdgeCases.test_invalid_nick_characters)
+Tests attempting to register with an invalid nickname (e.g., containing '#').
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/jack/github/ft_irc_dev/irc_tester/tests/test_robustness_edgecases.py", line 202, in test_invalid_nick_characters
+    self.assertTrue(
+AssertionError: False is not true : Server should reject invalid nickname 'Inv#lidNick'. Actual: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 432 * Inv#lidNick :Erroneous nickname']
+
+----------------------------------------------------------------------
+Ran 7 tests in 20.324s
+
+FAILED (failures=1)

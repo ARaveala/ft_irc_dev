@@ -1,0 +1,10 @@
+test_mode_missing_parameters_for_o (test_channel_modes.TestChannelModes.test_mode_missing_parameters_for_o)
+Test attempting to set +o mode without providing a nickname. ... DEBUG: Client proposed 'ParamTester', server assigned 'ParamTester'. Full response: [':localhost NOTICE * :Password accepted. Continuing registration.', ':localhost 001 ParamTester :Welcome to the IRC server ParamTester!', ':localhost 002 ParamTester :Your host is localhost, running version 1.0', ':localhost 003 ParamTester :This server was created today', ':localhost 004 ParamTester localhost 1.0 o o', ':localhost 375 ParamTester :- ~ Meowdy, traveler! ~', ":localhost 372 ParamTester :- Here's your good-luck cat butt:", ':localhost 372 ParamTester :-     /\\_/\\', ':localhost 372 ParamTester :-    ( o.o )', ':localhost 372 ParamTester :-     > ^ <    🍑', ':localhost 372 ParamTester :-     Cat butt initialized.', ':localhost 376 ParamTester :End of /MOTD']
+Test: ParamTester attempting to set +o without target nick...
+Test: ParamTester correctly received ERR_NEEDMOREPARAMS.
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 6.007s
+
+OK

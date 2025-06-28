@@ -33,6 +33,7 @@
 #include <fstream>     // for std::ofstream (log file writing)
 #include <string>      // for std::string
 #include <ctime>       // for std::time_t, std::localtime, std::strftime
+
 #define LOG_DEBUG(msg) log_inline("DEBUG::", msg)
 #define LOG_ERROR(msg) log_inline("ERROR::", msg)
 #define LOG_WARN(msg)  log_inline("WARN::", msg)

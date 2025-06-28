@@ -107,7 +107,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         			    std::string topic = channel->getTopic();
         			    size_t userCount = channel->getClientCount(); // Or however you store this
 					
-        			    std::string listLine = ":ft_irc 322 " + client->getNickname() + " " +
+        			    std::string listLine = ":localhost 322 " + client->getNickname() + " " +
         			                           channelName + " " +
         			                           std::to_string(userCount) + " :" +
         			                           "topic for channel = " + topic + "\r\n";
@@ -115,7 +115,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
         			    client->getMsg().queueMessage(listLine);
         			}
 				}
-				client->getMsg().queueMessage(":ft_irc 323 " + client->getNickname() + " :End of channel list\r\n");
+				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
 			}
 		}
@@ -176,10 +176,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			if (!_server->validateChannelExists(client, params[0], client->getNickname())) {return;}
 			std::shared_ptr<Channel> channel = _server->get_Channel(params[0]);
 			std::cout << "WHOIS: PREPPING MESSAGE FOR WHO DIS.\n";
-			std::string msg = ":ft_irc 352 " + client->getNickname() + " " + params[0] + " " + client->getUsername() 
-			+ " localhost ft_irc " + client->getNickname() + " H " + channel->getClientModePrefix(client) 
+			std::string msg = ":localhost 352 " + client->getNickname() + " " + params[0] + " " + client->getUsername() 
+			+ " localhost localhost " + client->getNickname() + " H " + channel->getClientModePrefix(client) 
 			+ " :0 " + client->getfullName() + "\r\n"; 
-			std::string msg2 = ":ft_irc 315 " + client->getNickname() + params[0] + ":End of WHO list\r\n";
+			std::string msg2 = ":localhost 315 " + client->getNickname() + params[0] + ":End of WHO list\r\n";
 			_server->broadcastMessage(msg, nullptr, nullptr, false, client);
 			_server->broadcastMessage(msg2, nullptr, nullptr, false, client);
 		return;
@@ -193,7 +193,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	    std::string target = params[0];
 	    std::string message = params[1];
 	    // Construct a notice message and send it silently
-	    std::string prefix = client->getNickname() + "!" + client->getUsername() + "@ft_irc\r\n"; //(client); // nick!user@host
+	    std::string prefix = client->getNickname() + "!" + client->getUsername() + "@localhost\r\n"; //(client); // nick!user@host
 	    std::string notice = prefix + " NOTICE " + target + " :" + message + "\r\n";
 		std::shared_ptr<Channel> channel = _server->get_Channel(target);
 		_server->broadcastMessage((notice), client, channel, true, nullptr); // you define this

@@ -30,7 +30,6 @@ void handle_signal(int signum)
 {
 	// if (signum == SIGINT)// || signum == SIGTERM)	// jack is disabling this line
 	if (signum == SIGINT || signum == SIGTERM)			// jack added this IRL
-
 	{
 		should_exit = 1;
 		std::cout<<"signal handler called"<<std::endl;

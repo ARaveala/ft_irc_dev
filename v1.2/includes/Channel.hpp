@@ -79,7 +79,7 @@ struct WeakPtrCompare {
 		const unsigned long& getClientCount() {return _clientCount;}; //const
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
-		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+		//std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); //ref

@@ -3,4 +3,4 @@
 #include <string>
 
 int validate_port(const char* port);
-std::string validate_password(char* password);
+std::string validate_password(const char* password);

@@ -765,3 +765,21 @@
 [15:42:13][DEBUG::] Full message sent for FD 20. Moving to next message.
 [15:42:21][DEBUG::] handleQuit:: Client ooo marked for disconnection, epollout will trigger removal
 [15:42:27][DEBUG::] handleQuit:: Client pleb1 marked for disconnection, epollout will trigger removal
+[22:50:37][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[22:50:37][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[22:50:37][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[22:50:37][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[22:50:37][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[22:50:37][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[22:50:37][DEBUG::] Full message sent for FD 18. Moving to next message.

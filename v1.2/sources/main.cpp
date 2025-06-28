@@ -141,31 +141,19 @@ int loop(Server &server)
  */
 int main(int argc, char** argv)
 {
-	int port_number = 6666;
-	std::string password = "password";
-	//if (argc != 3)
-	//	exit(1);
+	if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-	// if we give arguments we validate the arguments else we
-	// use defaults , this must be refined later .
-	if (argc == 2)
-	{
-		std::cout<<"need 2 arguments"<<std::endl;
+	int port_number = validate_port(argv[1]);
+
+	if (validate_password(argv[2]).empty())	{
+		std::cout<<"empty password"<<std::endl;
 		exit(1);
-	}
-	if (argc == 3)
-	{
-		port_number = validate_port(argv[1]);
-		if (validate_password(argv[2]).empty())
-		{
-			std::cout<<"empty password"<<std::endl;
-			exit(1);
 		}
-		password = argv[2];
-	}
-	else {
-		std::cout<<"Attempting to use default port and password"<<std::endl;
-	}
+	std::string password = argv[2];
+
 	// instantiate server object with assumed port and password
 	Server server(port_number, password);
 	if (setupServerSocket(server) == errVal::FAILURE)

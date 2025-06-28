@@ -16,3 +16,5 @@
 
 [16:01:05][NOTICE::] Notifying and removing client ggg from channel #bbq due to disconnect.
 
+[12:34:54][DEBUG::]  SERVER:: Message queued for FD 18 ()
+[12:39:40][DEBUG::]  SERVER:: Message queued for FD 18 ()

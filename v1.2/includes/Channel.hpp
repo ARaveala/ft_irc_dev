@@ -44,9 +44,9 @@ struct WeakPtrCompare {
 	private:
 		int _ClientLimit = 0;
 		unsigned long _clientCount = 0;
-
+		int _operatorCount = 0;
 		unsigned long _ulimit;
-
+		bool _wasOpRemoved = false;
 		std::string _name;
 		std::string _topic;
 		std::string _password;
@@ -66,10 +66,20 @@ struct WeakPtrCompare {
 
 		const std::string& getName() const;
 		const std::string& getTopic() const;
+		int getOperatorCount() {return _operatorCount;};
+		bool getwasOpRemoved() {return _wasOpRemoved;};
+		void setwasOpRemoved() {_wasOpRemoved = false;};
+		void setOperatorCount(int value) {
+			if (_operatorCount == 0){
+				return;
+			}
+		 	_operatorCount += value;
+    		if (_operatorCount < 0) _operatorCount = 0; // extra safeguard
+		};
 		const unsigned long& getClientCount() {return _clientCount;}; //const
 		std::vector<int> getAllfds();
 		const std::string getAllNicknames();
-		std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
+		//std::weak_ptr<Client> getWeakPtrByNickname(const std::string& nickname);
 		std::map<std::weak_ptr<Client>, std::pair<std::bitset<config::CLIENT_NUM_MODES>, int>, WeakPtrCompare> getAllClients() {return _ClientModes;};
 
 		std::bitset<config::CLIENT_NUM_MODES>& getClientModes(const std::string nickname); //ref
@@ -89,11 +99,12 @@ struct WeakPtrCompare {
 		int addClient(std::shared_ptr <Client> Client);
 		// void setTopic(const std::string& newTopid); wwrong spelling - Topid/Topic
 		void setTopic(const std::string& newTopic);
-		bool removeClient(const std::string& nickname);
-	    void removeClientByNickname(const std::string& nickname);
+		//bool removeClient(const std::string& nickname);
+	    //NEWNEW void removeClientByNickname(const std::string& nickname);
+		bool removeClientByNickname(const std::string& nickname);
 
 		bool isClientInChannel(const std::string& nickname) const;
-		bool isClientOperator(const std::string& nickname);
+		//bool isClientOperator(const std::string& nickname);
 		bool isValidChannelMode(char modeChar) const;
 		bool isValidClientMode(char modeChar) const;
 		bool channelModeRequiresParameter(char modeChar) const;
@@ -119,7 +130,7 @@ struct WeakPtrCompare {
 		
 		std::string getClientModePrefix(std::shared_ptr<Client> client) const ;
 		MsgType checkModeParameter(const std::string& nick, char mode, const std::string& param, char sign) const;
-
+		std::pair<MsgType, std::vector<std::string>> promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving);
 		void clearAllChannel() {
 			_ClientModes.clear();
 		};

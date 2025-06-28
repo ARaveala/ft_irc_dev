@@ -207,7 +207,7 @@ class TestPrivmsgChannelMsg(IrcTestBase):
         sender_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sender_sock.connect((self.SERVER_HOST, self.SERVER_PORT))
         self.addCleanup(sender_sock.close)
-        sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "csender", "Channel Sender")
+        sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "user_ChannelRecipient1", "Channel Sender")
         send_irc_command(sender_sock, f"JOIN {channel_name}")
         join_responses = recv_irc_response(sender_sock) # Clear join messages
         # Assert the JOIN message for sender using flexible prefix as server might echo it differently
@@ -301,7 +301,7 @@ class TestPrivmsgChannelMsg(IrcTestBase):
         channel_member_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         channel_member_sock.connect((self.SERVER_HOST, self.SERVER_PORT))
         self.addCleanup(channel_member_sock.close)
-        channel_member_actual_nick, channel_member_actual_user, channel_member_actual_host, _ = self._register_aux_client(channel_member_sock, channel_nick_proposal, "cmember", "Channel Member")
+        channel_member_actual_nick, channel_member_actual_user, channel_member_actual_host, _ = self._register_aux_client(channel_member_sock, channel_nick_proposal, "user_ChannelMember", "Channel Member")
         send_irc_command(channel_member_sock, f"JOIN {target_channel}")
         join_responses = recv_irc_response(channel_member_sock) # Clear join messages
         # Assert the JOIN message for channel member using flexible prefix
@@ -381,7 +381,7 @@ class TestPrivmsgChannelMsg(IrcTestBase):
         sender_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sender_sock.connect((self.SERVER_HOST, self.SERVER_PORT))
         self.addCleanup(sender_sock.close)
-        sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "ncsender", "Notice Channel Sender")
+        sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "user_NoticeChanSender", "Notice Channel Sender")
         send_irc_command(sender_sock, f"JOIN {channel_name}")
         join_responses = recv_irc_response(sender_sock) # Clear join messages
         # Assert the JOIN message for sender using flexible prefix

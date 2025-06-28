@@ -106,8 +106,13 @@ class Server {
 		bool validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname);
 		bool validateIsClientInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& nickname);
 		bool validateTargetInChannel(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& target_nickname);
-		bool validateTargetExists(const std::shared_ptr<Client>& client, const std::string& sender_nickname, const std::string& target_nickname);
+		bool validateTargetExists(const std::shared_ptr<Client>& client, const std::shared_ptr<Client>& target, const std::string& sender_nickname, const std::string& target_nickname);
 		bool validateModes(const std::shared_ptr<Channel> Channel, const std::shared_ptr<Client>& client, Modes::ChannelMode comp);
+		bool validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison, const std::string& command);
+		bool validateClientNotEmpty(std::shared_ptr<Client> client);
+		bool validateRegistrationTime(const std::shared_ptr<Client>& client);
+		void validateFallbackOperator(const std::shared_ptr<Channel>& channel, const std::shared_ptr<Client>& client);
+		
 		void handle_client_connection_error(ErrorType err_type);
 		void shutDown();
 		bool checkTimers(int fd);
@@ -142,12 +147,15 @@ class Server {
 		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 
-
-
 		//whois
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);
 		void broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, bool skip_sender, std::shared_ptr<Client> individual_recipient);
+
+	// new functions in the passwordhnalder cpp so we can navigate any issues easier
+		void tryRegisterClient(const std::shared_ptr<Client>& client);
+		void handlePassword(const std::shared_ptr<Client>& client, const int& client_fd, const std::string& password);
+
 };
 
 std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to_fd);

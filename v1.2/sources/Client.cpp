@@ -12,7 +12,12 @@
 #include "CommandDispatcher.hpp"
 #include <ctime>
 
-
+static std::string toLower(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return output;
+}
 // Client::Client(){} never let this exist - is that stated in the hpp?
 
 Client::Client(int fd, int timer_fd) :
@@ -155,12 +160,6 @@ void Client::set_acknowledged(){
 }*/
 
 void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
-	// this needs an alternative to add unique identifiers 
-	// also must add to all relative containers. 
-	//_nickName = generateUniqueNickname();
-	//std::string potential_nick = generateUniqueNickname();
-	//_username = "user_" + potential_nick;
-	//_fullName = "real_" + potential_nick;
 	_isOperator = false;
 	signonTime = time(NULL);
 	lastActivityTime = time(NULL);
@@ -171,10 +170,6 @@ void Client::setDefaults(){ //todo check these are really called - or woudl we c
 bool Client::change_nickname(std::string nickname){
 	_nickName.clear();
 	_nickName = nickname;
-	//std::cout<<"hey look its a fd = "<< fd << std::endl;
-	//this->set_nickname(nickname);
-
-//	else (0);
 	return true;
 }
 
@@ -182,13 +177,11 @@ bool Client::change_nickname(std::string nickname){
 std::string Client::getChannel(std::string channelName)
 {
 	auto it = _joinedChannels.find(channelName);
-	//if (find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end())
 	if (it != _joinedChannels.end()) {
 		return channelName;
 	}
 	std::cout<<"channel does not exist\n";
 	return "";
-		//_joinedChannels.push_back(channelName);
 }
 std::string Client::getCurrentModes() const {
 
@@ -201,40 +194,12 @@ std::string Client::getCurrentModes() const {
     return activeModes;
 }
 
-/*void Client::removeSelfFromChannel()
-{}*/
-int Client::prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify) { // Gemini corrected this &
-
-	std::cout<<"preparing quit \n";
-	int indicator = 0;
-    for (auto it = _joinedChannels.begin(); it != _joinedChannels.end(); ) {
-		std::cout<<"We are loooooping now  \n";
-        if (auto channelPtr = it->second.lock()) {
-			if (indicator == 0)
-			{
-				indicator = 1; // we could count how many channles are counted here ?? 
-					
-			}
-			channelsToNotify.push_back(channelPtr);
-			//_channelsToNotify.push_back(it->second);
-		
-            channelPtr->removeClient(_nickName);
-
-			++it;
-        } else {
-            it = _joinedChannels.erase(it);  //Remove expired weak_ptrs
-        }
-    }
-	std::cout<<"what is indicator here "<<indicator<<"\n";
-	return indicator;
-}
 
 bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
 
 	if (!channel)
 		return false;
 	auto it = _joinedChannels.find(channelName);
-	//if (std::find(_joinedChannels.begin(), _joinedChannels.end(), channelName) != _joinedChannels.end()) {
 	if (it != _joinedChannels.end()) {
 		std::cout<<"channel already exists on client list\n";
 		return false;
@@ -269,23 +234,15 @@ void Client::setHasRegistered() {
     lastActivityTime = time(NULL); // Also set initial last activity time
 }
 
-// You need to ensure this is called whenever you read data from the client's socket
-// For example, in your Server::handleReadEvent:
-// client_ptr->updateLastActivityTime(); // Or directly set client_ptr->lastActivityTime = time(NULL);
-// Add this method to Client class:
-void Client::updateLastActivityTime() {
-   lastActivityTime = time(NULL);
-   // This might reside in server's main event loop when handling EPOLLIN events for clients
-}
 
 
 void Client::removeJoinedChannel(const std::string& channel_name) {
     // Assuming 'channel_name' is already in lowercase, consistent with storage.
-    size_t removed_count = _joinedChannels.erase(channel_name);
+    size_t removed_count = _joinedChannels.erase(toLower(channel_name));
     if (removed_count > 0) {
-        std::cout << "CLIENT: " << _nickName << " removed from its _joinedChannels list for channel '" << channel_name << "'.\n";
+        LOG_NOTICE("removeJoinedChannel: " + _nickName + " removed from its _joinedChannels list for channel " + channel_name);
     } else {
-        std::cerr << "CLIENT ERROR: " << _nickName << " not found in its _joinedChannels for channel '" << channel_name << "' during removal attempt.\n";
+		LOG_ERROR("removeJoinedChannel: " + _nickName + " not found in its _joinedChannels for channel " + channel_name + " during removal attempt");
     }
 }
 

@@ -11,8 +11,9 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}Channel.cpp \
 			${SOURCES}CommandDispatcher.cpp \
 			${SOURCES}MessageBuilder.cpp \
-			${SOURCES}test.cpp
-			
+			${SOURCES}test.cpp \
+			${SOURCES}passwordHandler.cpp
+
 INCLUDES = -I ./includes
 CPP = c++
 CPPFLAGS = -Werror -Wextra -Wall -std=c++20 -MMD -MP $(INCLUDES) #-Wsign-conversion 

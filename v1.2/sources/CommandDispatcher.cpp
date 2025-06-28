@@ -32,7 +32,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	client->getMsg().printMessage(client->getMsg());
 	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
-	// command == "PASS" get the password and accept or dewcline based on getpassword()
+	if (command == "PASS") {
+		_server->handlePassword(client, client_fd, params[0]);
+	}
+
 	if (command == "CAP" && !client->getHasSentCap()) {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
@@ -40,19 +43,17 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		_server->handleQuit(client);
 		return ;
 	}
-
+	//handler needed
 	if (command == "USER" && !client->getHasSentUser()) {
 		client->setClientUname(params[0]);
 		client->setRealname(params[3]);
 		client->setHasSentUser();
+		_server->tryRegisterClient(client);
 	}
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
-	}
-	if (!client->getHasRegistered() && client->getHasSentNick() && client->getHasSentUser()) {
-		client->setHasRegistered();
-		client->getMsg().queueMessage(MessageBuilder::generatewelcome(client->getNickname()));
-		_server->updateEpollEvents(client_fd, EPOLLOUT, true);
+		//_server->tryRegisterClient(client);
+
 	}
 	if (command == "PING"){
 		_server->handlePing(client);
@@ -116,7 +117,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				}
 				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
 				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-
 			}
 		}
 	}
@@ -134,18 +134,25 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "MODE") {
 		_server->handleModeCommand(client, params);
 	}
-	if (client->getMsg().getCommand() == "PRIVMSG")  {
+	if (command == "PRIVMSG")  {
 		if (!params[0].empty()) // && 1 !empty
 		{
-			std::string contents = ":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+			
 			if (params[0][0] == '#')
 			{
+				std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
 				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
+				//std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+
 				// is client in channel 
 				_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
 			}
 			else
 			{
+				std::shared_ptr<Client> target = _server->getClientByNickname(params[1]);
+
+				if (!_server->validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
 				int fd = _server->get_nickname_to_fd().find(params[0])->second;
 				// check against end()
 				if (fd < 0) {
@@ -159,6 +166,36 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		}		
 	}
 	if (command == "WHOIS") {
+		std::cout << "WHOIS: WOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.\n";
+
 		_server->handleWhoIs(client, params[0]);
+	}
+	if (command == "WHO"){
+		if (params[0][0] == '#'){
+			std::cout << "WHOIS: CHANNEL CHECK UP.\n";
+			if (!_server->validateChannelExists(client, params[0], client->getNickname())) {return;}
+			std::shared_ptr<Channel> channel = _server->get_Channel(params[0]);
+			std::cout << "WHOIS: PREPPING MESSAGE FOR WHO DIS.\n";
+			std::string msg = ":localhost 352 " + client->getNickname() + " " + params[0] + " " + client->getUsername() 
+			+ " localhost localhost " + client->getNickname() + " H " + channel->getClientModePrefix(client) 
+			+ " :0 " + client->getfullName() + "\r\n"; 
+			std::string msg2 = ":localhost 315 " + client->getNickname() + params[0] + ":End of WHO list\r\n";
+			_server->broadcastMessage(msg, nullptr, nullptr, false, client);
+			_server->broadcastMessage(msg2, nullptr, nullptr, false, client);
+		return;
+		}
+	}
+	// only because tester
+	if (command == "NOTICE"){
+    // IRC spec says NOTICE must not reply to sender
+	    if (params.size() < 2) return;
+
+	    std::string target = params[0];
+	    std::string message = params[1];
+	    // Construct a notice message and send it silently
+	    std::string prefix = client->getNickname() + "!" + client->getUsername() + "@localhost\r\n"; //(client); // nick!user@host
+	    std::string notice = prefix + " NOTICE " + target + " :" + message + "\r\n";
+		std::shared_ptr<Channel> channel = _server->get_Channel(target);
+		_server->broadcastMessage((notice), client, channel, true, nullptr); // you define this
 	}
 }

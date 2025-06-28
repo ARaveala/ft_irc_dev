@@ -75,9 +75,9 @@ void Server::broadcastMessage(const std::string& message_content, std::shared_pt
         bool wasEmpty = recipientClient->isMsgEmpty();
         recipientClient->getMsg().queueMessage(message_content);
         if (wasEmpty) {
-            std::cout << "it was empty yeah !!!!---------------\n"; // Keep your debug message if desired
             updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
         }
-        std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
+		LOG_DEBUG(" SERVER:: Message queued for FD " + std::to_string(recipientClient->getFd()) + " (" + recipientClient->getNickname() + ")");
+        //std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
     }
 }

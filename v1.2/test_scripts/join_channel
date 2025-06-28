@@ -1,0 +1,41 @@
+from register_client import register_client
+import time
+
+def send_line(sock, who, msg):
+    print(f"[{who}] → {msg}")
+    sock.sendall((msg + "\r\n").encode())
+    time.sleep(0.2)
+
+def main():
+    # Setup clients
+    alice = register_client("Alice", "alice", "Alice Cooper", "#testchan")
+    bob = register_client("Bob", "bob", "Bob Barker", "#testchan")
+
+    # Give Alice +o (if she didn’t get it automatically)
+    send_line(alice, "MODE #testchan +o Alice")
+
+    # Set +i (invite-only)
+    send_line(alice, "MODE #testchan +i")
+
+    # Optional: try having Bob leave and rejoin (should fail unless re-invited)
+    send_line(bob, "PART #testchan :just testing")
+    send_line(bob, "JOIN #testchan")  # Should fail if invite-only
+
+    time.sleep(2)
+
+    # Unset +i
+    send_line(alice, "MODE #testchan -i")
+
+    # Bob tries again
+    send_line(bob, "JOIN #testchan")  # Should succeed now
+
+    print("[!] Done testing +o and +i. Press Ctrl+C to close.")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        alice.close()
+        bob.close()
+
+if __name__ == "__main__":
+    main()

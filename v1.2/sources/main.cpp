@@ -139,33 +139,69 @@ int loop(Server &server)
  * @param argv 1 = port 2 = password
  * @return int
  */
-int main(int argc, char** argv)
-{
-	int port_number = 6666;
-	std::string password = "password";
-	//if (argc != 3)
-	//	exit(1);
+int main(int argc, char** argv) {
+    // --- 1. Enforce mandatory arguments ---
+    // We expect program name (argv[0]), port (argv[1]), and password (argv[2]).
+    // So, argc must be exactly 3.
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-	// if we give arguments we validate the arguments else we
-	// use defaults , this must be refined later .
-	if (argc == 2)
-	{
-		std::cout<<"need 2 arguments"<<std::endl;
-		exit(1);
-	}
-	if (argc == 3)
-	{
-		port_number = validate_port(argv[1]);
-		if (validate_password(argv[2]).empty())
-		{
-			std::cout<<"empty password"<<std::endl;
-			exit(1);
-		}
-		password = argv[2];
-	}
-	else {
-		std::cout<<"Attempting to use default port and password"<<std::endl;
-	}
+	// --- 2. Parse and validate port number ---
+    int port_number;
+    try {
+        port_number = std::stoi(argv[1]); // Convert port string to int
+    } catch (const std::out_of_range& oor) {
+        std::cerr << "Error: Port number '" << argv[1] << "' is out of integer range." << std::endl;
+        return EXIT_FAILURE;
+    } catch (const std::invalid_argument& ia) {
+        std::cerr << "Error: Port '" << argv[1] << "' is not a valid number." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Now, call your more specific validate_port function.
+    // If validate_port handles all parsing and returns -1 for error,
+    // you might not need the try-catch above. But this way, `main`
+    // has direct control over basic string-to-int conversion errors.
+    // Let's assume validate_port does *additional* range/validity checks.
+    int validated_port = validate_port(argv[1]); // Pass original argv[1] to it
+    if (validated_port == -1 || validated_port != port_number) { // Example: if -1 means error or if validate_port changed the value
+        std::cerr << "Error: Invalid port number provided: " << argv[1] << std::endl;
+        // Your validate_port should ideally print a more specific error.
+        return EXIT_FAILURE;
+    }
+    // Update port_number with the validated value from your function
+    port_number = validated_port;
+
+
+    // --- 3. Validate password ---
+    std::string password = validate_password(argv[2]); // Call your validation function
+    if (password.empty()) {
+        std::cerr << "Error: Password requirements not met or invalid password provided." << std::endl;
+        // Your validate_password function should ideally output specific
+        // reasons for failure before returning an empty string.
+        return EXIT_FAILURE;
+    }
+    // If validation passes, the `password` variable now holds the
+    // potentially sanitized/validated password string.
+
+    std::cout << "Welcome to the ft_irc./:" << std::endl;
+    std::cout << "  Port: " << port_number << std::endl;
+    std::cout << "  Password: " << password << std::endl;
+
+
+
+
+
+	// int port_number = validate_port(argv[1]);
+
+	// if (validate_password(argv[2]).empty())	{
+	// 	std::cout<<"empty password"<<std::endl;
+	// 	exit(1);
+	// 	}
+	// std::string password = argv[2];
+
 	// instantiate server object with assumed port and password
 	Server server(port_number, password);
 	if (setupServerSocket(server) == errVal::FAILURE)

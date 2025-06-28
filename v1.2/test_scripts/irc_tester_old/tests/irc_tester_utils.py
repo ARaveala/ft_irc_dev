@@ -9,7 +9,7 @@ import io # Ensure this is imported for BytesIO usage in run_all_tests.py
 SERVER_HOST = '127.0.0.1' # Keep this as is
 SERVER_PORT = 6667
 SERVER_PASSWORD = 'pass'
-SERVER_PATH = '../v1.2/ft_irc'
+SERVER_PATH = '../v1.2/localhost'
 
 # --- IRC Reply Codes (Comprehensive list for testing) ---
 # For successful operations

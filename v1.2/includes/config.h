@@ -39,11 +39,17 @@
 #define LOG_WARN(msg)  log_inline("WARN::", msg)
 #define LOG_NOTICE(msg) log_inline("NOTICE::", msg)
 #define LOG_MISC(msg) log_inline("MISC::", msg)
+#define LOG_VERBOSE(msg) log_inline("VERBOSE_DEBUG::", msg);
 // In logger.hpp or a logger.cpp if you split
+constexpr bool ENABLE_VERBOSE_LOGS = false;
+
 static std::ofstream logfile("server.log", std::ios::app);
 
 inline void log_inline(const std::string& level, const std::string& message) {
-    std::time_t t = std::time(nullptr);
+    if (!ENABLE_VERBOSE_LOGS && level == "VERBOSE_DEBUG::") {
+        return; // Skip verbose logs if disabled
+    }
+	std::time_t t = std::time(nullptr);
     char timeBuf[20];
     std::strftime(timeBuf, sizeof(timeBuf), "%H:%M:%S", std::localtime(&t));
     logfile << "[" << timeBuf << "][" << level << "] " << message << std::endl;
@@ -166,12 +172,12 @@ namespace IRCMessage {
 	inline constexpr const char* pass_msg = "PASS :password\r\n";
 	inline std::string get_nick_msg(const std::string& nickname) {
 		std::stringstream ss;
-        ss << "@ft_irc new nickname is now :" << nickname << "\r\n";
+        ss << "@localhost new nickname is now :" << nickname << "\r\n";
         return ss.str(); }
-	inline constexpr const char* nick_msg = "*:*!Client@ft_irc NICK :helooo\r\n";	
+	inline constexpr const char* nick_msg = "*:*!Client@localhost NICK :helooo\r\n";	
 	//inline constexpr const char* nick_msg = ":NICK :helooo\r\n";
-	//inline constexpr const char* nick_msg = ":*!Client@ft_irc NICK :helooo\r\n";	
-	//inline constexpr const char* nick_msg = "@ft_irc new nickname name is now :nickname\r\n";
+	//inline constexpr const char* nick_msg = ":*!Client@localhost NICK :helooo\r\n";	
+	//inline constexpr const char* nick_msg = "@localhost new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
 /**

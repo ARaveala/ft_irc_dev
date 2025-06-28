@@ -17,7 +17,7 @@ static std::string toLower(const std::string& input) {
 
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
-	_ChannelModes.reset();  //set all modes to off (0)
+	_ChannelModes.reset();
     _ChannelModes.set(Modes::ChannelMode::TOPIC);  // enable topic protection by default, why to show we can
 }
 Channel::~Channel() {
@@ -35,8 +35,8 @@ const std::string& Channel::getTopic() const {
 std::vector<int> Channel::getAllfds() {
 	std::vector<int> fds;
 	for (const auto& entry : _ClientModes) {
-		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
-			fds.push_back(entry.second.second);  //Retrieve FD from stored pair (bitset, FD)
+		if (auto clientPtr = entry.first.lock()) {
+			fds.push_back(entry.second.second);
 		}
 	}
 	return fds;
@@ -45,8 +45,8 @@ std::vector<int> Channel::getAllfds() {
 const std::string Channel::getAllNicknames() {
 	std::string list;
 	for (const auto& entry : _ClientModes) {
-		if (auto clientPtr = entry.first.lock()) {  // Convert weak_ptr to shared_ptr safely, anny expired pointers will be ignored , oohlalal
-			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@ft_irc ";
+		if (auto clientPtr = entry.first.lock()) {
+			list += clientPtr->getNickname() + "!" + clientPtr->getNickname() + "@localhost ";
 		}
 	}
 	return list;
@@ -60,7 +60,7 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
 }
 
 // assuming all incoming 'nickname' parameters and stored client nicknames are ALREADY in lowercase.
-std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
+/*std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
     // We assume 'nickname' is already in lowercase as per the program's invariant.
     // No need for std::transform here.
     const std::string& target_nickname = nickname; // Use a const reference for clarity
@@ -77,13 +77,14 @@ std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname)
                 ++it;
             }
         } else {
+			//LOG_WARN("");
             std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
                       << "' during nickname lookup. Removing stale entry.\n";
             it = _ClientModes.erase(it); // Erase stale element and advance iterator
         }
     }
     return found_weak_ptr;
-}
+}*/
 
 
 
@@ -173,6 +174,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 	char sign;
 	std::vector<std::string> messageData;
 	std::cout<<"starting to change the mode----param at 0"<<params[paramIndex]<<"\n";
+	//for(size_t paramIndex = 1; paramIndex < params.size() ;paramIndex++)
 	while (paramIndex < params.size())
 	{
 		if (modeIndex == 0){
@@ -195,8 +197,7 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 			        --_operatorCount;
 			        _wasOpRemoved = true;
 			    }
-			}
-			//std::cout<<"whats in message data "<<messageData[0]<<"----\n";			
+			}		
 			if (!messageData.empty()) {
 				modes += messageData[0] + " ";
 				if (messageData.size() > 1)
@@ -207,48 +208,34 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 		}
 		paramIndex++;
 	}
-	if (modes.size() > 1) { // not only sign but also mode flag
+	if (modes.size() > 1) {
 		messageData.push_back(modes); 
 		messageData.push_back(targets); 
 	}
 	return messageData;
 }
-
+// what happnes if u limit is set to lower than there are clients in channel
+// ulimit is not working just as it should, 
 std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode, const std::string& target) {
-	std::cout<<"SET CHANNEL MODE ACTIVATED -------------------------mode char = "<<modeChar<<"\n";
-
 	std::vector<std::string> response;
 	bool modeChange = false;
-	Modes::ChannelMode cmodeType = Modes::NONE;
-	Modes::ClientMode modeType = Modes::CLIENT_NONE;
-
-	if (isValidChannelMode(modeChar)){
-		cmodeType = charToChannelMode(modeChar);
-		std::cout<<"is mode not changing here "<< static_cast<int>(cmodeType) << std::endl;
-	}
-	if (isValidClientMode(modeChar)) {
-		modeType = charToClientMode(modeChar);
-	}
+	Modes::ChannelMode cmodeType = charToChannelMode(modeChar);
+	Modes::ClientMode modeType = charToClientMode(modeChar);
 	if (cmodeType == Modes::NONE && modeType == Modes::CLIENT_NONE) {return {};};
-	if (cmodeType!= Modes::NONE) {
-		if(_ChannelModes.test(cmodeType) != enableMode) {
-			_ChannelModes.set(cmodeType, enableMode);
-			std::cout<<"mode changed in apply mode----\n";
-			modeChange = true;
-		}
+	if (cmodeType!= Modes::NONE && _ChannelModes.test(cmodeType) != enableMode) {
+		_ChannelModes.set(cmodeType, enableMode);
+		modeChange = true;
 	}
 
-	//bool shouldReport = !(modeChange && !enableMode) && (cmodeType != Modes::NONE); // || modeType != Modes::CLIENT_NONE);
 	bool shouldReport = modeChange || enableMode;
-
 	if (shouldReport) {
-			std::cout<<"should report activated ----\n";
 			response.push_back(std::string(1, modeChar)); // Mode char
 	}
-
+	// seperate into applyChanges()
  	switch (cmodeType) {
         case Modes::USER_LIMIT:
             if (enableMode) {
+				//overflow check since max clients for whole server is like 550. cap at that ?
 				_ulimit = std::stoul(target);
 			} else {
 				_ulimit = 0;
@@ -268,10 +255,6 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
                 response.push_back(target);
             }
 			break;
-        case Modes::TOPIC:
-			break;
-        case Modes::INVITE_ONLY:
-			break;
         default:
             break;
     }
@@ -282,7 +265,6 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 		response.push_back(std::string(1, modeChar)); // Mode char
         response.push_back(target);  // The user being affected
     }
-
     return response;
 }
 
@@ -323,20 +305,18 @@ int Channel::addClient(std::shared_ptr <Client> client) {
 			setChannelMode('o', setModeBool('+'), client->getNickname());
 			setChannelMode('q', setModeBool('+'), client->getNickname()); // incase we want to know who created the channel
 			setOperatorCount(1);
-			// if we add any other here we must remeber to set to 0 or 1
 			client->setChannelCreator(false); // so we do not step inside here again
 		}
 		else {
 			setChannelMode('o', setModeBool('-'), client->getNickname());
-			// make sure these modes are set to 0
-			//setClientMode("-q", client->getNickname(), "");
+			setChannelMode('q', setModeBool('+'), client->getNickname());
 		}
 		_clientCount += 1;
 	} else {
 		std::cout << "Client already exists in channel!" << std::endl;
 		return 1;
 	}
-    return 2; // Return true if insertion happened (Client was not already there)
+    return 2;
 }
 
 std::pair<MsgType, std::vector<std::string>> Channel::initialModeValidation(
@@ -384,23 +364,29 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
     }
     return MsgType::NONE;
 }
-//NEWNEW add a bool so we know if calling from a remove client
+//CHECK when only 1 client left , why does operator not pass to last client 
 std::pair<MsgType, std::vector<std::string>>
 Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving) {
-	std::cout<<"DEBUD:: promoteFallbackoperator-------- operator count = "<<_operatorCount<<" clientmode size = "<<_ClientModes.size()<<"\n";
-	if (!isLeaving && _operatorCount > 0) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE count big\n";return {MsgType::NONE, std::vector<std::string>()};};
-	if (isLeaving && _operatorCount == 1) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE count big\n";return {MsgType::NONE, std::vector<std::string>()};};
-	if (_ClientModes.size() == 1) {std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE client size\n";return {MsgType::NONE, std::vector<std::string>()};}; // Not enough clients to promote anyone
+	LOG_DEBUG("promoteFallbackoperator operator count = "+ std::to_string(_operatorCount) + " clientmode size = " + std::to_string(_ClientModes.size()));
+	if (!isLeaving && _operatorCount > 0) {
+		LOG_DEBUG("promoteFallbackoperator-------- returned NONE :: operator count too big");
+		return {MsgType::NONE, std::vector<std::string>()};
+	};
+	if (isLeaving && _operatorCount == 1) {
+		LOG_DEBUG("promoteFallbackoperator-------- returned NONE :: operator count too big");
+		return {MsgType::NONE, std::vector<std::string>()};
+	};
+	if (_ClientModes.size() == 1) {
+		LOG_DEBUG("promoteFallbackoperator-------- returned NONE :: client size");
+		return {MsgType::NONE, std::vector<std::string>()};
+	};
     for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
         std::shared_ptr<Client> candidate = it->first.lock();
         if (!candidate || candidate == removingClient) continue;
-        // Set operator bit (assume index 0 for +o mode)
         it->second.first.set(Modes::OPERATOR, true);
-        // Optional: broadcast MODE change
 		return {MsgType::CHANNEL_MODE_CHANGED, {removingClient->getNickname(), removingClient->getUsername(), getName(), "+o", candidate->getNickname()}};
 	}
-	std::cout<<"DEBUD:: promoteFallbackoperator-------- retuined NONE\n";
-
+	LOG_DEBUG("promoteFallbackoperator-------- returned NONE");
 	return {MsgType::NONE, std::vector<std::string>()};
 }
 
@@ -411,19 +397,17 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
     while (idx < params.size()) {
         const std::string& token = params[idx];
         if (token.empty() || (token[0] != '+' && token[0] != '-')) {
-            std::cout << "DEBUG: Syntax Error: Unexpected token '" << token << "'." << std::endl;
+            LOG_DEBUG("Syntax Error: Unexpected token = " + token);
             return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
         }
         sign = token[0];
         for (size_t i = 1; i < token.size(); ++i) {
             char mode = token[i];
             if (!isValidChannelMode(mode) && !isValidClientMode(mode)) {
-//                std::cout << "DEBUG: Unknown mode char '" << mode << "'." << std::endl;
                 return {MsgType::UNKNOWN_MODE, {std::string(1, mode), nick, getName()}};
             }
             if (!channelModeRequiresParameter(mode)) continue;
             if (idx + 1 >= params.size()) {
-//                std::cout << "DEBUG: Missing parameter for mode '" << mode << "'." << std::endl;
                 return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
             }
 
@@ -444,11 +428,9 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
 }
 //NEWNEW check to see if fcuntion needed anywhere
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {
-    if (!client) {
+	if (!client) {
         return ""; // Or handle as an error if a null shared_ptr is passed
     }
-
-    // Iterate through _ClientModes to find the matching client
     for (const auto& entry : _ClientModes) {
         // Safely lock the weak_ptr and compare with the provided shared_ptr
         if (auto weakClientPtr = entry.first.lock(); weakClientPtr && weakClientPtr == client) {

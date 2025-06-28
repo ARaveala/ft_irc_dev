@@ -12,7 +12,12 @@
 #include "CommandDispatcher.hpp"
 #include <ctime>
 
-
+std::string toLower(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return output;
+}
 // Client::Client(){} never let this exist - is that stated in the hpp?
 
 Client::Client(int fd, int timer_fd) :
@@ -233,11 +238,11 @@ void Client::setHasRegistered() {
 
 void Client::removeJoinedChannel(const std::string& channel_name) {
     // Assuming 'channel_name' is already in lowercase, consistent with storage.
-    size_t removed_count = _joinedChannels.erase(channel_name);
+    size_t removed_count = _joinedChannels.erase(toLower(channel_name));
     if (removed_count > 0) {
-        std::cout << "CLIENT: " << _nickName << " removed from its _joinedChannels list for channel '" << channel_name << "'.\n";
+        LOG_NOTICE("removeJoinedChannel: " + _nickName + " removed from its _joinedChannels list for channel " + channel_name);
     } else {
-        std::cerr << "CLIENT ERROR: " << _nickName << " not found in its _joinedChannels for channel '" << channel_name << "' during removal attempt.\n";
+		LOG_ERROR("removeJoinedChannel: " + _nickName + " not found in its _joinedChannels for channel " + channel_name + " during removal attempt");
     }
 }
 

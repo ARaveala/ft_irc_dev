@@ -8,6 +8,13 @@
 #include "Channel.hpp"
 #include "Client.hpp"
 
+std::string toLower(const std::string& input) {
+    std::string output = input;
+    std::transform(output.begin(), output.end(), output.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return output;
+}
+
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
 	_ChannelModes.reset();  //set all modes to off (0)
@@ -496,14 +503,14 @@ bool Channel::removeClientByNickname(const std::string& nickname) {
     
 	for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
         std::shared_ptr<Client> client_sptr = it->first.lock();
-        if (client_sptr && client_sptr->getNickname() == nickname) {
+        if (client_sptr && toLower(client_sptr->getNickname()) == nickname) {
             _ClientModes.erase(it);
 			_clientCount--;
-            std::cout << "CHANNEL: Removed '" << nickname << "' from channel '" << _name << "'.\n";
+			LOG_NOTICE("removeClientByNickname: " + nickname + " Removed from channel " + _name);
             return _ClientModes.empty();
         }
     }
-    std::cerr << "CHANNEL ERROR: Could not find client '" << nickname << "' to remove from '" << _name << "'.\n";
+	LOG_ERROR("removeClientByNickname: Could not find client " + nickname + " to remove from " + _name);
     return  _ClientModes.empty(); // Still return status in all cases
 }
 

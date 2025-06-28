@@ -153,10 +153,10 @@ bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::sh
     }
 	return true;
 }
-
-bool Server::validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison){
+///add commpand
+bool Server::validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison, const std::string& command){
     if (paramSize == 0 || paramSize < comparison) {
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, "INVITE"}), client, nullptr, false, client);
+        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, command}), client, nullptr, false, client);
         return false;
     }
 	return true;
@@ -358,9 +358,6 @@ void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_f
     if (bytes_read == 0) {
         std::cout << "Client FD " << client_fd << " disconnected gracefully (recv returned 0).\n";
         remove_Client(client_fd);
-		//client->setQuit();
-		//updateEpollEvents();
-		//handleQuit(client);
         return;
     }
     client->appendIncomingData(buffer, bytes_read);
@@ -521,16 +518,14 @@ void Server::createChannel(const std::string& channelName) {
 	if (_channels.count(lower) == 0){
 		_channels.emplace(lower, std::make_shared<Channel>(channelName));
         std::cout << "Channel '" << channelName << "' created." << std::endl;
-		return ;
     }
-	// todo handle error
-    std::cerr << "Error: Channel '" << channelName << "' already exists\n";
 }
 
 // oohlala check out this, ranged based iteration , no mroe this and that--->>
 std::shared_ptr<Channel> Server::get_Channel(const std::string& ChannelName) {
+	std::string channel_name_lower = toLower(ChannelName); 
 	for (const auto& [name, channel] : _channels) {
-    	if (name == ChannelName)
+    	if (name == channel_name_lower)
         	return channel;
 	}
 	throw ServerException(ErrorType::NO_CHANNEL_INMAP, "can not get_Channel()");
@@ -932,13 +927,17 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
 }
 
 void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
-    if (!client) {
+    
+	
+	if (!client) {
         std::cerr << "SERVER ERROR: handlePartCommand called with null client.\n";
         return;
     }
 	// Assumed to be lowercase
 	const std::string& nickname = client->getNickname();
-    if (params.empty()) {
+	LOG_DEBUG("handlePartCommand entered for " + nickname);
+
+	if (params.empty()) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {nickname, "PART"}), client, nullptr, false, client);
         return;
     }
@@ -981,26 +980,19 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
 
 
 void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {
-	std::cout << "SERVER: handleKickCommand entered for " << client->getNickname() << std::endl;
-    if (!client) {
-        std::cerr << "SERVER ERROR: handleKickCommand called with null client.\n";
-        return;
-    }
-
+    if (!validateClientNotEmpty(client)) {return;}
     const std::string& kicker_nickname = client->getNickname();
-    // Format: KICK <channel> <user> [<reason>]
-    if (params.size() < 2) {
-		std::cout << "SERVER: KICK - Not enough params from " << kicker_nickname << std::endl;
-        broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {kicker_nickname, "KICK"}), client, nullptr, false, client);
-        return;
-    }
+	LOG_DEBUG("handleKickCommand entered for " + kicker_nickname);
+	
+	// Format: KICK <channel> <user> [<reason>]
+    if (!validateParams(client, kicker_nickname, params.size(), 2, "KICK")) { return; }
 
     std::string channel_name = params[0];
-	std::string channel_name_lower = toLower(channel_name);
+	//std::string channel_name_lower = toLower(channel_name);
     std::string target_nickname = params[1];
     std::string kick_reason = (params.size() > 2) ? params[2] : kicker_nickname; // Default reason is kicker's nick
-    if (!validateChannelExists(client, channel_name_lower, kicker_nickname)) { return;}
-    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name_lower);
+    if (!validateChannelExists(client, channel_name, kicker_nickname)) { return;}
+    std::shared_ptr<Channel> channel_ptr = get_Channel(channel_name);
     if (!validateIsClientInChannel (channel_ptr, client, channel_name, kicker_nickname)) { return ;}
 	if (!validateModes(channel_ptr, client, Modes::NONE)) { return ;}
 
@@ -1008,37 +1000,37 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
 	if(!validateTargetExists(client, target_client_ptr, target_nickname, kicker_nickname)) { return; }
    	if (!validateIsClientInChannel (channel_ptr, client, channel_name, target_nickname)) { return ;}
 	broadcastMessage(MessageBuilder::generateMessage(MsgType::KICK, {client->getNickname(), client->getUsername(), channel_name, target_nickname, kick_reason}), client, channel_ptr, false, nullptr);
-    std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(target_client_ptr, true);
+    
+	std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(target_client_ptr, true);
 	//VALIDATE
 	if (result.first != MsgType::NONE){
 	    //std::cout<<"DEBUGGIN::: breoadcasting message of new operator\n";
 		broadcastMessage(MessageBuilder::generateMessage(result.first, result.second), target_client_ptr, channel_ptr, true, nullptr);
 	}
-	channel_ptr->removeClientByNickname(target_nickname); // Needs to be implemented in Channel
-    target_client_ptr->removeJoinedChannel(channel_name_lower); // Needs to be implemented in Client
+	channel_ptr->removeClientByNickname(target_nickname);
+    target_client_ptr->removeJoinedChannel(channel_name); // Needs to be implemented in Client
     if (channel_ptr->isEmpty()) { // Needs to be implemented in Channel
-        _channels.erase(channel_name_lower); // Remove the channel from Server's map
-        std::cout << "SERVER: Channel '" << channel_name << "' is now empty and has been removed.\n";
+        _channels.erase(toLower(channel_name)); // Remove the channel from Server's map
+		LOG_NOTICE("Channel " + channel_name + "is now empty and has been removed");
     }
 }
 
 
 std::shared_ptr<Client> Server::getClientByNickname(const std::string& nickname){
-    std::cout << "SERVER: Looking up FD for nickname: '" << nickname << "' (case-sensitive) in _nickname_to_fd map\n"; // Uncomment for debugging
-    // Step 1: Look up the file descriptor using the nickname
+    LOG_DEBUG("getClientByNickname: Looking up FD for nickname: " + nickname + " (case-sensitive) in _nickname_to_fd map");
     auto fd_it = _nickname_to_fd.find(toLower(nickname));
     if (fd_it == _nickname_to_fd.end()) {
-	    std::cout << "SERVER: Looking up FD for nickname: '" << nickname << "' (case-sensitive) in _nickname_to_fd map\n"; // Uncomment for debugging
-
+	    LOG_DEBUG("getClientByNickname:  " + nickname + " not found in _nickname_to_fd map");
 		return nullptr;
     }
 	std::shared_ptr<Client> client;
 	try {
 		client = get_Client(fd_it->second);
 	} catch(const ServerException& e) {
+	    LOG_DEBUG("getClientByNickname:  " + nickname + " not found in shared ptr map");
 		return nullptr;
 	}
-    return client; // Return the shared_ptr to the Client
+    return client;
 }
 
 
@@ -1046,9 +1038,9 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
 	if (!validateClientNotEmpty(client)) {return ;}
 	const std::string& sender_nickname = client->getNickname();
 
-	LOG_DEBUG("handleTopicCommand entered for " + sender_nickname);
+	LOG_DEBUG("handleTopicCommand: entered for " + sender_nickname);
 
-    if (!validateParams(client, sender_nickname, params.size(), 2)){return ;}
+    if (!validateParams(client, sender_nickname, params.size(), 2, "TOPIC")){return ;}
 
     std::string channel_name = toLower(params[0]);
 	if (!validateChannelExists(client, channel_name, sender_nickname)) { return;}
@@ -1082,11 +1074,11 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
 
 void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {    
 	if (!validateClientNotEmpty(client)) {return ;}
-    LOG_NOTICE("handleInviteCommand entered for "+ client->getNickname());
+    LOG_NOTICE("handleInviteCommand :entered for "+ client->getNickname());
 
 	const std::string& sender_nickname = client->getNickname();
 	
-	if (!validateParams(client, sender_nickname, params.size(), 2)){return ;}
+	if (!validateParams(client, sender_nickname, params.size(), 2, "INVITE")){return ;}
     std::string target_nickname = params[0];
     std::string channel_name = toLower(params[1]);
     

@@ -1,0 +1,75 @@
+[33m0987786[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mattempt_v_2[m[33m, [m[1;31morigin/attempt_v_2[m[33m)[m HEAD@{0}: pull origin attempt_v_2: Fast-forward
+[33me0e95bb[m HEAD@{1}: checkout: moving from main to attempt_v_2
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{2}: reset: moving to HEAD
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{3}: checkout: moving from main to main
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{4}: checkout: moving from main to main
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{5}: pull: Fast-forward
+[33mb9de9a7[m HEAD@{6}: checkout: moving from attempt_v_2 to main
+[33me0e95bb[m HEAD@{7}: commit: mode progresssion makes more sense now, functionality is still being tweaked , some code will be seperated later
+[33m0c4d960[m HEAD@{8}: commit: restructure:: mode handling
+[33m0f0439a[m HEAD@{9}: reset: moving to HEAD
+[33m0f0439a[m HEAD@{10}: commit: issue:fixed: issue:not clean. registartion was not complete and mode handling was not handled well, issue found , cleanup comming tomorrow
+[33mb29c788[m[33m ([m[1;31morigin/merger_branch[m[33m)[m HEAD@{11}: commit: whois now seperate fucntion, illegal ping send added to fix nickname issue
+[33md22eff9[m HEAD@{12}: checkout: moving from merger_branch to attempt_v_2
+[33mfc7b63c[m[33m ([m[1;32mmerger_branch[m[33m)[m HEAD@{13}: checkout: moving from attempt_v_2 to merger_branch
+[33md22eff9[m HEAD@{14}: commit: client registration almost done, still has not fixed the issue
+[33m8f5e9b2[m HEAD@{15}: pull: Fast-forward
+[33mfc7b63c[m[33m ([m[1;32mmerger_branch[m[33m)[m HEAD@{16}: checkout: moving from merger_branch to attempt_v_2
+[33mfc7b63c[m[33m ([m[1;32mmerger_branch[m[33m)[m HEAD@{17}: checkout: moving from attempt_v_2 to merger_branch
+[33mfc7b63c[m[33m ([m[1;32mmerger_branch[m[33m)[m HEAD@{18}: commit: things arfe working one way better but another way worse
+[33m9a730ca[m HEAD@{19}: commit: message building cleaned a little
+[33m60ee52c[m HEAD@{20}: commit: using MsgType enum to build usable exampole for when message needs to be built, but check and prep nickname returns false
+[33mf0f29ab[m HEAD@{21}: commit: complete overhaul happning excuse the mess
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{22}: merge arave_safe_branch: Fast-forward
+[33mb9de9a7[m HEAD@{23}: checkout: moving from main to attempt_v_2
+[33mb9de9a7[m HEAD@{24}: checkout: moving from arave_safe_branch to main
+[33md5f20c3[m[33m ([m[1;31morigin/arave_safe_branch[m[33m, [m[1;32mmain[m[33m, [m[1;32marave_safe_branch[m[33m)[m HEAD@{25}: commit: some clean up, new approach implementation into new branch <attempt_v_2>
+[33m23a4353[m HEAD@{26}: commit: proccess of changing messaging, qui tmessage now broadcast to channel
+[33me20cf41[m HEAD@{27}: commit: lord have mercy on my soul
+[33mba776ca[m HEAD@{28}: checkout: moving from main to arave_safe_branch
+[33mb9de9a7[m HEAD@{29}: reset: moving to b9de9a71129e1f0ec337846592fef0c14d456091
+[33mba776ca[m HEAD@{30}: checkout: moving from arave_safe_branch to main
+[33mba776ca[m HEAD@{31}: checkout: moving from arave_safe_branch to arave_safe_branch
+[33mba776ca[m HEAD@{32}: pull: Fast-forward
+[33m764c683[m HEAD@{33}: checkout: moving from main to arave_safe_branch
+[33mba776ca[m HEAD@{34}: checkout: moving from arave_safe_branch to main
+[33m764c683[m HEAD@{35}: checkout: moving from main to arave_safe_branch
+[33mba776ca[m HEAD@{36}: checkout: moving from arave_safe_branch to main
+[33m764c683[m HEAD@{37}: checkout: moving from main to arave_safe_branch
+[33mba776ca[m HEAD@{38}: checkout: moving from arave_safe_branch to main
+[33m764c683[m HEAD@{39}: checkout: moving from main to arave_safe_branch
+[33mba776ca[m HEAD@{40}: checkout: moving from arave_safe_branch to main
+[33m764c683[m HEAD@{41}: checkout: moving from main to arave_safe_branch
+[33mba776ca[m HEAD@{42}: commit: multiple changes, attempting to get structure for command to fucntion mapping without carrying all objects
+[33mb9de9a7[m HEAD@{43}: reset: moving to HEAD
+[33mb9de9a7[m HEAD@{44}: reset: moving to origin/main
+[33mb9de9a7[m HEAD@{45}: commit: channels have cross communication
+[33m0c1103e[m HEAD@{46}: commit: changed how messages are sent , using enums and conditional macro for message selection
+[33m132922b[m HEAD@{47}: commit: join can now have multiple clienst in same channel
+[33m1f10afc[m HEAD@{48}: commit: adjusted nick name management now takes refrences to maps from server
+[33m79f74f3[m HEAD@{49}: commit: join working better now and channel reciveing welcome message, client welcome message adjusted
+[33m365d730[m HEAD@{50}: commit: some clean up , join semi works messages not going through , no leaks
+[33mddab886[m HEAD@{51}: commit: no more message fucntions in server files, handle message is now a client method , some channel fucntions compile
+[33mf4919e3[m HEAD@{52}: commit: comment clean up
+[33m82f69a2[m HEAD@{53}: checkout: moving from main to main
+[33m82f69a2[m HEAD@{54}: pull: Fast-forward
+[33m9664569[m HEAD@{55}: commit: IrcPrepper added
+[33me9fa9ed[m HEAD@{56}: checkout: moving from arave_safe_branch to main
+[33m764c683[m HEAD@{57}: checkout: moving from main to arave_safe_branch
+[33me9fa9ed[m HEAD@{58}: pull: Fast-forward
+[33m26a11fe[m HEAD@{59}: commit: added erros message to ircresources
+[33m764c683[m HEAD@{60}: commit: compile issue fixed
+[33m961378c[m HEAD@{61}: pull: Fast-forward
+[33m41cdc52[m HEAD@{62}: commit: clean up and valgrind shows no leaks or open fds or still reachables
+[33mf2730b0[m HEAD@{63}: commit: some valgrind checks and clean up , more required
+[33m40b8674[m HEAD@{64}: commit: clean up main, server
+[33m1f728bd[m HEAD@{65}: commit: multiple changes and some clean , mostly epoll events sending
+[33m72e5dad[m HEAD@{66}: commit: epoll fixed and to subject standars, clean up required
+[33m8336bc3[m HEAD@{67}: commit: nickname handling is now split and reqwuires error handling
+[33m0253f87[m HEAD@{68}: commit: we have some type of broadcast happening by sending a server message
+[33m1ad4494[m HEAD@{69}: commit: brodcasting imitation added to message handling
+[33mb7617b1[m HEAD@{70}: commit: cleaning up main loop and message handling logic
+[33m1b687de[m HEAD@{71}: commit: cleaned up time management by applying yet another map
+[33mf644a80[m HEAD@{72}: commit: setting up buffers and bette rtime management
+[33m1dcff38[m HEAD@{73}: commit: addition of example 6
+[33md1e8d22[m HEAD@{74}: clone: from github.com:sparklebutt/ft_irc_dev.git

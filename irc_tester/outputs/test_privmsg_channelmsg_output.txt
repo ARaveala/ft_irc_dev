@@ -1,0 +1,39 @@
+test_privmsg_to_nonexistent_channel (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_to_nonexistent_channel)
+Tests sending a private message to a non-existent channel. ... FAIL
+test_privmsg_to_nonexistent_user (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_to_nonexistent_user)
+Tests sending a private message to a non-existent user. ... FAIL
+
+======================================================================
+FAIL: test_privmsg_to_nonexistent_channel (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_to_nonexistent_channel)
+Tests sending a private message to a non-existent channel.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_privmsg_channelmsg.py", line 279, in test_privmsg_to_nonexistent_channel
+    sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "senderunch", "Sender Unchannel")
+                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_privmsg_channelmsg.py", line 88, in _register_aux_client
+    self.assert_irc_reply(response, RPL_WELCOME)
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 001 not found in response:
+[':ft_irc NOTICE * :Password accepted. Continuing registration.', ':ft_irc 001 SenderNoChannel :Welcome to the IRC server SenderNoChannel!', ':ft_irc 002 SenderNoChannel :Your host is ft_irc, running version 1.0', ':ft_irc 003 SenderNoChannel :This server was created today', ':ft_irc 004 SenderNoChannel ft_irc 1.0 o o', ':ft_irc 375 SenderNoChannel :- ~ Meowdy, traveler! ~', ":ft_irc 372 SenderNoChannel :- Here's your good-luck cat butt:", ':ft_irc 372 SenderNoChannel :-     /\\_/\\', ':ft_irc 372 SenderNoChannel :-    ( o.o )', ':ft_irc 372 SenderNoChannel :-     > ^ <    🍑', ':ft_irc 372 SenderNoChannel :-     Cat butt initialized.', ':ft_irc 376 SenderNoChannel :End of /MOTD']
+
+======================================================================
+FAIL: test_privmsg_to_nonexistent_user (test_privmsg_channelmsg.TestPrivmsgChannelMsg.test_privmsg_to_nonexistent_user)
+Tests sending a private message to a non-existent user.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_privmsg_channelmsg.py", line 184, in test_privmsg_to_nonexistent_user
+    sender_actual_nick, sender_actual_user, sender_actual_host, _ = self._register_aux_client(sender_sock, sender_nick_proposal, "senderunu", "Sender Nonexistent User")
+                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_privmsg_channelmsg.py", line 88, in _register_aux_client
+    self.assert_irc_reply(response, RPL_WELCOME)
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 001 not found in response:
+[':ft_irc NOTICE * :Password accepted. Continuing registration.', ':ft_irc 001 SenderNoUser :Welcome to the IRC server SenderNoUser!', ':ft_irc 002 SenderNoUser :Your host is ft_irc, running version 1.0', ':ft_irc 003 SenderNoUser :This server was created today', ':ft_irc 004 SenderNoUser ft_irc 1.0 o o', ':ft_irc 375 SenderNoUser :- ~ Meowdy, traveler! ~', ":ft_irc 372 SenderNoUser :- Here's your good-luck cat butt:", ':ft_irc 372 SenderNoUser :-     /\\_/\\', ':ft_irc 372 SenderNoUser :-    ( o.o )', ':ft_irc 372 SenderNoUser :-     > ^ <    🍑', ':ft_irc 372 SenderNoUser :-     Cat butt initialized.', ':ft_irc 376 SenderNoUser :End of /MOTD']
+
+----------------------------------------------------------------------
+Ran 2 tests in 8.010s
+
+FAILED (failures=2)

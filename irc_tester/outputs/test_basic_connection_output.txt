@@ -1,0 +1,39 @@
+test_client_connects_and_receives_welcome (test_basic_connection.TestBasicConnection.test_client_connects_and_receives_welcome)
+Tests that a client can connect and receives initial welcome messages (001-004). ... FAIL
+test_connect_with_invalid_password (test_basic_connection.TestBasicConnection.test_connect_with_invalid_password)
+Tests that a client is denied connection with an incorrect password. ... FAIL
+test_connect_without_password_when_required (test_basic_connection.TestBasicConnection.test_connect_without_password_when_required)
+Tests that a client is denied connection if no password is provided when required. ... Test: Client denied without password. Responses:
+[':ft_irc NOTICE * :initilization has begun.......', ':ft_irc 464 * :Password incorrect']
+ok
+
+======================================================================
+FAIL: test_client_connects_and_receives_welcome (test_basic_connection.TestBasicConnection.test_client_connects_and_receives_welcome)
+Tests that a client can connect and receives initial welcome messages (001-004).
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_basic_connection.py", line 18, in test_client_connects_and_receives_welcome
+    self.assert_irc_reply(response_lines, RPL_WELCOME, "Welcome to the IRC server") # Adjusted message part for your server's output
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 001 not found in response:
+[':ft_irc NOTICE * :Password accepted. Continuing registration.', ':ft_irc 001 test_client :Welcome to the IRC server test_client!', ':ft_irc 002 test_client :Your host is ft_irc, running version 1.0', ':ft_irc 003 test_client :This server was created today', ':ft_irc 004 test_client ft_irc 1.0 o o', ':ft_irc 375 test_client :- ~ Meowdy, traveler! ~', ":ft_irc 372 test_client :- Here's your good-luck cat butt:", ':ft_irc 372 test_client :-     /\\_/\\', ':ft_irc 372 test_client :-    ( o.o )', ':ft_irc 372 test_client :-     > ^ <    🍑', ':ft_irc 372 test_client :-     Cat butt initialized.', ':ft_irc 376 test_client :End of /MOTD']
+
+======================================================================
+FAIL: test_connect_with_invalid_password (test_basic_connection.TestBasicConnection.test_connect_with_invalid_password)
+Tests that a client is denied connection with an incorrect password.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/test_basic_connection.py", line 51, in test_connect_with_invalid_password
+    self.assert_irc_reply(response, ERR_PASSWDMISMATCH, "Password incorrect") # Using constant
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/shaboom/ft_irc_dev_jack/irc_tester/tests/irc_tester_utils.py", line 255, in assert_irc_reply
+    self.assertTrue(found, f"Expected IRC reply {expected_code} not found in response:\n{response_lines}")
+AssertionError: False is not true : Expected IRC reply 464 not found in response:
+[':ft_irc NOTICE * :initilization has begun.......', ':ft_irc 464 * :Password incorrect', ':ft_irc 464 * :Password incorrect']
+
+----------------------------------------------------------------------
+Ran 3 tests in 5.118s
+
+FAILED (failures=2)

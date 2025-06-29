@@ -15,28 +15,28 @@
 static std::string toLower(const std::string& input) {
     std::string output = input;
     std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+	[](unsigned char c) { return std::tolower(c); });
     return output;
 }
 // Client::Client(){} never let this exist - is that stated in the hpp?
 
 Client::Client(int fd, int timer_fd) :
-	_fd(fd),
-	_timer_fd(timer_fd),
-	_failed_response_counter(0),
-	signonTime(0),          // Initialize to 0, set on registration
-	lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
-	_channelCreator(false),
-	_quit(false),
-	_hasSentCap(false),
-	_hasSentNick(false),
-	// _hasSentUSer(false),
-	_registered(false),
-	_isOperator(false)      // Initialize to false
-  	
+_fd(fd),
+_timer_fd(timer_fd),
+_failed_response_counter(0),
+signonTime(0),          // Initialize to 0, set on registration
+lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
+_channelCreator(false),
+_quit(false),
+_hasSentCap(false),
+_hasSentNick(false),
+// _hasSentUSer(false),
+_registered(false),
+_isOperator(false)      // Initialize to false
+
 {
-		lastActivityTime = time(NULL);
-		_ClientPrivModes.reset();
+	lastActivityTime = time(NULL);
+	_ClientPrivModes.reset();
 }
 
 Client::~Client(){
@@ -45,67 +45,42 @@ Client::~Client(){
 	// getChannel().removeUser(*this); //getClient().erase();
 }
 
-int Client::getFd(){
-	return _fd;
-}
-
-bool Client::get_acknowledged(){
-	return _acknowledged;
-}
-bool Client::get_pendingAcknowledged(){
-	return _pendingAcknowledged;
-}
-int Client::get_failed_response_counter(){
-	return _failed_response_counter;
-}
+int Client::getFd(){return _fd;}
+bool Client::get_acknowledged(){return _acknowledged;}
+bool Client::get_pendingAcknowledged(){	return _pendingAcknowledged;}
+int Client::get_failed_response_counter(){return _failed_response_counter;}
+bool Client::isOperator() const {return _isOperator;}
+void Client::setOperator(bool status) { _isOperator = status;}
+time_t Client::getSignonTime() const { return signonTime;} // This value is set when client registers
+long Client::getIdleTime() const { return time(NULL) - lastActivityTime;} // Calculate difference between current time and last activity time
+const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {return _joinedChannels;}
 
 // specifically adds a specific amount, not increment by 1
 void Client::set_failed_response_counter(int count){
 	/*std::cout<<"failed response counter is "
-				<< _failed_response_counter
-				<<"new value to be added "
-				<< count
-				<<std::endl;*/
+	<< _failed_response_counter
+	<<"new value to be added "
+	<< count
+	<<std::endl;*/
 	if ( count < 0 && _failed_response_counter == 0)
-		return ;
+	return ;
 	if ( count == 0){
 		_failed_response_counter = 0;
 		return;
 	}	
-	_failed_response_counter += count;
-}
+				_failed_response_counter += count;
+			}
+			
+			int Client::get_timer_fd(){return _timer_fd;}
+			std::string Client::getNickname() const{return _nickName;}
+			std::string& Client::getNicknameRef(){return _nickName;}
+			std::string Client::getClientUname(){return _username;}
+			std::string Client::getfullName(){return _fullName;}
+			
+			const std::string& Client::getHostname() const {return _hostname;}
+			
+			void Client::setHostname(const std::string& hostname) {_hostname = hostname;}
 
-int Client::get_timer_fd(){
-	return _timer_fd;
-}
-
-std::string Client::getNickname() const{
-	return _nickName;
-}
-
-std::string& Client::getNicknameRef(){
-	return _nickName;
-}
-
-std::string Client::getClientUname(){
-	return _username;
-}
-
-std::string Client::getfullName(){
-	return _fullName;
-}
-
-const std::string& Client::getHostname() const {
-    return _hostname;
-}
-
-void Client::setHostname(const std::string& hostname) {
-    _hostname = hostname;
-}
-
-const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {
-        return _joinedChannels;
-}
 
 std::string Client::getPrivateModeString(){
 	std::string activeModes = "+";
@@ -140,9 +115,7 @@ bool Client::extractAndParseNextCommand() {
 	return true;
 }
 
-void Client::set_acknowledged(){
-	_acknowledged = true;
-}
+void Client::set_acknowledged(){ _acknowledged = true;}
 
 /*void Client::set_pendingAcknowledged(bool onoff){
 	_pendingAcknowledged = onoff;
@@ -165,17 +138,13 @@ void Client::setDefaults(){ //todo check these are really called - or woudl we c
 	lastActivityTime = time(NULL);
 }
 
-
-
 bool Client::change_nickname(std::string nickname){
 	_nickName.clear();
 	_nickName = nickname;
 	return true;
 }
 
-
-std::string Client::getChannel(std::string channelName)
-{
+std::string Client::getChannel(std::string channelName){
 	auto it = _joinedChannels.find(channelName);
 	if (it != _joinedChannels.end()) {
 		return channelName;
@@ -183,8 +152,8 @@ std::string Client::getChannel(std::string channelName)
 	std::cout<<"channel does not exist\n";
 	return "";
 }
-std::string Client::getCurrentModes() const {
 
+std::string Client::getCurrentModes() const {
 	std::string activeModes = "+";
     for (size_t i = 0; i < Modes::clientModeChars.size(); ++i) {
         if (_ClientPrivModes.test(i)) {
@@ -193,7 +162,6 @@ std::string Client::getCurrentModes() const {
     }
     return activeModes;
 }
-
 
 bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
 
@@ -210,22 +178,6 @@ bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Ch
 	return true;
 }
 
-bool Client::isOperator() const {
-    return _isOperator;
-}
-
-void Client::setOperator(bool status) {
-    _isOperator = status;
-}
-
-time_t Client::getSignonTime() const {
-    return signonTime; // This value is set when client registers
-}
-
-long Client::getIdleTime() const {
-    // Calculate difference between current time and last activity time
-    return time(NULL) - lastActivityTime;
-}
 
 // Ensure this is called when client successfully registers
 void Client::setHasRegistered() {
@@ -233,8 +185,6 @@ void Client::setHasRegistered() {
     signonTime = time(NULL); // Set signon time upon successful registration
     lastActivityTime = time(NULL); // Also set initial last activity time
 }
-
-
 
 void Client::removeJoinedChannel(const std::string& channel_name) {
     // Assuming 'channel_name' is already in lowercase, consistent with storage.

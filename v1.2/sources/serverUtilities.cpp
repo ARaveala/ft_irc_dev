@@ -3,9 +3,9 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <unistd.h>
+
 #include "Server.hpp"
 #include "serverUtilities.hpp"
-
 #include "ServerError.hpp"
 #include "config.h"
 

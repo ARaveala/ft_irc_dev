@@ -3,16 +3,16 @@
 
 //class MessageBuilder;
 void Server::handlePassword(const std::shared_ptr<Client>& client, const int& client_fd, const std::string& password) {
-	std::cout<<"DEBUG::PASSWORD BEING BEING ACTUATED......... \n";
+	std::cout<<"Server::handlePassword::PASSWORD BEING BEING ACTUATED......... \n";
 	if (password == get_password())
 	{
-		std::cout<<"DEBUG::PASSWORD ACCEPTED......... \n";
+		std::cout<<"Server::handlePassword::PASSWORD ACCEPTED......... \n";
 		client->getMsg().queueMessage(":localhost NOTICE * :Password accepted. Continuing registration.\r\n");
 		client->setPasswordValid();
 		updateEpollEvents(client_fd, EPOLLOUT, true);
 	}
 	else {
-		std::cout<<"DEBUG::PASSWORD NOT ACCPTED......... \n";
+		std::cout<<"Server::handlePassword::PASSWORD NOT ACCPTED......... \n";
 		client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
 		client->setQuit();
 		updateEpollEvents(client_fd, EPOLLOUT, true);
@@ -27,7 +27,7 @@ void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
     if (!client->getHasSentNick() || !client->getHasSentUser())
         return;
     if (!client->getPasswordValid()) {
-        std::cout << "DEBUG::PASSWORD NOT ACCEPTED.........\n";
+        std::cout << "Server::tryRegisterClient::PASSWORD NOT ACCEPTED.........\n";
         client->getMsg().queueMessage(":localhost 464 * :Password incorrect\r\n");
         client->setQuit();
         updateEpollEvents(fd, EPOLLOUT, true);

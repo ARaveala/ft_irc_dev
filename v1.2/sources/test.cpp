@@ -1,6 +1,4 @@
-
 #include "Server.hpp"
-
 
 std::set<std::shared_ptr<Client>> Server::getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender) {
     std::set<std::shared_ptr<Client>> recipients;

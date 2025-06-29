@@ -1,8 +1,9 @@
-#include "MessageBuilder.hpp"
-
 #include <tuple>
 #include <functional>
 #include <string>
+#include <iostream> // debugging only 
+
+#include "MessageBuilder.hpp"
 
 // Makes a sequence of numbers matching indexes, expands to individual arguments , calls fucn with those argumenst. 
 template <typename Func, size_t... Indices>
@@ -17,11 +18,9 @@ std::string callBuilder(std::function<Ret(Args...)> func, const std::vector<std:
         return "Error: Incorrect number of parameters! Expected " + std::to_string(sizeof...(Args)) +
                ", but received " + std::to_string(params.size()) + ".";
     }
-
     return invokeWithVector(func, params, std::make_index_sequence<sizeof...(Args)>{});
 }
 
-#include <iostream> // debugging only 
 namespace MessageBuilder {
 
 std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
@@ -43,13 +42,12 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 				// This assumes buildUserOnChannel takes (inviter_nickname, target_nickname, channel_name)
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildUserOnChannel), params);
 
-
-
 	        case MsgType::WELCOME:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::generatewelcome), params);
 			case MsgType::JOIN:
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildJoinChannel), params);
-	       /* case MsgType::HOST_INFO:
+
+		/* case MsgType::HOST_INFO:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildHostInfo), params);
 
 	        case MsgType::SERVER_CREATION:
@@ -107,6 +105,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
 	        case MsgType::CAP_RESPONSE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildCapResponse), params);*/
+
 			case MsgType::INVITE_ONLY:
 			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInviteOnlyChannel), params);
 					
@@ -124,13 +123,9 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 		}
 	}
 	
-
-	
 	std::string generatewelcome(const std::string& nickname) {
 		return buildWelcome(nickname) + buildHostInfo(nickname) +  buildServerCreation(nickname) + buildServerInfo(nickname) + buildRegistartionEnd(nickname);
 	}
-
-	
 
     // Helper for common server prefix (you can make this a constant or pass it)
     const std::string SERVER = "localhost";
@@ -243,7 +238,6 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
         return ":" + SERVER + " 332 " + nickname + " " + channelName + " :" + topic + "\r\n";
     }
 
-
     std::string buildNickChange(const std::string& oldnick, const std::string & username, const std::string& newnick) {
         return prefix(oldnick, username) + " NICK " +  newnick + "\r\n";
     }
@@ -255,7 +249,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     std::string buildServerNoticeNickChange(const std::string& oldnick, const std::string& newnick) {
         return ":server NOTICE * :User " + oldnick + " changed nickname to " + newnick + "\r\n";
     }
-// MODE MESSAGES
+
+	// MODE MESSAGES
    std::string buildNeedMoreParams(const std::string& clientNickname, const std::string& command) {
         return  SERVER_PREFIX +  " " + std::to_string(static_cast<int>(MsgType::NEED_MORE_PARAMS)) + " " + clientNickname + " " + command + " :Not enough parameters\r\n";
     }
@@ -275,8 +270,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     }
 
     std::string buildInvalidTarget(const std::string& clientNickname, const std::string& target) {
-        // You can make this message more specific if needed
-
+        // This message more specific if needed
         return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::INVALID_TARGET)) + " " + clientNickname + " :Cant change mode for other "+target+"users\r\n";
     }
 
@@ -318,6 +312,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     	//std::string invite_message = sender_prefix + " INVITE " + target_nickname + " :" + channel_name + "\r\n";
 		return prefix(nickname, username) +  " INVITE " + target + " :" + channel_name + "\r\n";
 	}
+
 	 // namespace MessageBuilder
 	
 	 // New function for ERR_USERONCHANNEL (443)
@@ -345,6 +340,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	std::string buildTopicChange(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& topic) {
 		return prefix(clientNickname, username) +  " TOPIC " + channelName + " :" + topic + "\r\n";
 	}
+
 	std::string buildPart(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& partReason) {
 	    return prefix(clientNickname, username) + " PART " + channelName + " :" + partReason + "\r\n";
 	}
@@ -355,12 +351,11 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	std::string buildPrivMessage(const std::string& clientNickname, const std::string& username, const std::string& where, const std::string& msg){
 		return ":" + prefix(clientNickname, username)+ " PRIVMSG " + where + " " + msg +"\r\n";  
 	}
+
  //":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 	/*std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
 	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
 	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";
 	}*/
-
-
 }
  // namespace MessageBuilder

@@ -1,14 +1,14 @@
-#include "signal_handler.h"
 #include <iostream>
 #include <sys/signalfd.h>
+
+#include "signal_handler.h"
 #include "Server.hpp"
 #include "config.h"
 
 int should_exit = 0;
 sigset_t sigmask;
 
-int signal_mask()
-{
+int signal_mask(){
 	int fd = 0;
 	sigemptyset(&sigmask);
 	sigaddset(&sigmask, SIGUSR1);
@@ -25,8 +25,7 @@ int signal_mask()
 	return fd;
 }
 
-void handle_signal(int signum)
-{
+void handle_signal(int signum){
 	if (signum == SIGINT || signum == SIGTERM)
 	{
 		should_exit = 1;
@@ -41,8 +40,7 @@ void handle_signal(int signum)
  * sa mask defines which signals should be blocked while the handler runs. 
  * 
  */
-void setup_signal_handler()
-{
+void setup_signal_handler(){
 	struct sigaction sa;
 	sa.sa_handler = handle_signal; // SIG_DFL to set to default
 	sigemptyset(&sa.sa_mask);
@@ -53,8 +51,7 @@ void setup_signal_handler()
 	//_epollEventMap[]
 }
 
-int manage_signal_events(int signal_fd)
-{
+int manage_signal_events(int signal_fd){
 	struct signalfd_siginfo si;
 	read(signal_fd, &si, sizeof(si));
 	if (si.ssi_signo == SIGUSR1) {

@@ -1,19 +1,21 @@
+#include <algorithm> // find_if
+#include <ctime>
+#include <cctype>
+#include <cctype>    // Required for std::tolower (character conversion)
+#include <iostream> // testing with cout
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h> //strlen
-#include <iostream> // testing with cout
 #include <sstream>  // for passing parameters
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <map>
 #include <memory> // shared pointers
-#include <cctype>
+#include <netinet/tcp.h>
+#include <netinet/in.h>
 //#include "SendException.hpp"
-#include <algorithm> // find_if
 #include <unordered_set>
-#include <cctype>    // Required for std::tolower (character conversion)
 #include <vector>
-#include <ctime>
 
 #include "config.h"
 #include "ServerError.hpp"
@@ -24,16 +26,17 @@
 
 class ServerException;
 
+static std::string toLower(const std::string& input) {
+	std::string output = input;
+	std::transform(output.begin(), output.end(), output.begin(),
+				   [](unsigned char c) { return std::tolower(c); });
+	return output;
+}
 
 Server::Server(){
-	std::cout << "#### Server instance created.\n";
+	std::cout << "Server::Server -  Server instance created.\n";
 }
-static std::string toLower(const std::string& input) {
-    std::string output = input;
-    std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return output;
-}
+
 /**
  * @brief Construct a new Server:: Server object
  * 
@@ -45,50 +48,19 @@ Server::Server(int port , const std::string& password) : _port(port), _password(
 }
 
 // ~~~SETTERS
-void Server::setFd(int fd){
-	_fd = fd;}
-
-void Server::set_signal_fd(int fd){
-	_signal_fd = fd;
-}
-
-// note we may want to check here for values below 0
-void Server::set_event_pollfd(int epollfd){
-	_epoll_fd = epollfd;
-}
-
-void Server::set_client_count(int val){
-	_client_count += val;
-}
-
-void Server::set_current_client_in_progress(int fd){
-	_current_client_in_progress = fd;
-}
+void Server::setFd(int fd){_fd = fd;}
+void Server::set_signal_fd(int fd){_signal_fd = fd;}
+void Server::set_event_pollfd(int epollfd){	_epoll_fd = epollfd;} // note we may want to check here for values below 0
+void Server::set_client_count(int val){	_client_count += val;}
+void Server::set_current_client_in_progress(int fd){_current_client_in_progress = fd;}
 
 // ~~~GETTERS
-int Server::getFd() const {
-	 return _fd;
-}
-
-int Server::get_signal_fd() const{
-	return _signal_fd;
-}
-
-int Server::get_client_count() const{
-	return _client_count;
-}
-
-int Server::getPort() const{
-	return _port;
-}
-
-int Server::get_event_pollfd() const{
-	return _epoll_fd;
-}
-
-int Server::get_current_client_in_progress() const{
-	return _current_client_in_progress;
-}
+int Server::getFd() const { return _fd;}
+int Server::get_signal_fd() const{ return _signal_fd;}
+int Server::get_client_count() const{ return _client_count;}
+int Server::getPort() const{return _port;}
+int Server::get_event_pollfd() const{return _epoll_fd;}
+int Server::get_current_client_in_progress() const{	return _current_client_in_progress;}
 
 bool Server::isTimerFd(int fd){
 	if (_timer_map.find(fd) == _timer_map.end()) {
@@ -140,7 +112,6 @@ bool Server::validateTargetExists(const std::shared_ptr<Client>& client, const s
 	return true;
 }
 
-
 bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::shared_ptr<Client>& client, Modes::ChannelMode comp) {
 	
 	if (comp == Modes::NONE && !channel->getClientModes(client->getNickname()).test(Modes::OPERATOR))	{
@@ -153,14 +124,14 @@ bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::sh
     }
 	return true;
 }
-///add commpand
+
+//add command
 bool Server::validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison, const std::string& command){
     if (paramSize == 0 || paramSize < comparison) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, command}), client, nullptr, false, client);
         return false;
     }
 	return true;
-
 }
 
 bool Server::validateClientNotEmpty(std::shared_ptr<Client> client){
@@ -170,15 +141,12 @@ bool Server::validateClientNotEmpty(std::shared_ptr<Client> client){
     }
 	return true;
 }
+
 /**
  * @brief Here a client is accepted , error checked , socket is adusted for non-blocking
  * the client fd is added to the epoll and then added to the Client map. a welcome message
  * is sent as an acknowlegement message back to irssi.
  */
-
-#include <netinet/tcp.h>
-#include <netinet/in.h>
-
 void Server::create_Client(int epollfd) {
  	// Handle new incoming connection
 	int client_fd = accept(getFd(), nullptr, nullptr);
@@ -213,11 +181,13 @@ void Server::remove_Client(int client_fd) {
     //    including which channels it joined.
     std::shared_ptr<Client> client_to_remove = get_Client(client_fd);
     if (!client_to_remove) {
-        std::cerr << "ERROR: remove_Client called for non-existent client FD: " << client_fd << std::endl;
+        std::cerr << "ERROR: Server::remove_Client called for non-existent client FD: " << client_fd << std::endl;
         return;
     }
-	std::cout << "SERVER: REMOVAL OF CLIENT active message should be qued \n";
+
+	std::cout << "Server::remove_Client: REMOVAL OF CLIENT active message should be qued \n";
     std::vector<std::string> joined_channel_names;
+
     for (const auto& pair : client_to_remove->getJoinedChannels()) {
         if (pair.second.lock()) { // Ensure the weak_ptr is still valid and the channel object exists
             joined_channel_names.push_back(pair.first);
@@ -259,6 +229,7 @@ void Server::remove_Client(int client_fd) {
     }
     // After iterating through all channels, clear the client's internal list of joined channels.
     client_to_remove->clearJoinedChannels();
+
     // --- Step 3: Perform server-wide cleanup ---
     // Remove client's nickname to FD and FD to nickname mappings.
 
@@ -273,7 +244,8 @@ void Server::remove_Client(int client_fd) {
     	_epollEventMap.erase(client_to_remove->get_timer_fd());
     	close(client_to_remove->get_timer_fd());
 	}
- //   epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
+
+//   epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
 //    close(client_to_remove->get_timer_fd());
 
     // Remove client FD from epoll and close it.
@@ -288,9 +260,8 @@ void Server::remove_Client(int client_fd) {
     
     // Decrement the active client count.
     _client_count--;
-    std::cout << "Client has been completely removed. Total clients: " << _client_count << std::endl;
+    std::cout << "Server::remove_Client - Client has been completely removed. Total clients: " << _client_count << std::endl;
 }
-
 
 /**
  * @brief to find the Client object in the Clients array
@@ -308,22 +279,10 @@ std::shared_ptr<Client> Server::get_Client(int fd) {
 	throw ServerException(ErrorType::NO_Client_INMAP, "can not get_Client()");
 }
 
-
-std::map<int, std::shared_ptr<Client>>& Server::get_map() {
-	return _Clients;
-}
-
-std::map<int, std::string>& Server::get_fd_to_nickname() {
-	return _fd_to_nickname;
-}
-
-std::map<std::string, int>& Server::get_nickname_to_fd() {
-	return _nickname_to_fd;
-}
-
-std::string Server::get_password() const {
-	return _password;
-}
+std::map<int, std::shared_ptr<Client>>& Server::get_map() {	return _Clients;}
+std::map<int, std::string>& Server::get_fd_to_nickname() {return _fd_to_nickname;}
+std::map<std::string, int>& Server::get_nickname_to_fd() {return _nickname_to_fd;}
+std::string Server::get_password() const {return _password;}
 
 void Server::closeAndResetClient() {
     if (_current_client_in_progress > 0) {
@@ -505,10 +464,7 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 
 }
 
-bool Server::channelExists(const std::string& channelName) const {
-    
-	return _channels.count(channelName) > 0;
-}
+bool Server::channelExists(const std::string& channelName) const {return _channels.count(channelName) > 0;}
 
 void Server::createChannel(const std::string& channelName) {
     std::string lower =  toLower(channelName);
@@ -543,8 +499,7 @@ std::pair<MsgType, std::vector<std::string>> Server::validateChannelName(const s
 	return {MsgType::NONE, {}};
 
 }
-void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params)
-{
+void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params){
 	if (!client || params.empty()){return;}
 	const std::string& nickname = client->getNickname();
 	std::vector<std::string> channels = splitCommaList(params[0]);
@@ -578,6 +533,7 @@ void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vecto
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::UPDATE_CHAN, updateChannel),client, channel, true, nullptr);
 	}
 }
+
 void Server::updateNickname(const std::shared_ptr<Client>& client, const std::string& newNick, const std::string& oldNick) {
     const int& fd = client->getFd();
     std::string old_lc = toLower(oldNick);
@@ -595,8 +551,8 @@ bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 		    return false;
 	}
 	return true;
-
 }
+
 // todo be very sure this is handling property fd_to_nick and nick_to_fd.
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
 	// new function here , can use it all kinds of ways, this will help prevent segv on early attemps to chnage things before registartion
@@ -640,7 +596,6 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
 	client->setQuit();
 	LOG_DEBUG("handleQuit:: Client " + client->getNickname() + " marked for disconnection, epollout will trigger removal");
 }
-
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
  	/*if (params.empty()) {

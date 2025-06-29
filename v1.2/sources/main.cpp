@@ -1,32 +1,34 @@
-#include <string>
+#include <chrono>
 #include <iostream>
 //#include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/epoll.h>
+#include <string>
+#include <string.h>
+#include <sys/signalfd.h>
+//#include <signal.h>
+//#include <unistd.h> // close()
+//#include <string.h>
 
 #include "Server.hpp"
 #include "serverUtilities.hpp"
 #include "Client.hpp"
 #include "general_utilities.hpp"
 #include "config.h"
-//#include <unistd.h> // close()
-//#include <string.h>
-
 #include "ServerError.hpp"
-#include <sys/epoll.h>
 #include "signal_handler.h"
-#include <sys/signalfd.h>
 #include "IrcMessage.hpp"
-#include <string.h>
+
 //#include "SendException.hpp"
-//#include <signal.h>
+
 // irssi commands
 // / WINDOW LOG ON
 // this can be opend in new terminal tail -f ~/ircTAB
 // /help
 // /raw open `/file of choice
 // open fileofchoice
-void debug_helper_print_events(struct epoll_event* events)
-{
+
+void debug_helper_print_events(struct epoll_event* events){
 	std::cout << "EPOLL event for FD " << events->data.fd << ": "
               << ((events->events & EPOLLIN) ? " READ " : "")
               << ((events->events & EPOLLOUT) ? " WRITE " : "")
@@ -39,8 +41,8 @@ void debug_helper_print_events(struct epoll_event* events)
     << ((events[i].events & EPOLLHUP) ? " HUP " : "")
     << ((events[i].events & EPOLLERR) ? " ERROR " : "")
     << std::endl;*/
-
 }
+
 /**
  * @brief This loop functions job is to keep the server running and accepting connections.
  * It will also help manage incoming messages from clients that will be redirected to Client class methods
@@ -56,7 +58,6 @@ void debug_helper_print_events(struct epoll_event* events)
  * how to test if everything is non blocking MAX CLIENTS IS MAX 510 DUE TO USING EPOLL FOR TIMER_FD ALSO,
  * SIGNAL FD AND CLIENT FDS AND SERVER FD
  */
-#include <chrono>
 int loop(Server &server)
 {
 	int epollfd = 0;
@@ -190,17 +191,6 @@ int main(int argc, char** argv) {
     std::cout << "  Port: " << port_number << std::endl;
     std::cout << "  Password: " << password << std::endl;
 
-
-
-
-
-	// int port_number = validate_port(argv[1]);
-
-	// if (validate_password(argv[2]).empty())	{
-	// 	std::cout<<"empty password"<<std::endl;
-	// 	exit(1);
-	// 	}
-	// std::string password = argv[2];
 
 	// instantiate server object with assumed port and password
 	Server server(port_number, password);

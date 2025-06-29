@@ -1,13 +1,16 @@
-#include <CommandDispatcher.hpp>
-#include <iostream>
-#include "Server.hpp"
-#include "Client.hpp"
-#include "IrcMessage.hpp"
 #include <cctype>
+#include <CommandDispatcher.hpp>
+#include <iomanip>
+#include <iostream>
 #include <regex>
+#include <sys/socket.h>
+
+#include "Client.hpp"
+#include "config.h"
+#include "IrcMessage.hpp"
 #include "IrcResources.hpp"
 #include "MessageBuilder.hpp"
-#include "config.h"
+#include "Server.hpp"
 
 
 // these where static but apparanetly that is not a good approach 
@@ -20,8 +23,6 @@ CommandDispatcher::CommandDispatcher(Server* server_ptr) :  _server(server_ptr){
 
 CommandDispatcher::~CommandDispatcher() {}
 
-#include <sys/socket.h>
-#include <iomanip>
 void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
 {
 	int client_fd = client->getFd();
@@ -39,10 +40,12 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	if (command == "CAP" && !client->getHasSentCap()) {
 		_server->handleCapCommand(nickname, client->getMsg().getQue(), client->getHasSentCap());
 	}
+
 	if (command == "QUIT") {
 		_server->handleQuit(client);
 		return ;
 	}
+
 	//handler needed
 	if (command == "USER" && !client->getHasSentUser()) {
 		client->setClientUname(params[0]);
@@ -50,25 +53,28 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		client->setHasSentUser();
 		_server->tryRegisterClient(client);
 	}
+
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
 		//_server->tryRegisterClient(client);
-
 	}
+
 	if (command == "PING"){
 		_server->handlePing(client);
 		return;
 	}
+
 	if (command == "PONG"){
 		_server->handlePong(client);
 		return;
-
 	}
+
 	if (command == "KICK"){
 		std::cout << "COMMAND DISPATCHER: " << command << " command recieved. Calling Server::handleKickCommand." << std::endl;
 		_server->handleKickCommand(client, params);
 		return;
 	}
+
 	if (command == "LEAVE" || command == "PART"){
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handlePartCommand.\n";
         _server->handlePartCommand(client, params);
@@ -88,8 +94,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 
     if (command == "JOIN"){
-
-		std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
+		// std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleJoinChannel.\n";
 		if (!params[0].empty())
 		{
 			_server->handleJoinChannel(client, params);
@@ -132,9 +138,12 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	 * 
 	 */
 	if (command == "MODE") {
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleModeCommand.\n";
 		_server->handleModeCommand(client, params);
 	}
+
 	if (command == "PRIVMSG")  {
+		std::cout << "COMMAND DISPATCHER: " << command << " command received.\n";
 		if (!params[0].empty()) // && 1 !empty
 		{
 			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
@@ -166,12 +175,11 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		}		
 	}
 	if (command == "WHOIS") {
-		std::cout << "WHOIS: WOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO.\n";
-
+		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleWhoIs.\n";
 		_server->handleWhoIs(client, params[0]);
 	}
 	if (command == "WHO"){
-		if (params[0][0] == '#'){
+		std::cout << "COMMAND DISPATCHER: " << command << " command received.\n";
 			std::cout << "WHOIS: CHANNEL CHECK UP.\n";
 			if (!_server->validateChannelExists(client, params[0], client->getNickname())) {return;}
 			std::shared_ptr<Channel> channel = _server->get_Channel(params[0]);
@@ -184,9 +192,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			_server->broadcastMessage(msg2, nullptr, nullptr, false, client);
 		return;
 		}
-	}
+
 	// only because tester
 	if (command == "NOTICE"){
+		std::cout << "COMMAND DISPATCHER: " << command << " command received.n";
     // IRC spec says NOTICE must not reply to sender
 	    if (params.size() < 2) return;
 

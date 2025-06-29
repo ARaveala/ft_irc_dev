@@ -26,7 +26,6 @@
 
 int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 {
-	
 	struct epoll_event event = {};
 	memset(&event, 0, sizeof(event));
 
@@ -98,6 +97,7 @@ int Server::create_epollfd()
 	//server.set_event_pollfd(epollfd);
 	return epollfd;
 }
+
 int Server::createTimerFD(int timeout_seconds) {
     int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);  //creates a timer FD
     if (timer_fd == -1)

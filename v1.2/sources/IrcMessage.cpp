@@ -40,12 +40,13 @@ const std::string IrcMessage::getParam(unsigned long index) const {
 	return _paramsList[index];
  }
 
-// definition of illegal nick_names ai
+// definition of illegal nick_names
 std::set<std::string> const IrcMessage::_illegal_nicknames = {
        "ping", "pong", "server", "root", "nick", "services", "god",
     "admin", "operator", "op", "system", "console", "bot",
     "null", "undefined", "localhost", "irc", "help", "whois"
 };
+
 void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(msg));  //activate only one msg
@@ -69,13 +70,9 @@ const char* IrcMessage::getCurrentMessageCstrOffset() const {
 	    return _messageQue.front().c_str() + safe_offset;
 }
 
-bool IrcMessage::isActive(MsgType type) {
-	    return _msgState.test(static_cast<size_t>(type));
-}
+bool IrcMessage::isActive(MsgType type) {  return _msgState.test(static_cast<size_t>(type));}
+MsgType IrcMessage::getActiveMessageType() const {	return _activeMsg; }  // Returns the currently active message type
 
-MsgType IrcMessage::getActiveMessageType() const {
-   		return _activeMsg;  // Returns the currently active message type
-}
 
 bool IrcMessage::isValidNickname(const std::string& nick) {
     if (nick.empty() || nick.length() > 25) return false;
@@ -168,7 +165,6 @@ void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
     }
 }
 
-//asdf
 bool IrcMessage::parse(const std::string& rawMessage)
 {
     // 1. Clear previous state
@@ -241,7 +237,7 @@ bool IrcMessage::parse(const std::string& rawMessage)
     }
     remainder_of_line = remainder_of_line.substr(first_non_space);
 
-    // --- REVISED PARAMETER PARSING ---
+    // --- PARAMETER PARSING ---
     std::stringstream params_ss(remainder_of_line);
     std::string param_token;
 
@@ -273,14 +269,9 @@ bool IrcMessage::parse(const std::string& rawMessage)
             _paramsList.push_back(param_token);
         }
     }
-    // --- END REVISED PARAMETER PARSING ---
-
     return true; // Parsing successful
 }
 
-
-
-// --- toRawString Method (Same as before, should work correctly with fixed parsing) ---
 std::string IrcMessage::toRawString() const
 {
     std::stringstream ss;

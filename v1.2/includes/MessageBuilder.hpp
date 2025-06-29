@@ -1,10 +1,11 @@
 #pragma once
+
 #include <string>
 #include <vector>
+
 #include "IrcResources.hpp"
 
 namespace MessageBuilder {
-	
 	std::string generateMessage(MsgType type, const std::vector<std::string>& params);
     // General purpose error/reply messages
     std::string buildNicknameInUse(const std::string& nick, const std::string& attempted);
@@ -68,6 +69,6 @@ namespace MessageBuilder {
 	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name);
 	std::string bildPing();
 	std::string bildPong();
-	// You can add more specific builders as needed, like:
+	// We can add more specific builders as needed, like:
     // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

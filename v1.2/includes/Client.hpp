@@ -76,7 +76,6 @@ class Client {
 		};
 		//void setUsername(const std::string& username);
 
-
 		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
 		
 		const std::string& getOldNick() {  return _oldNick; };
@@ -108,9 +107,7 @@ class Client {
 		std::string getClientUname();
 		std::string getfullName();
 
-//todo pop these in cpp
 		const std::string& getUsername() const { return _username;}
-// end todo
 
 		const std::string& getHostname() const;
 		bool isOperator() const;
@@ -153,9 +150,7 @@ class Client {
     // For QUITTING, you might need a getter for all joined channels
     // const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
 
-//adedded extar feature to prevent user error on early nick or join 
+	//adedded extar feature to prevent user error on early nick or join 
 		void setRegisteredAt(std::chrono::time_point<std::chrono::steady_clock> start) {_pleaseWait = start;}
 		std::chrono::time_point<std::chrono::steady_clock> getRegisteredAt() {return _pleaseWait;}
 };
-
-

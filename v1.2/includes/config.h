@@ -84,9 +84,6 @@ namespace Modes {
    		OPERATOR,		// 0
 		FOUNDER,		// 1
 		CLIENT_NONE,	// 2
-
-
-
 	};
 	enum ChannelMode {
     	USER_LIMIT,   	// 0
@@ -95,7 +92,6 @@ namespace Modes {
     	TOPIC,   		// 3
 		NONE			// 4 out of bounds saftey?
 	};
-
 	constexpr std::array<char, 4> channelModeChars = {'l', 'i', 'k', 't'};
 	constexpr std::array<char, 2> clientModeChars = {'o', 'q'};
 }
@@ -108,9 +104,7 @@ namespace clientPrivModes{
 	constexpr std::array<char, 2> clientPrivModeChars = {'i'};
 }
 
-
-namespace IRCillegals
-{
+namespace IRCillegals {
     inline constexpr const char* ForbiddenChannelChars = "!:@,";
 }
 // Function to determine mode type
@@ -131,14 +125,13 @@ namespace config {
 	constexpr std::size_t MSG_TYPE_NUM = 502;
 	constexpr int MAX_LEN_CHANNAME = 25;	
 	constexpr int MAX_LEN_CHANPASSWORD = 20;	
-	
-
 }
 
 namespace errVal {
 	constexpr int FAILURE = -1;
 	constexpr int SUCCESS = 0;
 }
+
 /**
  * @brief i do not know if all of these are needed but here 
  * is a list of some irc error codes  
@@ -180,6 +173,7 @@ namespace IRCMessage {
 	//inline constexpr const char* nick_msg = "@localhost new nickname name is now :nickname\r\n";
 	inline constexpr const char* Client_msg = "Client :Clientname 0 * :realname\r\n";
 }
+
 /**
  * @brief creating short cuts so that we dont have to use large lines in parameters 
  * (making it pretty i hope)

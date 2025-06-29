@@ -6,8 +6,7 @@
 
 int should_exit = 0;
 sigset_t sigmask;
-// rename file to signals / handle signals?
-//may not need anymore
+
 int signal_mask()
 {
 	int fd = 0;
@@ -28,8 +27,7 @@ int signal_mask()
 
 void handle_signal(int signum)
 {
-	// if (signum == SIGINT)// || signum == SIGTERM)	// jack is disabling this line
-	if (signum == SIGINT || signum == SIGTERM)			// jack added this IRL
+	if (signum == SIGINT || signum == SIGTERM)
 	{
 		should_exit = 1;
 		std::cout<<"signal handler called"<<std::endl;

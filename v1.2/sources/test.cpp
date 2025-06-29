@@ -41,8 +41,38 @@ std::set<std::shared_ptr<Client>> Server::getSharedChannelRecipients(std::shared
     return recipients;
 }
 
-// --- Refactored broadcastMessage Function ---
-// todo doxygen this
+// --- Refactored broadcastMessage Function that is explicitly not too big or complicated ---
+/**
+ * @brief Broadcasts a message to one or more clients, based on the provided parameters.
+ *
+ * This function is designed to handle various message broadcasting scenarios:
+ * - Sending to a single, specific client.
+ * - Sending to all clients within a specified channel.
+ * - Sending to all clients in channels shared with a given sender.
+ *
+ * The function ensures that empty messages are skipped and handles cases where
+ * required parameters are missing. It queues the message for each recipient
+ * and updates their epoll events to ensure the message is sent.
+ *
+ * @param message_content The actual message string to be broadcast. Must not be empty.
+ * @param sender A shared pointer to the client who is sending the message. This is used
+ * to determine shared channels or to skip the sender in a channel broadcast.
+ * Can be nullptr if `individual_recipient` is provided and no sender context is needed.
+ * @param target_channel A shared pointer to the channel to which the message should be broadcast.
+ * Mutually exclusive with `individual_recipient`.
+ * @param skip_sender If true, the `sender` will be excluded from the list of recipients
+ * when broadcasting to a channel or shared channels. Defaults to false.
+ * @param individual_recipient An optional shared pointer to a specific client who should receive the message.
+ * If provided, the message is sent only to this client. Mutually exclusive with `target_channel`.
+ *
+ * @attention
+ * - If `message_content` is empty, a warning is logged and the function returns immediately.
+ * - One of `individual_recipient`, `target_channel`, or `sender` must be provided to determine recipients.
+ * If none are provided, an error is logged.
+ * - In the case of `sender` being provided without `target_channel` or `individual_recipient`,
+ * the message is broadcast to all clients in channels *shared* with the sender. If the sender
+ * is alone in all their channels and `skip_sender` is false, the sender will still receive the message.
+ */
 void Server::broadcastMessage(const std::string& message_content, std::shared_ptr<Client> sender, std::shared_ptr<Channel> target_channel, // For single channel broadcasts
     bool skip_sender,
     std::shared_ptr<Client> individual_recipient // Optional: for sending to a single client
@@ -58,9 +88,9 @@ void Server::broadcastMessage(const std::string& message_content, std::shared_pt
         recipients = getChannelRecipients(target_channel, sender, skip_sender);
     } else if (sender) {
         recipients = getSharedChannelRecipients(sender, skip_sender);
-		if (recipients.empty() && !skip_sender) {
-        	recipients.insert(sender);  // Ensure sender receives the message even if alone
-    	}
+        if (recipients.empty() && !skip_sender) {
+            recipients.insert(sender);  // Ensure sender receives the message even if alone
+        }
     } else {
         std::cerr << "Error: Invalid call to broadcastMessage. Must provide an individual recipient, a target channel, or a sender.\n";
         return;
@@ -77,7 +107,7 @@ void Server::broadcastMessage(const std::string& message_content, std::shared_pt
         if (wasEmpty) {
             updateEpollEvents(recipientClient->getFd(), EPOLLOUT, true);
         }
-		LOG_DEBUG(" SERVER:: Message queued for FD " + std::to_string(recipientClient->getFd()) + " (" + recipientClient->getNickname() + ")");
+        LOG_DEBUG(" SERVER:: Message queued for FD " + std::to_string(recipientClient->getFd()) + " (" + recipientClient->getNickname() + ")");
         //std::cout << "DEBUG: Message queued for FD " << recipientClient->getFd() << " (" << recipientClient->getNickname() << ")\n";
     }
 }

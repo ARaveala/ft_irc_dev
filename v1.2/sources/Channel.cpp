@@ -11,7 +11,7 @@
 static std::string toLower(const std::string& input) {
     std::string output = input;
     std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+                   [](unsigned char c) { return std::tolower(c); }); // tolower does one char at a time. it is different than our toLower by a 'L'
     return output;
 }
 
@@ -267,7 +267,6 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
     }
     return response;
 }
-
 
 // using optional here instead as we can just retun nullptr 
 std::optional<std::pair<MsgType, std::vector<std::string>>>

@@ -106,7 +106,7 @@ std::vector<std::string> Server::splitCommaList(const std::string& input) {
     return result;
 }
 
-// validators these are tasked with a simple job, it helps prevent repative code all over the files
+// validators these are tasked with a simple job, it helps prevent repetative code all over the files
 bool Server::validateChannelExists(const std::shared_ptr<Client>& client, const std::string& channel_name, const std::string& sender_nickname) {
  if(!channelExists(toLower(channel_name))) {
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {sender_nickname, channel_name}), client, nullptr, false, client);

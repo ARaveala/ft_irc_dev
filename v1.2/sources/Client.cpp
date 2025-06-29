@@ -21,20 +21,18 @@ static std::string toLower(const std::string& input) {
 // Client::Client(){} never let this exist - is that stated in the hpp?
 
 Client::Client(int fd, int timer_fd) :
-_fd(fd),
-_timer_fd(timer_fd),
-_failed_response_counter(0),
-signonTime(0),          // Initialize to 0, set on registration
-lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
-_channelCreator(false),
-_quit(false),
-_hasSentCap(false),
-_hasSentNick(false),
-// _hasSentUSer(false),
-_registered(false),
-_isOperator(false)      // Initialize to false
-
-{
+										_fd(fd),
+										_timer_fd(timer_fd),
+										_failed_response_counter(0),
+										signonTime(0),          // Initialize to 0, set on registration
+										lastActivityTime(0),    // Initialize to 0, set on registration and updated on activity
+										_channelCreator(false),
+										_quit(false),
+										_hasSentCap(false),
+										_hasSentNick(false),
+										// _hasSentUSer(false),
+										_registered(false),
+										_isOperator(false) {      // Initialize to false
 	lastActivityTime = time(NULL);
 	_ClientPrivModes.reset();
 }
@@ -49,11 +47,12 @@ int Client::getFd(){return _fd;}
 bool Client::get_acknowledged(){return _acknowledged;}
 bool Client::get_pendingAcknowledged(){	return _pendingAcknowledged;}
 int Client::get_failed_response_counter(){return _failed_response_counter;}
-bool Client::isOperator() const {return _isOperator;}
-void Client::setOperator(bool status) { _isOperator = status;}
+void Client::set_acknowledged(){ _acknowledged = true;}
 time_t Client::getSignonTime() const { return signonTime;} // This value is set when client registers
 long Client::getIdleTime() const { return time(NULL) - lastActivityTime;} // Calculate difference between current time and last activity time
 const std::map<std::string, std::weak_ptr<Channel>>& Client::getJoinedChannels() const {return _joinedChannels;}
+void Client::setOperator(bool status) { _isOperator = status;}
+bool Client::isOperator() const {return _isOperator;}
 
 // specifically adds a specific amount, not increment by 1
 void Client::set_failed_response_counter(int count){
@@ -115,7 +114,6 @@ bool Client::extractAndParseNextCommand() {
 	return true;
 }
 
-void Client::set_acknowledged(){ _acknowledged = true;}
 
 /*void Client::set_pendingAcknowledged(bool onoff){
 	_pendingAcknowledged = onoff;
@@ -164,20 +162,18 @@ std::string Client::getCurrentModes() const {
 }
 
 bool Client::addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel) {
-
 	if (!channel)
 		return false;
 	auto it = _joinedChannels.find(channelName);
 	if (it != _joinedChannels.end()) {
-		std::cout<<"channel already exists on client list\n";
+		std::cout<<"Client::addChannel -- channel already exists on client list\n";
 		return false;
 	}
-	std::cout<<"------------------channel ahas been added to the map of joined channles for client----------------------------------------- \n";
+	std::cout<<"Client::addChannel -- channel has been added to the map of joined channels for client \n";
 	std::weak_ptr<Channel> weakchannel = channel;
 	_joinedChannels.emplace(channelName, weakchannel);
 	return true;
 }
-
 
 // Ensure this is called when client successfully registers
 void Client::setHasRegistered() {

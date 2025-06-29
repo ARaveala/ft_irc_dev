@@ -15,6 +15,6 @@ Test: Server allowed NICK change to stillalive. Server appears to be fully stabl
 ok
 
 ----------------------------------------------------------------------
-Ran 1 test in 14.106s
+Ran 1 test in 14.105s
 
 OK

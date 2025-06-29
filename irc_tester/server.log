@@ -369,3 +369,40 @@
 ] and the fd = 24
 [00:12:36][DEBUG::] Full message sent for FD 24. Moving to next message.
 [00:12:37][DEBUG::] handleQuit:: Client stillalive marked for disconnection, epollout will trigger removal
+[13:45:59][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[13:45:59][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:00][DEBUG::]  SERVER:: Message queued for FD 18 (StabilityProber)
+[13:46:00][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[13:46:00][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:00][DEBUG::] checking the message from que before send [:localhost 001 StabilityProber :Welcome to the IRC server StabilityProber!
+:localhost 002 StabilityProber :Your host is localhost, running version 1.0
+:localhost 003 StabilityProber :This server was created today
+:localhost 004 StabilityProber localhost 1.0 o o
+:localhost 375 StabilityProber :- ~ Meowdy, traveler! ~
+:localhost 372 StabilityProber :- Here's your good-luck cat butt:
+:localhost 372 StabilityProber :-     /\_/\
+:localhost 372 StabilityProber :-    ( o.o )
+:localhost 372 StabilityProber :-     > ^ <    🍑
+:localhost 372 StabilityProber :-     Cat butt initialized.
+:localhost 376 StabilityProber :End of /MOTD
+] and the fd = 18
+[13:46:00][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:02][DEBUG::]  SERVER:: Message queued for FD 18 (StabilityProber)
+[13:46:02][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[13:46:02][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:05][DEBUG::]  SERVER:: Message queued for FD 18 (StabilityProber)
+[13:46:05][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[13:46:05][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:09][DEBUG::]  SERVER:: Message queued for FD 18 (StabilityProber)
+[13:46:09][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[13:46:09][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:12][DEBUG::]  SERVER:: Message queued for FD 18 (stillalive)
+[13:46:12][DEBUG::] checking the message from que before send [:StabilityProber!stableuser@localhost NICK stillalive
+] and the fd = 18
+[13:46:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:46:13][DEBUG::] handleQuit:: Client stillalive marked for disconnection, epollout will trigger removal

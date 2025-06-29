@@ -1,9 +1,0 @@
-test_privmsg_to_nonexistent_user (test_messaging.TestMessaging.test_privmsg_to_nonexistent_user)
-Tests sending a PRIVMSG to a user that does not exist. ... Test: PRIVMSG to non-existent user rejected. Responses:
-[':localhost 401 SenderNick NonExistentUser :No such nick/channel']
-ok
-
-----------------------------------------------------------------------
-Ran 1 test in 4.106s
-
-OK

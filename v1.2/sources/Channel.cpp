@@ -9,9 +9,9 @@
 #include "Client.hpp"
 
 static std::string toLower(const std::string& input) {
-    std::string output = input;
+	std::string output = input;
     std::transform(output.begin(), output.end(), output.begin(),
-                   [](unsigned char c) { return std::tolower(c); }); // tolower does one char at a time. it is different than our toLower by a 'L'
+	[](unsigned char c) { return std::tolower(c); }); // tolower does one char at a time. it is different than our toLower by a 'L'
     return output;
 }
 
@@ -21,16 +21,19 @@ Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("
     _ChannelModes.set(Modes::ChannelMode::TOPIC);  // enable topic protection by default, why to show we can
 }
 Channel::~Channel() {
-    std::cout << "Channel '" << _name << "' destroyed." << std::endl;
+	std::cout << "Channel '" << _name << "' destroyed." << std::endl;
 }
 
-const std::string& Channel::getName() const {
-    return _name;
-}
+const std::string& Channel::getName() const {return _name;}
+const std::string& Channel::getTopic() const {return _topic;}
+void Channel::setTopic(const std::string& newTopic) {_topic = newTopic;}
+bool Channel::setModeBool(char onoff){return onoff == '+';}
+bool Channel::isEmpty() const {return _ClientModes.empty();} // Helper function to check if the channel has any members left
+bool Channel::isInvited(const std::string& nickname) const { return std::find(_invites.begin(), _invites.end(), nickname) != _invites.end();}// Use std::find to check if the nickname exists in the _invites deque
+bool Channel::isValidChannelMode(char modeChar) const { return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();}
+bool Channel::isValidClientMode(char modeChar) const { return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();}
+bool Channel::channelModeRequiresParameter(char modeChar) const {return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');}
 
-const std::string& Channel::getTopic() const {
-    return _topic;
-}
 
 std::vector<int> Channel::getAllfds() {
 	std::vector<int> fds;
@@ -64,7 +67,7 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
     // We assume 'nickname' is already in lowercase as per the program's invariant.
     // No need for std::transform here.
     const std::string& target_nickname = nickname; // Use a const reference for clarity
-
+	
     std::weak_ptr<Client> found_weak_ptr; // To store the weak_ptr of the client we're looking for
     for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
         if (auto clientPtr = it->first.lock()) {
@@ -73,70 +76,53 @@ std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakCli
                 // Found a direct match (case-sensitive due to invariant).
                 found_weak_ptr = it->first; // Get the actual weak_ptr key from the map
                 ++it; // Move to the next element
-            } else {
-                ++it;
-            }
-        } else {
-			//LOG_WARN("");
-            std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
-                      << "' during nickname lookup. Removing stale entry.\n";
-            it = _ClientModes.erase(it); // Erase stale element and advance iterator
-        }
-    }
-    return found_weak_ptr;
-}*/
-
-
-
+				} else {
+					++it;
+					}
+					} else {
+	//LOG_WARN("");
+	std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
+	<< "' during nickname lookup. Removing stale entry.\n";
+	it = _ClientModes.erase(it); // Erase stale element and advance iterator
+	}
+	}
+	return found_weak_ptr;
+	}*/
+					
+					
+					
 std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string nickname)
 {
 	std::cout << "Total Clients: " << _ClientModes.size() << std::endl;
 	for (auto& entry : _ClientModes) {
 		std::cout<<"whats thje name we looking at now = ["<<entry.first.lock()->getNickname()<<"]\n";
 		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
-
-            return entry.second.first;  // return the matching weak_ptr
-        }
-    }
+			
+			return entry.second.first;  // return the matching weak_ptr
+		}
+	}
 	// we could substitute with our own  throw here
 	throw std::runtime_error("Client not found get client modes!");
 	//return ;  // return empty weak_ptr if no match is found
-}
-bool Channel::isValidChannelMode(char modeChar) const {
-    return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();
-}
-
-bool Channel::isValidClientMode(char modeChar) const {
-    return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();
-}
-
-bool Channel::channelModeRequiresParameter(char modeChar) const {
-	return ( modeChar == 'k' || modeChar == 'l' || modeChar == 'o');
 }
 
 bool Channel::isClientInChannel(const std::string& nickname) const {
 	for (const auto& entry : _ClientModes) {
 		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
-    		return true;
+			return true;
 		}
 	}
 	return false;
 }
-
-
-std::string Channel::getCurrentModes() const {
-
+					
+std::string Channel::getCurrentModes() const {				
 	std::string activeModes = "+";
-    for (size_t i = 0; i < Modes::channelModeChars.size(); ++i) {
+	for (size_t i = 0; i < Modes::channelModeChars.size(); ++i) {
         if (_ChannelModes.test(i)) {
-            activeModes += Modes::channelModeChars[i];
+			activeModes += Modes::channelModeChars[i];
         }
     }
     return activeModes;
-}
-
-void Channel::setTopic(const std::string& newTopic) {
-    _topic = newTopic;
 }
 
 Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
@@ -145,7 +131,6 @@ Modes::ClientMode Channel::charToClientMode(const char& modeChar) {
 		case 'q': return Modes::FOUNDER;
 		default : return Modes::CLIENT_NONE;
 	}
-
 }
 
 Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
@@ -156,10 +141,6 @@ Modes::ChannelMode Channel::charToChannelMode(const char& modeChar) {
 		case 't': return Modes::TOPIC;
 		default : return Modes::NONE;
 	}
-}
-
-bool Channel::setModeBool(char onoff) {
-	return onoff == '+'; 
 }
 
 std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
@@ -353,16 +334,17 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
 				return {MsgType::NEED_MORE_PARAMS};
             }
         } catch (...) {
-            return {MsgType::NEED_MORE_PARAMS};
+			return {MsgType::NEED_MORE_PARAMS};
         }
     }
     else if (mode == 'k' && sign == '+') {
-        if (param.empty()) {
-            return {MsgType::NEED_MORE_PARAMS};
+		if (param.empty()) {
+			return {MsgType::NEED_MORE_PARAMS};
         }
     }
     return MsgType::NONE;
 }
+
 //CHECK when only 1 client left , why does operator not pass to last client 
 std::pair<MsgType, std::vector<std::string>>
 Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving) {
@@ -380,7 +362,7 @@ Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, 
 		return {MsgType::NONE, std::vector<std::string>()};
 	};
     for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ++it) {
-        std::shared_ptr<Client> candidate = it->first.lock();
+		std::shared_ptr<Client> candidate = it->first.lock();
         if (!candidate || candidate == removingClient) continue;
         it->second.first.set(Modes::OPERATOR, true);
 		return {MsgType::CHANNEL_MODE_CHANGED, {removingClient->getNickname(), removingClient->getUsername(), getName(), "+o", candidate->getNickname()}};
@@ -391,27 +373,27 @@ Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, 
 
 std::pair<MsgType, std::vector<std::string>>
 Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::string>& params) const {
-    size_t idx = 1;
+	size_t idx = 1;
     char sign = ' ';
     while (idx < params.size()) {
-        const std::string& token = params[idx];
+		const std::string& token = params[idx];
         if (token.empty() || (token[0] != '+' && token[0] != '-')) {
-            LOG_DEBUG("Syntax Error: Unexpected token = " + token);
+			LOG_DEBUG("Syntax Error: Unexpected token = " + token);
             return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
         }
         sign = token[0];
         for (size_t i = 1; i < token.size(); ++i) {
-            char mode = token[i];
+			char mode = token[i];
             if (!isValidChannelMode(mode) && !isValidClientMode(mode)) {
-                return {MsgType::UNKNOWN_MODE, {std::string(1, mode), nick, getName()}};
+				return {MsgType::UNKNOWN_MODE, {std::string(1, mode), nick, getName()}};
             }
             if (!channelModeRequiresParameter(mode)) continue;
             if (idx + 1 >= params.size()) {
-                return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
+				return {MsgType::NEED_MORE_PARAMS, {nick, "MODE"}};
             }
-
+			
             const std::string& param = params[idx + 1];
-
+			
             MsgType checkResult = checkModeParameter(nick, mode, param, sign);
             if (checkResult != MsgType::NONE) {
 				if (checkResult == MsgType::NOT_ON_CHANNEL){
@@ -425,6 +407,7 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
     }
     return {MsgType::NONE, {}};
 }
+
 //NEWNEW check to see if fcuntion needed anywhere
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {
 	if (!client) {
@@ -495,12 +478,6 @@ bool Channel::removeClientByNickname(const std::string& nickname) {
     return  _ClientModes.empty(); // Still return status in all cases
 }
 
-
-// Helper function to check if the channel has any members left
-bool Channel::isEmpty() const {
-    return _ClientModes.empty();
-}
-
 void Channel::addInvite(const std::string& nickname) {
     // Check if already invited to avoid duplicates
     if (!isInvited(nickname)) {
@@ -509,11 +486,6 @@ void Channel::addInvite(const std::string& nickname) {
     } else {
         std::cout << "CHANNEL: '" << nickname << "' is already on invite list for '" << _name << "'.\n";
     }
-}
-
-bool Channel::isInvited(const std::string& nickname) const {
-    // Use std::find to check if the nickname exists in the _invites deque
-    return std::find(_invites.begin(), _invites.end(), nickname) != _invites.end();
 }
 
 void Channel::removeInvite(const std::string& nickname) {

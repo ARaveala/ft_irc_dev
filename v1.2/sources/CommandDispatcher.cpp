@@ -25,14 +25,12 @@ CommandDispatcher::~CommandDispatcher() {}
 
 void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
 {
+	std::string command = client->getMsg().getCommand();
+
 	if (!_server->validateRegistrationTime(client)) {return ;}
 	int client_fd = client->getFd();
-    if (!client) {
-        std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;
-        return;
-    }
+    if (!_server->validateClientNotEmpty(client)) {return;}
 	client->getMsg().printMessage(client->getMsg());
-	std::string command = client->getMsg().getCommand();
 	const std::string& nickname = client->getNickname();
 	if (command == "PASS") {
 		_server->handlePassword(client, client_fd, params[0]);
@@ -57,7 +55,6 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
-		//_server->tryRegisterClient(client);
 	}
 
 	if (command == "PING"){
@@ -95,49 +92,10 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
 
     if (command == "JOIN"){
-		// std::cout<<"JOIN CAUGHT LETS HANDLE IT \n";
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleJoinChannel.\n";
-		if (!params[0].empty())
-		{
-			_server->handleJoinChannel(client, params);
-		}
-		else
-		{
-			if (client->getHasSentCap() == true)
-			{
-				if (!_server->get_channels_map().empty())
-				{
-        			for (auto it = _server->get_channels_map().begin(); it != _server->get_channels_map().end(); ++it)
-        			{
-        			    auto channel = it->second;
-        			    std::string channelName = channel->getName();
-        			    std::string topic = channel->getTopic();
-        			    size_t userCount = channel->getClientCount(); // Or however you store this
-					
-        			    std::string listLine = ":localhost 322 " + client->getNickname() + " " +
-        			                           channelName + " " +
-        			                           std::to_string(userCount) + " :" +
-        			                           "topic for channel = " + topic + "\r\n";
-					
-        			    client->getMsg().queueMessage(listLine);
-        			}
-				}
-				client->getMsg().queueMessage(":localhost 323 " + client->getNickname() + " :End of channel list\r\n");
-				_server->updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			}
-		}
+		_server->handleJoinChannel(client, params);
 	}
 
-	/**
-	 * @brief 
-	 * 
-	 * sudo tcpdump -A -i any port <port number>, this will show what irssi sends before being reecived on
-	 * _server, irc withe libera chat handles modes like +io +o user1 user2 but , i cant find a way to do that because
-	 * irssi is sending the flags and users combined together into 1 string, where does flags end and user start? 
-	 * 
-	 * so no option but to not allow that format !
-	 * 
-	 */
 	if (command == "MODE") {
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleModeCommand.\n";
 		_server->handleModeCommand(client, params);
@@ -145,7 +103,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	if (command == "PRIVMSG")  {
 		std::cout << "COMMAND DISPATCHER: " << command << " command received.\n";
-		if (!params[0].empty()) // && 1 !empty
+		if (!params[0].empty())
 		{
 			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 			
@@ -153,24 +111,13 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 			{
 				std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
 				if (!_server->validateChannelExists(client, params[0], client->getNickname())) { return;}
-				//std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
-
-				// is client in channel 
 				_server->broadcastMessage(contents, client,_server->get_Channel(params[0]), true, nullptr);
 			}
 			else
 			{
-				std::shared_ptr<Client> target = _server->getClientByNickname(params[1]);
-
+				std::shared_ptr<Client> target = _server->getClientByNickname(params[0]);
 				if (!_server->validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
-				int fd = _server->get_nickname_to_fd().find(params[0])->second;
-				// check against end()
-				if (fd < 0) {
-					// no user found by name
-					// no username provided
-					std::cout<<"no user here by that name \n"; 
-					return ;
-				}
+				int fd = target->getFd();
 				_server->broadcastMessage(contents, client, nullptr, true, _server->get_Client(fd));				
 			}
 		}		

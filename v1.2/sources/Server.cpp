@@ -3,7 +3,7 @@
 #include <cctype>    // Required for std::tolower (character conversion)
 #include <iostream> // testing with cout
 //#include <sys/types.h>
-//#include <unistd.h>
+#include <unistd.h>
 //#include <string.h> //strlen
 //#include <sstream>  // for passing parameters
 #include <sys/socket.h>
@@ -439,6 +439,7 @@ std::pair<MsgType, std::vector<std::string>> Server::validateChannelName(const s
 void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params){
 	if (!client || params.empty()){return;}
 	const std::string& nickname = client->getNickname();
+	
 	std::vector<std::string> channels = splitCommaList(params[0]);
 	std::vector<std::string> keys = (params.size() > 1) ? splitCommaList(params[1]) : std::vector<std::string>{};
     size_t keyIndex = 0;
@@ -483,7 +484,7 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
 bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 	auto now = std::chrono::steady_clock::now();
 	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing innput, server loading......\r\n");
+		   // client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing innput, server loading......\r\n");
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		    return false;
 	}
@@ -491,6 +492,8 @@ bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 }
 
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
+	//if (!validateRegistrationTime(client)) {return ;}
+
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();

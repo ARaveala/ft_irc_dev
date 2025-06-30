@@ -186,7 +186,8 @@ void Server::remove_Client(int client_fd) {
     // 1. Get the shared pointer to the client. This client object holds all its state,
     //    including which channels it joined.
     std::shared_ptr<Client> client_to_remove = get_Client(client_fd);
-    if (!client_to_remove) {
+    if (!validateClientNotEmpty(client_to_remove)) {return;}
+	if (!client_to_remove) {
         std::cerr << "ERROR: Server::remove_Client called for non-existent client FD: " << client_fd << std::endl;
         return;
     }
@@ -206,12 +207,6 @@ void Server::remove_Client(int client_fd) {
         try {
             channel_ptr = get_Channel(channel_name);
 			validateFallbackOperator(channel_ptr, client_to_remove);
-			/*std::pair<MsgType, std::vector<std::string>> result = channel_ptr->promoteFallbackOperator(client_to_remove, true);
-			//VALIDATE
-			if (result.first != MsgType::NONE){
-	    		//std::cout<<"DEBUGGIN::: breoadcasting message of new operator\n";
-				broadcastMessage(MessageBuilder::generateMessage(result.first, result.second), client_to_remove, channel_ptr, true, nullptr);
-			}*/
         } catch (const ServerException& e) {
             if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
                 // This means the channel was already cleaned up by another client's action (e.g., last PART/QUIT).
@@ -219,7 +214,6 @@ void Server::remove_Client(int client_fd) {
                           << channel_name << ", but it no longer exists on server. Skipping channel cleanup for this client.\n";
                 continue;
             }
-            throw; // Re-throw other unexpected exceptions
         }
         if (channel_ptr) { // Ensure the channel pointer is valid
 			LOG_NOTICE("Notifying and removing client " + client_to_remove->getNickname() + " from channel " + channel_name + " due to disconnect.\n");
@@ -244,23 +238,6 @@ void Server::remove_Client(int client_fd) {
 
 	removeFdFromEpoll(client_to_remove->get_timer_fd());
 	removeFdFromEpoll(client_fd);
-	// Remove timer FD from epoll and close it.
-	//copy for all epoll situations
-	/*if (_epollEventMap.count(client_to_remove->get_timer_fd())) {
-    	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), nullptr);
-    	_epollEventMap.erase(client_to_remove->get_timer_fd());
-    	close(client_to_remove->get_timer_fd());
-	}*/
-
-//   epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
-//    close(client_to_remove->get_timer_fd());
-
-    // Remove client FD from epoll and close it.
-    /*epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-    close(client_fd);*/
-    
-    // Remove the client's shared_ptr from the server's main client map.
-    // Assuming `_Clients` (capital C) is the correct member variable name for your map of shared_ptrs.
     _Clients.erase(client_fd);
     // Remove the epoll event structure associated with this client FD.
     _epollEventMap.erase(client_fd);
@@ -461,7 +438,6 @@ void Server::send_message(const std::shared_ptr<Client>& client)
 		LOG_DEBUG("Full message sent for FD " + std::to_string(fd) + ". Moving to next message.");
 	    } else { return; }
 	}
-	//CHECK acknolwegded used where ?
 	if (client->isMsgEmpty()) {
 		if (!client->get_acknowledged()) {
 			client->set_acknowledged();		
@@ -598,11 +574,6 @@ void Server::handleQuit(std::shared_ptr<Client> client) {
 }
 
 void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params){
- 	/*if (params.empty()) {
-        client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {client->getNickname(), "MODE"}));
-		updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		return;
-    }*/
     std::string target = params[0];
     bool targetIsChannel = (target[0] == '#');
     if (targetIsChannel) {
@@ -783,18 +754,11 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
     // 3. Process each channel
     for (const std::string& ch_name : channels_to_part) {
         // If not, you'd need a tolower transform here too.
-
-        //std::shared_ptr<Channel> channel_ptr = get_Channel(ch_name);
-		std::string lower_ch_name = toLower(ch_name); // Use this variable for map lookup if your map keys are lowercase.
-		//if (validateChannelExists)
-        auto it = _channels.find(lower_ch_name);
-        if (it == _channels.end()) {
-	        broadcastMessage(MessageBuilder::generateMessage(MsgType::NO_SUCH_CHANNEL, {nickname, ch_name}), client, nullptr, false, client);
-            continue;
-        }
-        std::shared_ptr<Channel> channel_ptr = it->second;
+		//std::string lower_ch_name = toLower(ch_name); // Use this variable for map lookup if your map keys are lowercase.
+		if (!validateChannelExists(client, ch_name, nickname)) {return;}
+        std::shared_ptr<Channel> channel_ptr = get_Channel(ch_name);//->second;
         // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
-        if (!validateIsClientInChannel (channel_ptr, client, lower_ch_name, nickname)) { return ;}		
+        if (!validateIsClientInChannel (channel_ptr, client, ch_name, nickname)) { return ;}		
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), nullptr, channel_ptr, false, nullptr);
 		validateFallbackOperator(channel_ptr, client);
 
@@ -824,7 +788,6 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
     if (!validateParams(client, kicker_nickname, params.size(), 2, "KICK")) { return; }
 
     std::string channel_name = params[0];
-	//std::string channel_name_lower = toLower(channel_name);
     std::string target_nickname = params[1];
     std::string kick_reason = (params.size() > 2) ? params[2] : kicker_nickname; // Default reason is kicker's nick
     if (!validateChannelExists(client, channel_name, kicker_nickname)) { return;}

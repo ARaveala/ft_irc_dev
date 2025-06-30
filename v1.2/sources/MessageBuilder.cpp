@@ -195,15 +195,6 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
         acknowledgedCaps += "multi-prefix";
     }
 
-    // Acknowledge 'sasl' if the client requested it AND your server supports it.
-    if (requestedCaps.find("sasl") != std::string::npos) {
-        if (!acknowledgedCaps.empty()) acknowledgedCaps += " "; // Add space if already added caps
-        acknowledgedCaps += "sasl";
-    }
-
-    // You might add logic here to send CAP NAK if no requested capabilities were supported.
-    // For this project, sending an ACK with supported caps is usually sufficient.
-
     return SERVER_PREFIX + " CAP " + clientNickname + " ACK :" + acknowledgedCaps + "\r\n";
 	}
 

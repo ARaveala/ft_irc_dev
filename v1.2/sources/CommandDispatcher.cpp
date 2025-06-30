@@ -178,33 +178,5 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleWhoIs.\n";
 		_server->handleWhoIs(client, params[0]);
 	}
-	if (command == "WHO"){
-		std::cout << "COMMAND DISPATCHER: " << command << " command received.\n";
-			std::cout << "WHOIS: CHANNEL CHECK UP.\n";
-			if (!_server->validateChannelExists(client, params[0], client->getNickname())) {return;}
-			std::shared_ptr<Channel> channel = _server->get_Channel(params[0]);
-			std::cout << "WHOIS: PREPPING MESSAGE FOR WHO DIS.\n";
-			std::string msg = ":localhost 352 " + client->getNickname() + " " + params[0] + " " + client->getUsername() 
-			+ " localhost localhost " + client->getNickname() + " H " + channel->getClientModePrefix(client) 
-			+ " :0 " + client->getfullName() + "\r\n"; 
-			std::string msg2 = ":localhost 315 " + client->getNickname() + params[0] + ":End of WHO list\r\n";
-			_server->broadcastMessage(msg, nullptr, nullptr, false, client);
-			_server->broadcastMessage(msg2, nullptr, nullptr, false, client);
-		return;
-		}
-
-	// only because tester
-	if (command == "NOTICE"){
-		std::cout << "COMMAND DISPATCHER: " << command << " command received.n";
-    // IRC spec says NOTICE must not reply to sender
-	    if (params.size() < 2) return;
-
-	    std::string target = params[0];
-	    std::string message = params[1];
-	    // Construct a notice message and send it silently
-	    std::string prefix = client->getNickname() + "!" + client->getUsername() + "@localhost\r\n"; //(client); // nick!user@host
-	    std::string notice = prefix + " NOTICE " + target + " :" + message + "\r\n";
-		std::shared_ptr<Channel> channel = _server->get_Channel(target);
-		_server->broadcastMessage((notice), client, channel, true, nullptr); // you define this
-	}
+	
 }

@@ -13,6 +13,9 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 
+#include <cstdlib>
+#include <fstream>
+
 #include <unordered_set>
 #include <vector>
 
@@ -292,23 +295,17 @@ void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_f
 
 void Server::shutDown() {
 
-	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
-		close(it->first);
-	}
+	std::vector<int> clientFds;
+	for (const auto& entry : _Clients) {clientFds.push_back(entry.first);}
+	for (int fd : clientFds){remove_Client(fd);}
 	for (std::map<const std::string, std::shared_ptr<Channel>>::iterator it = _channels.begin(); it != _channels.end(); it++){
 		it->second->clearAllChannel();
 	}
-	for (std::map<int, int>::iterator timerit = _timer_map.begin(); timerit != _timer_map.end(); timerit++) {
-		close(timerit->first);
-	}
+
 	close(_fd);
 	close(_signal_fd);
 	close(_epoll_fd);
-	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
-		it->second.reset();
-		it->second->getMsg().clearQue();
-		it->second->getMsg().clearAllMsg();
-	}
+
 	_timer_map.clear();
 	_Clients.clear();
 	_epollEventMap.clear();
@@ -492,9 +489,7 @@ bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 	return true;
 }
 
-void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
-	//if (!validateRegistrationTime(client)) {return ;}
-
+void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) 
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();
@@ -574,38 +569,11 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			}
 		}
 	}
-	else { // Target is a client (private mode) aravweal fixes, will take 30 mins
-        // A client can only set/list modes on themselves for private modes.
-        if (target != client->getNickname()) {
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::INVALID_TARGET, {client->getNickname(), target}));
-            updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			return; // Abort: Cannot set private modes for another user
-        }
-
-        // Handle private mode listing specifically (as Channel::initialModeValidation isn't called for clients).
-        if (params.size() == 1) {
-            client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::RPL_UMODEIS, {client->getNickname(), client->getPrivateModeString()}));
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			return; // Abort: Command was for listing
-        }
-		// todo fix so either + or - and we dont accept any others
-		if (params[1] == "+i")
-		{
-			client->setMode(clientPrivModes::INVISABLE);
-			client->getMsg().queueMessage(":**:" + params[0] + " MODE " + params[0] +" :+i\r\n**");
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-			return;
-
-		}
-
-    }
 }
 
-void Server::handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent){
-		(void)nickname;
-        que.push_back(":localhost CAP * ACK :multi-prefix\r\n");
-		que.push_back(":localhost CAP * ACK :END\r\n");
-		capSent = true;
+void Server::handleCapCommand(const std::shared_ptr<Client>& client){
+        broadcastMessage(MessageBuilder::buildCapResponse(), nullptr, nullptr, false, client);
+		client->setHasSentCap();
 }
 
 void Server::handlePing(const std::shared_ptr<Client>& client){
@@ -652,10 +620,6 @@ void Server::updateEpollEvents(int fd, uint32_t flag_to_toggle, bool enable) {
         remove_Client(fd);
     }
 }
-
-
-# include <cstdlib>
-#include <fstream>
 
 std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to_fd) {
     std::vector<std::string> adjectives = {
@@ -840,23 +804,23 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
 }
 
 void Server::handlePrivMsg(const std::vector<std::string>& params, const std::shared_ptr<Client>& client) {
-	//if (!validateParams(client, client->getNickname(), 0, 0 , "PRIVMSG")){return;}
-	if (!params[0].empty())
-		{
-			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
-			
-			if (params[0][0] == '#')
-			{
-				std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
-				if (!validateChannelExists(client, params[0], client->getNickname())) { return;}
-				broadcastMessage(contents, client, get_Channel(params[0]), true, nullptr);
-			}
-			else
-			{
-				std::shared_ptr<Client> target = getClientByNickname(params[0]);
-				if (!validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
-				//int fd = target->getFd();
-				broadcastMessage(contents, client, nullptr, true, target);				
-			}
-		}	
+	if (!params[0].empty()) {
+		std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);
+		if (params[0][0] == '#') {
+			std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
+			if (!validateChannelExists(client, params[0], client->getNickname())) { return;}
+			broadcastMessage(contents, client, get_Channel(params[0]), true, nullptr);
+		} else {
+			std::shared_ptr<Client> target = getClientByNickname(params[0]);
+			if (!validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
+			broadcastMessage(contents, client, nullptr, true, target);				
+		}
+	}	
+}
+
+void Server::handleUser(const std::shared_ptr<Client>& client, const std::vector<std::string>& params) {
+		client->setClientUname(params[0]);
+		client->setRealname(params[3]);
+		client->setHasSentUser();
+		tryRegisterClient(client);
 }

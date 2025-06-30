@@ -23,7 +23,7 @@ namespace MessageBuilder {
     std::string buildServerCreation(const std::string& nickname);
     std::string buildServerInfo(const std::string& nickname);
 	std::string buildWhois(const std::vector<std::string>& p);
-	std::string buildCapResponse(const std::string& clientNickname, const std::string& requestedCaps);
+	std::string buildCapResponse();
 
     // Channel related messages
     //std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);

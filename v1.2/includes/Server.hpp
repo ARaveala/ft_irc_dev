@@ -140,13 +140,14 @@ class Server {
 		void handleQuit(std::shared_ptr<Client> client);
 		void handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param);
 		void handleModeCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
-		void handleCapCommand(const std::string& nickname, std::deque<std::string>& que, bool& capSent);
+		void handleCapCommand(const std::shared_ptr<Client>& client);
 		void handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleKickCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
 		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 		void handlePrivMsg(const std::vector<std::string>& params, const std::shared_ptr<Client>& client);
+		void handleUser(const std::shared_ptr<Client>& client, const std::vector<std::string>& params);
 		//whois
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);

@@ -13,6 +13,8 @@ int signal_mask(){
 	sigemptyset(&sigmask);
 	sigaddset(&sigmask, SIGUSR1);
 	sigaddset(&sigmask, SIGTSTP);   // Ctrl+Z (suspend)
+
+
 	if (sigprocmask(SIG_SETMASK, &sigmask, nullptr) == -1) {
 		perror("sigprocmask failed");
 		exit(EXIT_FAILURE);
@@ -69,30 +71,10 @@ int manage_signal_events(int signal_fd) {
 
         case SIGTSTP:
             std::cout << "Caught Ctrl+Z (SIGTSTP), handling as no-op\n";
-            return 2;
+            return -2;
 
         default:
             std::cout << "Unhandled signal: " << si.ssi_signo << "\n";
             return -1;
     }
 }
-/*int manage_signal_events(int signal_fd){
-	struct signalfd_siginfo si;
-	read(signal_fd, &si, sizeof(si));
-	std::cout << "SIGNAL received! EPOLL CAUGHT IT YAY..." << std::endl;
-	
-	if (si.ssi_signo == SIGUSR1) {
-		std::cout << "SIGNAL received! EPOLL CAUGHT IT YAY..." << std::endl;
-		// how to force certian signals to catch and handle
-		//server.shutDown();
-		return 2; //config continue? break
-		//break;
-	}
-	if (si.ssi_signo == SIGTSTP) {
-		std::cout << "SIGNAL cntrl Z! EPOLL CAUGHT IT YAY..." << std::endl;
-
-		return 2;
-
-	}
-	return -1;
-}*/

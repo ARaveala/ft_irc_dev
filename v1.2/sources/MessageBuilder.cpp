@@ -101,11 +101,10 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 
 	        case MsgType::RPL_END_NAMES_LIST:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildEndNamesList), params);
+*/
 
-
-	        case MsgType::CAP_RESPONSE:
-	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildCapResponse), params);*/
-
+	        //case MsgType::CAP_RESPONSE:
+	        //    return callBuilder(MessageBuilder::buildCapResponse);
 			case MsgType::INVITE_ONLY:
 			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInviteOnlyChannel), params);
 					
@@ -187,15 +186,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     }
 
 	// cap response 
-	std::string buildCapResponse(const std::string& clientNickname, const std::string& requestedCaps) {
-		    std::string acknowledgedCaps = "";
-
-    // Acknowledge 'multi-prefix' if the client requested it AND your server supports it.
-    if (requestedCaps.find("multi-prefix") != std::string::npos) {
-        acknowledgedCaps += "multi-prefix";
-    }
-
-    return SERVER_PREFIX + " CAP " + clientNickname + " ACK :" + acknowledgedCaps + "\r\n";
+	std::string buildCapResponse() {
+	    return SERVER_PREFIX + " CAP  * ACK :" +  "multi-prefix" + "\r\n" + SERVER_PREFIX + " CAP * ACK :END\r\n";
 	}
 
 	std::string bildPing() {

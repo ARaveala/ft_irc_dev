@@ -1,19 +1,18 @@
 #include <algorithm> // find_if
 #include <ctime>
-#include <cctype>
 #include <cctype>    // Required for std::tolower (character conversion)
 #include <iostream> // testing with cout
-#include <sys/types.h>
-#include <unistd.h>
-#include <string.h> //strlen
-#include <sstream>  // for passing parameters
+//#include <sys/types.h>
+//#include <unistd.h>
+//#include <string.h> //strlen
+//#include <sstream>  // for passing parameters
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <map>
 #include <memory> // shared pointers
 #include <netinet/tcp.h>
 #include <netinet/in.h>
-//#include "SendException.hpp"
+
 #include <unordered_set>
 #include <vector>
 
@@ -155,7 +154,6 @@ void Server::removeFdFromEpoll(int fd) {
  * is sent as an acknowlegement message back to irssi.
  */
 void Server::create_Client(int epollfd) {
- 	// Handle new incoming connection
 	int client_fd = accept(getFd(), nullptr, nullptr);
  	if (client_fd < 0) {
 		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
@@ -183,25 +181,17 @@ void Server::create_Client(int epollfd) {
 }
 
 void Server::remove_Client(int client_fd) {
-    // 1. Get the shared pointer to the client. This client object holds all its state,
-    //    including which channels it joined.
+
     std::shared_ptr<Client> client_to_remove = get_Client(client_fd);
     if (!validateClientNotEmpty(client_to_remove)) {return;}
-	if (!client_to_remove) {
-        std::cerr << "ERROR: Server::remove_Client called for non-existent client FD: " << client_fd << std::endl;
-        return;
-    }
 
-	std::cout << "Server::remove_Client: REMOVAL OF CLIENT active message should be qued \n";
     std::vector<std::string> joined_channel_names;
-
     for (const auto& pair : client_to_remove->getJoinedChannels()) {
-        if (pair.second.lock()) { // Ensure the weak_ptr is still valid and the channel object exists
+        if (pair.second.lock()) {
             joined_channel_names.push_back(pair.first);
         }
     }
 
-    // Loop through each channel the client was a member of
     for (const std::string& channel_name : joined_channel_names) {
         std::shared_ptr<Channel> channel_ptr;
         try {
@@ -209,42 +199,26 @@ void Server::remove_Client(int client_fd) {
 			validateFallbackOperator(channel_ptr, client_to_remove);
         } catch (const ServerException& e) {
             if (e.getType() == ErrorType::NO_CHANNEL_INMAP) {
-                // This means the channel was already cleaned up by another client's action (e.g., last PART/QUIT).
-                std::cerr << "WARNING: Client " << client_to_remove->getNickname() << " was in channel "
-                          << channel_name << ", but it no longer exists on server. Skipping channel cleanup for this client.\n";
                 continue;
             }
         }
-        if (channel_ptr) { // Ensure the channel pointer is valid
+        if (channel_ptr) {
 			LOG_NOTICE("Notifying and removing client " + client_to_remove->getNickname() + " from channel " + channel_name + " due to disconnect.\n");
             bool channel_became_empty = channel_ptr->removeClientByNickname(client_to_remove->getNickname());
-			//NEWNEWbool channel_became_empty = channel_ptr->removeClient(client_to_remove->getNickname());
-
-            // D) If the channel became empty after this client left, remove it from the server's map.
             if (channel_became_empty) {
-                std::cout << "SERVER: Channel '" << channel_name << "' is now empty. Deleting from server's master list.\n";
-                _channels.erase(channel_name); // Assuming _channels is the correct map name.
+                _channels.erase(channel_name); 
             }
         }
     }
-    // After iterating through all channels, clear the client's internal list of joined channels.
     client_to_remove->clearJoinedChannels();
-
-    // --- Step 3: Perform server-wide cleanup ---
-    // Remove client's nickname to FD and FD to nickname mappings.
-
     _nickname_to_fd.erase(client_to_remove->getNickname());
     _fd_to_nickname.erase(client_fd);
-
 	removeFdFromEpoll(client_to_remove->get_timer_fd());
 	removeFdFromEpoll(client_fd);
     _Clients.erase(client_fd);
-    // Remove the epoll event structure associated with this client FD.
-    _epollEventMap.erase(client_fd);
-    
-    // Decrement the active client count.
+    _epollEventMap.erase(client_fd);    
     _client_count--;
-    std::cout << "Server::remove_Client - Client has been completely removed. Total clients: " << _client_count << std::endl;
+	LOG_DEBUG("Server::remove_Client - Client has been completely removed. Total clients: " + std::to_string(_client_count));
 }
 
 /**
@@ -275,7 +249,6 @@ void Server::closeAndResetClient() {
     }
 }
 
-// ERROR HANDLING INSIDE LOOP
 void Server::handle_client_connection_error(ErrorType err_type) {
 	switch (err_type){
 		case ErrorType::ACCEPT_FAILURE:
@@ -288,32 +261,28 @@ void Server::handle_client_connection_error(ErrorType err_type) {
 			break;
 		} default:
 			closeAndResetClient();
-			std::cerr << "server Unknown error occurred" << std::endl;
+			LOG_ERROR("server Unknown error occurred");
 			break;
 	}
 }
 
-void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_fd) { // send client as aparam const ref
+void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_fd) {
     if (!client) { return; }
 	set_current_client_in_progress(client_fd);
     char buffer[config::BUFFER_SIZE];
-    ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0); // Server does the recv, ONCE per event!
-	std::cout << "Debug - Raw Buffer Data: [" << std::string(buffer, bytes_read) << "]" << std::endl;
+    ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
     if (bytes_read < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK) { return; }
-        perror("recv failed in handleReadEvent"); // error
 		remove_Client(client_fd);
 		return;
     }
     if (bytes_read == 0) {
-        std::cout << "Client FD " << client_fd << " disconnected gracefully (recv returned 0).\n";
+		LOG_DEBUG("Client FD " + std::to_string(client_fd) + " disconnected gracefully (recv returned 0)");
         remove_Client(client_fd);
         return;
     }
     client->appendIncomingData(buffer, bytes_read);
-	  // This loop ensures all complete messages are processed.
     while (client->extractAndParseNextCommand()) {
-        // This is the point where you know the client is active and sent a valid message.
         resetClientTimer(client_fd, config::TIMEOUT_CLIENT);
         client->set_failed_response_counter(-1);
         _commandDispatcher->dispatchCommand(client, client->getMsg().getParams());
@@ -321,19 +290,16 @@ void Server::handleReadEvent(const std::shared_ptr<Client>& client, int client_f
 }
 
 void Server::shutDown() {
-	// close all sockets
+
 	for (std::map<int, std::shared_ptr<Client>>::iterator it = _Clients.begin(); it != _Clients.end(); it++){
 		close(it->first);
 	}
 	for (std::map<const std::string, std::shared_ptr<Channel>>::iterator it = _channels.begin(); it != _channels.end(); it++){
 		it->second->clearAllChannel();
-		//close(it->first);
 	}
-	for (std::map<int, int>::iterator timerit = _timer_map.begin(); timerit != _timer_map.end(); timerit++)
-	{
+	for (std::map<int, int>::iterator timerit = _timer_map.begin(); timerit != _timer_map.end(); timerit++) {
 		close(timerit->first);
 	}
-	// close server socket
 	close(_fd);
 	close(_signal_fd);
 	close(_epoll_fd);
@@ -342,21 +308,14 @@ void Server::shutDown() {
 		it->second->getMsg().clearQue();
 		it->second->getMsg().clearAllMsg();
 	}
-
 	_timer_map.clear();
 	_Clients.clear();
-	// delete channels
 	_epollEventMap.clear();
-	
-
 	_server_broadcasts.clear();
-	//_illegal_nicknames.clear();
-
 	std::cout<<"server shutDown completed"<<std::endl;
 }
 
 Server::~Server(){
-	//shutDown();
 }
 
 /**
@@ -368,10 +327,7 @@ Server::~Server(){
  * @return true if timer fd was not an active event 
  * @return false if timer fd was an active event
  */
-/*bool confirmClientAlive(int timer_fd, int client_fd) {
-    set_failed_response_counter(1);
 
-}*/
 bool Server::checkTimers(int fd) {
 	auto timerit = _timer_map.find(fd);
 	if (timerit == _timer_map.end()) { return true; }
@@ -394,9 +350,7 @@ bool Server::checkTimers(int fd) {
 }
 
 void Server::resetClientFullTimer(int resetVal, std::shared_ptr<Client> client){
-	if (!client) {
-		return; //thow?
-	}
+	if (!validateClientNotEmpty(client)) {return ;}
 	int client_fd = client->getFd();
 	int found_timer_fd = 0;
 	client->set_failed_response_counter(resetVal);
@@ -529,17 +483,14 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
 bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 	auto now = std::chrono::steady_clock::now();
 	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before changing nick\r\n");
+		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing innput, server loading......\r\n");
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		    return false;
 	}
 	return true;
 }
 
-// todo be very sure this is handling property fd_to_nick and nick_to_fd.
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
-	// new function here , can use it all kinds of ways, this will help prevent segv on early attemps to chnage things before registartion
-	if (!validateRegistrationTime(client)) {return ;}
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();
@@ -619,7 +570,7 @@ void Server::handleModeCommand(std::shared_ptr<Client> client, const std::vector
 			}
 		}
 	}
-	else { // Target is a client (private mode)
+	else { // Target is a client (private mode) aravweal fixes, will take 30 mins
         // A client can only set/list modes on themselves for private modes.
         if (target != client->getNickname()) {
             client->getMsg().queueMessage(MessageBuilder::generateMessage(MsgType::INVALID_TARGET, {client->getNickname(), target}));
@@ -732,7 +683,6 @@ void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string t
 
 	for (const auto& pair : joined) {
 	    if (auto chan = pair.second.lock()) {
-	        // Use the key (pair.first) for the channel name
 	        channel_list += chan->getClientModePrefix(target_client) + pair.first + " ";
 	    }
 	}
@@ -750,18 +700,13 @@ void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector
 	LOG_DEBUG("handlePartCommand entered for " + nickname);
 	if (!validateParams(client, nickname, params.size(), 0, "PART")) {return ;}
     std::string part_reason = (params.size() > 1 && !params[1].empty()) ? params[1] : nickname;
-	std::vector<std::string> channels_to_part = splitCommaList(params[0]); //tolower
-    // 3. Process each channel
+	std::vector<std::string> channels_to_part = splitCommaList(params[0]);
     for (const std::string& ch_name : channels_to_part) {
-        // If not, you'd need a tolower transform here too.
-		//std::string lower_ch_name = toLower(ch_name); // Use this variable for map lookup if your map keys are lowercase.
 		if (!validateChannelExists(client, ch_name, nickname)) {return;}
-        std::shared_ptr<Channel> channel_ptr = get_Channel(ch_name);//->second;
-        // that 'nickname' is lowercase and compare against lowercase nicknames in the channel.
+        std::shared_ptr<Channel> channel_ptr = get_Channel(ch_name);
         if (!validateIsClientInChannel (channel_ptr, client, ch_name, nickname)) { return ;}		
 		broadcastMessage(MessageBuilder::generateMessage(MsgType::PART, {nickname, client->getUsername() ,channel_ptr->getName(), part_reason}), nullptr, channel_ptr, false, nullptr);
 		validateFallbackOperator(channel_ptr, client);
-
 		bool channel_is_empty = channel_ptr->removeClientByNickname(nickname);
         client->removeJoinedChannel(ch_name);
    		if (channel_is_empty) {
@@ -784,7 +729,6 @@ void Server::handleKickCommand(std::shared_ptr<Client> client, const std::vector
     const std::string& kicker_nickname = client->getNickname();
 	LOG_DEBUG("handleKickCommand entered for " + kicker_nickname);
 	
-	// Format: KICK <channel> <user> [<reason>]
     if (!validateParams(client, kicker_nickname, params.size(), 2, "KICK")) { return; }
 
     std::string channel_name = params[0];
@@ -853,11 +797,9 @@ void Server::handleTopicCommand(std::shared_ptr<Client> client, const std::vecto
 		LOG_DEBUG("TOPIC:: topic +t , should get not operator");
 		return;
 	}
-    std::string new_topic_content = params[1]; // The topic string starts at params[1]
-
-	// multi word topics work
+    std::string new_topic_content = params[1];
     if (!new_topic_content.empty() && new_topic_content[0] == ':') {
-        new_topic_content = new_topic_content.substr(1); // Remove leading colon if present
+        new_topic_content = new_topic_content.substr(1);
     }
     channel->setTopic(new_topic_content);
     LOG_DEBUG("TOPIC - Set topic for " + channel_name + " to: " + new_topic_content);

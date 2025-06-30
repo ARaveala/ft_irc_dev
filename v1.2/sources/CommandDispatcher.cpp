@@ -25,6 +25,7 @@ CommandDispatcher::~CommandDispatcher() {}
 
 void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params)
 {
+	if (!_server->validateRegistrationTime(client)) {return ;}
 	int client_fd = client->getFd();
     if (!client) {
         std::cerr << "Error: Client pointer is null in dispatchCommand()" << std::endl;

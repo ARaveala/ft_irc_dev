@@ -3,7 +3,7 @@ import threading
 import time
 
 SERVER = 'localhost'
-PORT = 6667
+PORT = 6668
 CHANNEL = '#loadtest'
 MAX_CLIENTS = 100
 JOIN_DELAY = 0.05  # Seconds between joins to avoid burst
@@ -14,7 +14,7 @@ def connect_client(client_id):
         user = f'user{client_id}'
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((SERVER, PORT))
-        s.sendall(f"PASS hell\r\n".encode())
+        s.sendall(f"PASS Hell1\r\n".encode())
         s.sendall(f"NICK {nick}\r\n".encode())
         s.sendall(f"USER {user} 0 * :Test User {client_id}\r\n".encode())
         time.sleep(0.5)

@@ -38,5 +38,4 @@ void Server::tryRegisterClient(const std::shared_ptr<Client>& client) {
 	client->setRegisteredAt(std::chrono::steady_clock::now());
     client->setHasRegistered();
     broadcastMessage(MessageBuilder::generatewelcome(client->getNickname()), nullptr, nullptr, false , client);
-    updateEpollEvents(fd, EPOLLOUT, true);
 }

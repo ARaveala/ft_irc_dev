@@ -11,14 +11,14 @@
 static std::string toLower(const std::string& input) {
 	std::string output = input;
     std::transform(output.begin(), output.end(), output.begin(),
-	[](unsigned char c) { return std::tolower(c); }); // tolower does one char at a time. it is different than our toLower by a 'L'
+	[](unsigned char c) { return std::tolower(c); });
     return output;
 }
 
 Channel::Channel(const std::string& channelName)  : _name(channelName), _topic("not set"){
 	std::cout << "Channel '" << _name << "' created." << std::endl;
 	_ChannelModes.reset();
-    _ChannelModes.set(Modes::ChannelMode::TOPIC);  // enable topic protection by default, why to show we can
+    _ChannelModes.set(Modes::ChannelMode::TOPIC);
 }
 Channel::~Channel() {
 	std::cout << "Channel '" << _name << "' destroyed." << std::endl;
@@ -28,7 +28,7 @@ const std::string& Channel::getName() const {return _name;}
 const std::string& Channel::getTopic() const {return _topic;}
 void Channel::setTopic(const std::string& newTopic) {_topic = newTopic;}
 bool Channel::setModeBool(char onoff){return onoff == '+';}
-bool Channel::isEmpty() const {return _ClientModes.empty();} // Helper function to check if the channel has any members left
+bool Channel::isEmpty() const {return _ClientModes.empty();}
 bool Channel::isInvited(const std::string& nickname) const { return std::find(_invites.begin(), _invites.end(), nickname) != _invites.end();}// Use std::find to check if the nickname exists in the _invites deque
 bool Channel::isValidChannelMode(char modeChar) const { return std::find(Modes::channelModeChars.begin(), Modes::channelModeChars.end(), modeChar) != Modes::channelModeChars.end();}
 bool Channel::isValidClientMode(char modeChar) const { return std::find(Modes::clientModeChars.begin(), Modes::clientModeChars.end(), modeChar) != Modes::clientModeChars.end();}
@@ -56,41 +56,12 @@ const std::string Channel::getAllNicknames() {
 }
 
 std::string Channel::getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
-    if (auto clientPtr = weakClient.lock()) {  //  Convert weak_ptr to shared_ptr safely
-        return clientPtr->getNickname();  //  Get the current nickname live
-    }
-    return "";  //eturn empty string if the Client no longe
-}
-
-// assuming all incoming 'nickname' parameters and stored client nicknames are ALREADY in lowercase.
-/*std::weak_ptr<Client> Channel::getWeakPtrByNickname(const std::string& nickname) {
-    // We assume 'nickname' is already in lowercase as per the program's invariant.
-    // No need for std::transform here.
-    const std::string& target_nickname = nickname; // Use a const reference for clarity
-	
-    std::weak_ptr<Client> found_weak_ptr; // To store the weak_ptr of the client we're looking for
-    for (auto it = _ClientModes.begin(); it != _ClientModes.end(); ) {
-        if (auto clientPtr = it->first.lock()) {
-            // We assume clientPtr->getNickname() also returns a lowercase string.
-            if (clientPtr->getNickname() == target_nickname) {
-                // Found a direct match (case-sensitive due to invariant).
-                found_weak_ptr = it->first; // Get the actual weak_ptr key from the map
-                ++it; // Move to the next element
-				} else {
-					++it;
-					}
-					} else {
-	//LOG_WARN("");
-	std::cerr << "CHANNEL WARNING: Found expired weak_ptr in channel '" << _name
-	<< "' during nickname lookup. Removing stale entry.\n";
-	it = _ClientModes.erase(it); // Erase stale element and advance iterator
+    if (auto clientPtr = weakClient.lock()) {
+        return clientPtr->getNickname();
 	}
-	}
-	return found_weak_ptr;
-	}*/
-					
-					
-					
+    return "";
+}					
+						
 std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string nickname)
 {
 	std::cout << "Total Clients: " << _ClientModes.size() << std::endl;
@@ -154,18 +125,16 @@ std::vector<std::string> Channel::applymodes(std::vector<std::string> params)
 	char modeChar;
 	char sign;
 	std::vector<std::string> messageData;
-	std::cout<<"starting to change the mode----param at 0"<<params[paramIndex]<<"\n";
-	//for(size_t paramIndex = 1; paramIndex < params.size() ;paramIndex++)
 	while (paramIndex < params.size())
 	{
 		if (modeIndex == 0){
-				sign = params[paramIndex][modeIndex]; // we take the + or -
+				sign = params[paramIndex][modeIndex]; 
 				modeFlags = params[paramIndex].substr(1);
 				modes += sign; 
 			}
 		while (modeIndex < modeFlags.size())
 		{
-			modeChar = modeFlags[modeIndex];//params[paramIndex][modeIndex];
+			modeChar = modeFlags[modeIndex];
 			if (channelModeRequiresParameter(modeChar)) {
 				paramIndex++;
 			}
@@ -212,7 +181,6 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 	if (shouldReport) {
 			response.push_back(std::string(1, modeChar)); // Mode char
 	}
-	// seperate into applyChanges()
  	switch (cmodeType) {
         case Modes::USER_LIMIT:
             if (enableMode) {
@@ -221,7 +189,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 			} else {
 				_ulimit = 0;
 			}
-			if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
+			if (shouldReport) {
                 response.push_back(target);
 			}
 			break;
@@ -232,7 +200,7 @@ std::vector<std::string> Channel::setChannelMode(char modeChar , bool enableMode
 			} else {
 				_password.clear();
 			}
-			if (shouldReport) { // shouldReport check ensures we only add if we're actually reporting
+			if (shouldReport) {
                 response.push_back(target);
             }
 			break;
@@ -270,8 +238,6 @@ Channel::canClientJoin(const std::string& nickname, const std::string& value) {
             return std::make_pair(MsgType::CHANNEL_FULL, std::vector<std::string>{nickname, getName()});
 		}
 	}
-    // - ban list ??
-	// - is memeber already joined ??
     return std::nullopt;
 }
 
@@ -280,12 +246,12 @@ int Channel::addClient(std::shared_ptr <Client> client) {
 		return -1;
 	std::weak_ptr<Client> weakclient = client;
 	if (_ClientModes.find(weakclient) == _ClientModes.end()) {
-		_ClientModes.insert({weakclient, std::make_pair(std::bitset<config::CLIENT_NUM_MODES>(), client->getFd())});  //Insert new client
+		_ClientModes.insert({weakclient, std::make_pair(std::bitset<config::CLIENT_NUM_MODES>(), client->getFd())});
 		if (client->getChannelCreator() == true) {
 			setChannelMode('o', setModeBool('+'), client->getNickname());
 			setChannelMode('q', setModeBool('+'), client->getNickname()); // incase we want to know who created the channel
 			setOperatorCount(1);
-			client->setChannelCreator(false); // so we do not step inside here again
+			client->setChannelCreator(false);
 		}
 		else {
 			setChannelMode('o', setModeBool('-'), client->getNickname());
@@ -293,7 +259,7 @@ int Channel::addClient(std::shared_ptr <Client> client) {
 		}
 		_clientCount += 1;
 	} else {
-		std::cout << "Client already exists in channel!" << std::endl;
+		LOG_DEBUG("Client already exists in channel!");
 		return 1;
 	}
     return 2;
@@ -322,7 +288,7 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
 	(void)nick;
 	if (mode == 'o') {
         if (param.empty() || !isClientInChannel(param)) {
-            std::cout << "DEBUG: Invalid or missing client '" << param << "' for +o.\n";
+			LOG_DEBUG("Invalid or missing client " + param + " for +o.");
             return MsgType::NOT_ON_CHANNEL;
         }
     }
@@ -330,7 +296,7 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
         try {
             unsigned long limit = std::stoul(param);
             if (limit > 100) {
-                std::cout << "DEBUG: Limit too high (" << limit << ")\n";
+				LOG_DEBUG("Limit too high (" + std::to_string(limit) + ")");
 				return MsgType::NEED_MORE_PARAMS;
             }
         } catch (...) {
@@ -345,7 +311,6 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
     return MsgType::NONE;
 }
 
-//CHECK when only 1 client left , why does operator not pass to last client 
 std::pair<MsgType, std::vector<std::string>>
 Channel::promoteFallbackOperator(const std::shared_ptr<Client>& removingClient, bool isLeaving) {
 	LOG_DEBUG("promoteFallbackoperator operator count = "+ std::to_string(_operatorCount) + " clientmode size = " + std::to_string(_ClientModes.size()));
@@ -393,7 +358,6 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
             }
 			
             const std::string& param = params[idx + 1];
-			
             MsgType checkResult = checkModeParameter(nick, mode, param, sign);
             if (checkResult != MsgType::NONE) {
 				if (checkResult == MsgType::NOT_ON_CHANNEL){
@@ -401,36 +365,26 @@ Channel::modeSyntaxValidator(const std::string& nick, const std::vector<std::str
 				}
 				return {checkResult, {nick, "MODE", std::string(1, mode), param}};
             }
-            ++idx; // consumed parameter
+            ++idx;
         }
         ++idx;
     }
     return {MsgType::NONE, {}};
 }
 
-//NEWNEW check to see if fcuntion needed anywhere
  std::string Channel::getClientModePrefix(std::shared_ptr<Client> client) const {
-	if (!client) {
-        return ""; // Or handle as an error if a null shared_ptr is passed
-    }
+	if (!client) { return ""; }
     for (const auto& entry : _ClientModes) {
-        // Safely lock the weak_ptr and compare with the provided shared_ptr
         if (auto weakClientPtr = entry.first.lock(); weakClientPtr && weakClientPtr == client) {
             const std::bitset<config::CLIENT_NUM_MODES>& modes = entry.second.first;
             std::string prefix = "";
-
-            // Check for operator mode ('@') first, as it takes precedence over voice ('+')
-            if (modes.test(Modes::OPERATOR)) { // Assuming Modes::OPERATOR is defined in config.h
+            if (modes.test(Modes::OPERATOR)) {
                 prefix = "@"; 
             }
-            // Else, check for voice mode ('+')
-            /*else if (modes.test(Modes::VOICE)) { // Assuming Modes::VOICE is defined in config.h
-                prefix = "+";
-            }*/
             return prefix;
         }
     }
-    return ""; // Client not found in this channel
+    return "";
 }
 
 
@@ -479,9 +433,8 @@ bool Channel::removeClientByNickname(const std::string& nickname) {
 }
 
 void Channel::addInvite(const std::string& nickname) {
-    // Check if already invited to avoid duplicates
     if (!isInvited(nickname)) {
-        _invites.push_back(nickname); // Add to the deque
+        _invites.push_back(nickname);
         std::cout << "CHANNEL: Added '" << nickname << "' to invite list for '" << _name << "'. Current invites: " << _invites.size() << std::endl;
     } else {
         std::cout << "CHANNEL: '" << nickname << "' is already on invite list for '" << _name << "'.\n";
@@ -491,7 +444,7 @@ void Channel::addInvite(const std::string& nickname) {
 void Channel::removeInvite(const std::string& nickname) {
     auto it = std::find(_invites.begin(), _invites.end(), nickname);
     if (it != _invites.end()) {
-        _invites.erase(it); // Remove from the deque
+        _invites.erase(it);
         std::cout << "CHANNEL: Removed '" << nickname << "' from invite list for '" << _name << "'. Current invites: " << _invites.size() << std::endl;
     }
 }

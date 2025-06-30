@@ -489,7 +489,7 @@ bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 	return true;
 }
 
-void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) 
+void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();

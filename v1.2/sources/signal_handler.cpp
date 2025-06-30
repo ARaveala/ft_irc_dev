@@ -13,7 +13,7 @@ int signal_mask(){
 	sigemptyset(&sigmask);
 	sigaddset(&sigmask, SIGUSR1);
 	sigaddset(&sigmask, SIGTSTP);   // Ctrl+Z (suspend)
-
+	sigaddset(&sigmask, SIGQUIT);
 
 	if (sigprocmask(SIG_SETMASK, &sigmask, nullptr) == -1) {
 		perror("sigprocmask failed");
@@ -51,6 +51,7 @@ void setup_signal_handler(){
 
 	sigaction(SIGINT, &sa, nullptr);
 	sigaction(SIGTERM, &sa, nullptr);
+	//sigaction(SIGQUIT, &sa, nullptr)
 	//_epollEventMap[]
 }
 
@@ -72,7 +73,9 @@ int manage_signal_events(int signal_fd) {
         case SIGTSTP:
             std::cout << "Caught Ctrl+Z (SIGTSTP), handling as no-op\n";
             return -2;
-
+		case SIGQUIT:
+            std::cout << "Caught  (SIGQUIT), handling as no-op\n";
+            return -2;
         default:
             std::cout << "Unhandled signal: " << si.ssi_signo << "\n";
             return -1;

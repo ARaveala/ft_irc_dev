@@ -33,8 +33,10 @@ int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 	event.data.fd = fd; // File descriptor to monitor
 
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == errVal::FAILURE)
+	{
+		//close(fd);
 		throw ServerException(ErrorType::EPOLL_FAILURE_1, "could not add fd to epoll");
-
+	}
 	_epollEventMap.emplace(fd, event);//[fd] = event;
 	
 	std::cout << "✅ FD " << fd << " successfully added to epoll!" << std::endl;
@@ -94,7 +96,6 @@ int Server::create_epollfd()
 	make_socket_unblocking(_fd);
 	setup_signal_handler();
 	_epoll_fd = epollfd;
-	//server.set_event_pollfd(epollfd);
 	return epollfd;
 }
 
@@ -110,13 +111,10 @@ int Server::createTimerFD(int timeout_seconds) {
     timer_value.it_interval.tv_nsec = 0;
 
     timerfd_settime(timer_fd, 0, &timer_value, NULL);  //Set timer expiration
-	//_epollEventMap[timer_fd] = timer_value;
     return timer_fd;
 }
 
 void Server::resetClientTimer(int timer_fd, int timeout_seconds) {
-    //std::cout<<"timer should be reseting checking seconds to set"<<config::TIMEOUT_CLIENT<<std::endl;
-	//grab the correct fd
 	struct itimerspec timer_value = {};
 	timer_value.it_value.tv_sec = timeout_seconds;
     timer_value.it_value.tv_nsec = 0;

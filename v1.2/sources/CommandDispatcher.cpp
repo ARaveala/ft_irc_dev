@@ -31,21 +31,16 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	int client_fd = client->getFd();
     std::string command = client->getMsg().getCommand();
 	client->getMsg().printMessage(client->getMsg());
-	if (command == "PASS") {
-		_server->handlePassword(client, client_fd, params[0]);
-	}
-	if (command == "CAP" && !client->getHasSentCap()) {
-		_server->handleCapCommand(client);
-	}
-	if (command == "QUIT") {
-		_server->handleQuit(client);
-		return ;
-	}
+	
+	if (command == "PASS") { _server->handlePassword(client, client_fd, params[0]); return;}
+	if (command == "CAP" && !client->getHasSentCap()) { _server->handleCapCommand(client); return;}
+	if (command == "QUIT") { _server->handleQuit(client); return ;}
 	if (command == "USER" && !client->getHasSentUser()) {
 		_server->handleUser(client, params);
 	}
 	if (command == "NICK") {
 		_server->handleNickCommand(client, _server->get_nickname_to_fd(), params[0]);
+		return;
 	}
 	if (command == "PING"){
 		_server->handlePing(client);
@@ -73,15 +68,19 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 	}
     if (command == "JOIN"){
 		_server->handleJoinChannel(client, params);
+		return;
 	}
 	if (command == "MODE") {
+		return;
 		_server->handleModeCommand(client, params);
 	}
 	if (command == "PRIVMSG")  {
 		_server->handlePrivMsg(params, client);
+		return;
 	}
 	if (command == "WHOIS") {
 		_server->handleWhoIs(client, params[0]);
+		return;
 	}
 	
 }

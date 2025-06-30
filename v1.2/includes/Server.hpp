@@ -28,7 +28,7 @@
  */
 class Client;
 class Channel;
-
+class CommandDispatcher;
 class Server {
 	private:
 		int _port;

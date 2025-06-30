@@ -201,7 +201,10 @@ int main(int argc, char** argv) {
 	// instantiate server object with assumed port and password
 	Server server(port_number, password);
 	if (setupServerSocket(server) == errVal::FAILURE)
+	{
 		std::cout<<"server socket setup failure"<<std::endl;
+		return 0;
+	}
 	try {
 		loop(server); //begin server loop
 	}
@@ -257,7 +260,5 @@ int main(int argc, char** argv) {
 	 catch (const std::exception& e) {
 		std::cout<<"an exception has been caught in main:: "<<e.what()<<std::endl;
 	}
-	// clean up
-	//server.shutDown();
 	return 0;
 }

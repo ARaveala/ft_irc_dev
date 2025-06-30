@@ -50,8 +50,8 @@ struct WeakPtrCompare {
         std::string _topic;
         std::string _password;
         std::string _topicSetter;     // Stores the nickname of the user who last set the topic
-        std::time_t _topicSetTime;    // Stores the Unix timestamp (from <ctime>) when the topic was last set
-        int _ClientLimit = 0;
+        //std::time_t _topicSetTime;    // Stores the Unix timestamp (from <ctime>) when the topic was last set
+        //int _ClientLimit = 0;
         unsigned long _ulimit;
         unsigned long _clientCount = 0;
         int _operatorCount = 0;

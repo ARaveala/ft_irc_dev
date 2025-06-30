@@ -378,16 +378,16 @@ bool Server::checkTimers(int fd) {
 	int client_fd = timerit->second;
     auto clientit = _Clients.find(client_fd);
     if (clientit == _Clients.end()) {
-		LOG_ERROR("No client fd matching timer fd found in map , client fd = " + fd);
+		LOG_ERROR("No client fd matching timer fd found in map , client fd = " +  std::to_string(fd));
 		return false;
 	}
     if (clientit->second->get_failed_response_counter() == 3) {
-		LOG_WARN("failed response counter has reached max, client timeout reached for client fd = " + fd);
+		LOG_WARN("failed response counter has reached max, client timeout reached for client fd = " +  std::to_string(fd));
 		remove_Client(client_fd);
         _timer_map.erase(fd);
         return false;
     }
-	LOG_NOTICE("PING has been qued for client fd = " + fd);
+	LOG_NOTICE("PING has been qued for client fd = " + std::to_string(fd));
 	broadcastMessage(MessageBuilder::bildPing(), nullptr, nullptr, false, get_Client(fd));
 	resetClientFullTimer(1, clientit->second);
 	return false;

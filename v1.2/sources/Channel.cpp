@@ -331,15 +331,15 @@ MsgType Channel::checkModeParameter(const std::string& nick, char mode, const st
             unsigned long limit = std::stoul(param);
             if (limit > 100) {
                 std::cout << "DEBUG: Limit too high (" << limit << ")\n";
-				return {MsgType::NEED_MORE_PARAMS};
+				return MsgType::NEED_MORE_PARAMS;
             }
         } catch (...) {
-			return {MsgType::NEED_MORE_PARAMS};
+			return MsgType::NEED_MORE_PARAMS;
         }
     }
     else if (mode == 'k' && sign == '+') {
 		if (param.empty()) {
-			return {MsgType::NEED_MORE_PARAMS};
+			return MsgType::NEED_MORE_PARAMS;
         }
     }
     return MsgType::NONE;

@@ -146,7 +146,7 @@ class Server {
 		void handleWhoIs(std::shared_ptr<Client> client, std::string param);
 		void handleTopicCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
 	    void handleInviteCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params);
-
+		void handlePrivMsg(const std::vector<std::string>& params, const std::shared_ptr<Client>& client);
 		//whois
 		std::set<std::shared_ptr<Client>> getChannelRecipients(std::shared_ptr<Channel> channel, std::shared_ptr<Client> sender, bool skip_sender);
 		std::set<std::shared_ptr<Client>> getSharedChannelRecipients(std::shared_ptr<Client> sender, bool skip_sender);

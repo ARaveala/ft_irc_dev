@@ -71,6 +71,11 @@ int loop(Server &server)
 		int nfds = epoll_pwait(epollfd, events, config::MAX_CLIENTS, config::TIMEOUT_EPOLL, &sigmask);
 		if (nfds == -1 && errno == EINTR) {
 		    std::cerr << "epoll interrupted by signal" << std::endl;
+			if (manage_signal_events(server.get_signal_fd()) == -1) {
+				server.shutDown();
+				//should_exit = 1;
+				break;
+			}
     		continue;
 		}
 		for (int i = 0; i < nfds; i++) {
@@ -84,6 +89,7 @@ int loop(Server &server)
 					// must test signals properly still
 					if (manage_signal_events(server.get_signal_fd()) == 2)
 						break;
+					server.shutDown();
 				}
 				if (fd == server.getFd()) {
 					try {

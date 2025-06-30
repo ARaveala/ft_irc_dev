@@ -154,6 +154,7 @@ void Server::removeFdFromEpoll(int fd) {
  * is sent as an acknowlegement message back to irssi.
  */
 void Server::create_Client(int epollfd) {
+
 	int client_fd = accept(getFd(), nullptr, nullptr);
  	if (client_fd < 0) {
 		throw ServerException(ErrorType::ACCEPT_FAILURE, "debuggin: create Client");
@@ -836,4 +837,26 @@ void Server::handleInviteCommand(std::shared_ptr<Client> client, const std::vect
 	
 	broadcastMessage(msgInvite, client, nullptr, false, client);
 	broadcastMessage(msgNotice, client, nullptr, false, target_client);
+}
+
+void Server::handlePrivMsg(const std::vector<std::string>& params, const std::shared_ptr<Client>& client) {
+	//if (!validateParams(client, client->getNickname(), 0, 0 , "PRIVMSG")){return;}
+	if (!params[0].empty())
+		{
+			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
+			
+			if (params[0][0] == '#')
+			{
+				std::cout<<"DEBUGGIN PRIVMESSAGE CHANNEL EDITION :: before validate channel\n";
+				if (!validateChannelExists(client, params[0], client->getNickname())) { return;}
+				broadcastMessage(contents, client, get_Channel(params[0]), true, nullptr);
+			}
+			else
+			{
+				std::shared_ptr<Client> target = getClientByNickname(params[0]);
+				if (!validateTargetExists(client, target, client->getNickname(), params[0])) { return ;}
+				//int fd = target->getFd();
+				broadcastMessage(contents, client, nullptr, true, target);				
+			}
+		}	
 }

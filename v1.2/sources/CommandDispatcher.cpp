@@ -103,7 +103,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 
 	if (command == "PRIVMSG")  {
 		std::cout << "COMMAND DISPATCHER: " << command << " command received.\n";
-		if (!params[0].empty())
+		_server->handlePrivMsg(params, client);
+		/*if (!params[0].empty())
 		{
 			std::string contents = MessageBuilder::buildPrivMessage(client->getNickname(), client->getUsername(), params[0], params[1]);//":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 			
@@ -120,7 +121,7 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 				int fd = target->getFd();
 				_server->broadcastMessage(contents, client, nullptr, true, _server->get_Client(fd));				
 			}
-		}		
+		}*/		
 	}
 	if (command == "WHOIS") {
 		std::cout << "COMMAND DISPATCHER: " << command << " command received. Calling Server::handleWhoIs.\n";

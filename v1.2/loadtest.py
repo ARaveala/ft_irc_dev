@@ -5,7 +5,7 @@ import time
 SERVER = 'localhost'
 PORT = 6668
 CHANNEL = '#loadtest'
-MAX_CLIENTS = 100
+MAX_CLIENTS = 110
 JOIN_DELAY = 0.05  # Seconds between joins to avoid burst
 
 def connect_client(client_id):

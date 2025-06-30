@@ -130,11 +130,11 @@ bool Client::extractAndParseNextCommand() {
 	
 }*/
 
-void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
+/*void Client::setDefaults(){ //todo check these are really called - or woudl we call from constructor?
 	_isOperator = false;
 	signonTime = time(NULL);
 	lastActivityTime = time(NULL);
-}
+}*/
 
 bool Client::change_nickname(std::string nickname){
 	_nickName.clear();

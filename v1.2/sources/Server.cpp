@@ -168,7 +168,7 @@ void Server::create_Client(int epollfd) {
 	std::shared_ptr<Client> client = _Clients[client_fd];
 	_timer_map[timer_fd] = client_fd;
 	set_current_client_in_progress(client_fd);
-	client->setDefaults();
+	//client->setDefaults();
 	if (!client->get_acknowledged()){			
 		client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
 		set_client_count(1);		

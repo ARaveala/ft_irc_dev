@@ -1116,3 +1116,373 @@
 [11:25:08][NOTICE::] Notifying and removing client pleb1 from channel #bbq due to disconnect.
 
 [11:25:08][NOTICE::] removeClientByNickname: pleb1 Removed from channel #bbq
+[12:06:12][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[12:06:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:12][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 18
+[12:06:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:12][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 18
+[12:06:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:12][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 18
+[12:06:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:13][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:06:13][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[12:06:13][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:13][DEBUG::] checking the message from que before send [:localhost 001 pleb1 :Welcome to the IRC server pleb1!
+:localhost 002 pleb1 :Your host is localhost, running version 1.0
+:localhost 003 pleb1 :This server was created today
+:localhost 004 pleb1 localhost 1.0 o o
+:localhost 375 pleb1 :- ~ Meowdy, traveler! ~
+:localhost 372 pleb1 :- Here's your good-luck cat butt:
+:localhost 372 pleb1 :-     /\_/\
+:localhost 372 pleb1 :-    ( o.o )
+:localhost 372 pleb1 :-     > ^ <    🍑
+:localhost 372 pleb1 :-     Cat butt initialized.
+:localhost 376 pleb1 :End of /MOTD
+] and the fd = 18
+[12:06:13][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:15][DEBUG::] checking the message from que before send [:**:pleb1 MODE pleb1 :+i
+**] and the fd = 18
+[12:06:15][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:19][DEBUG::] checking the message from que before send [:localhost 439 pleb1 :Please wait a moment before changing nick
+] and the fd = 18
+[12:06:19][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:22][DEBUG::] checking the message from que before send [:localhost 439 pleb1 :Please wait a moment before changing nick
+] and the fd = 18
+[12:06:22][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:25][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:06:25][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[12:06:25][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:26][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:26][DEBUG::] checking the message from que before send [:pleb1!anon@localhost NICK kk
+] and the fd = 18
+[12:06:26][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:30][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:30][DEBUG::] checking the message from que before send [:kk!anon@localhost JOIN #bbq
+:localhost 332 kk #bbq :Welcome to #bbq!
+:localhost 353 kk = #bbq :kk!kk@localhost 
+:localhost 366 kk #bbq :End of /NAMES list
+] and the fd = 18
+[12:06:30][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:33][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:33][DEBUG::] checking the message from que before send [:localhost 324 kk #bbq +t
+] and the fd = 18
+[12:06:33][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:34][DEBUG::] checking the message from que before send [:localhost502 kk :Cant change mode for other =iusers
+] and the fd = 18
+[12:06:34][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:37][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:37][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:37][DEBUG::] checking the message from que before send [:localhost 352 kk #bbq anon localhost localhost kk H @ :0 anonthedon
+] and the fd = 18
+[12:06:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:37][DEBUG::] checking the message from que before send [:localhost 315 kk#bbq:End of WHO list
+] and the fd = 18
+[12:06:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:06:56][DEBUG::]  SERVER:: Message queued for FD 18 (kk)
+[12:06:56][DEBUG::] checking the message from que before send [:kk!anon@localhost MODE #bbq +i  
+] and the fd = 18
+[12:06:56][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:00][DEBUG::] handleQuit:: Client kk marked for disconnection, epollout will trigger removal
+[12:07:29][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:29][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:29][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:29][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:29][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:29][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:29][DEBUG::] checking the message from que before send [:localhost 001 pleb1 :Welcome to the IRC server pleb1!
+:localhost 002 pleb1 :Your host is localhost, running version 1.0
+:localhost 003 pleb1 :This server was created today
+:localhost 004 pleb1 localhost 1.0 o o
+:localhost 375 pleb1 :- ~ Meowdy, traveler! ~
+:localhost 372 pleb1 :- Here's your good-luck cat butt:
+:localhost 372 pleb1 :-     /\_/\
+:localhost 372 pleb1 :-    ( o.o )
+:localhost 372 pleb1 :-     > ^ <    🍑
+:localhost 372 pleb1 :-     Cat butt initialized.
+:localhost 376 pleb1 :End of /MOTD
+] and the fd = 18
+[12:07:29][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:31][DEBUG::] checking the message from que before send [:**:pleb1 MODE pleb1 :+i
+**] and the fd = 18
+[12:07:31][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:36][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:37][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[12:07:37][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:41][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:41][DEBUG::] checking the message from que before send [:pleb1!anon@localhost JOIN #bbq
+:localhost 332 pleb1 #bbq :Welcome to #bbq!
+:localhost 353 pleb1 = #bbq :pleb1!pleb1@localhost 
+:localhost 366 pleb1 #bbq :End of /NAMES list
+] and the fd = 18
+[12:07:41][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:43][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:43][DEBUG::] checking the message from que before send [:localhost 324 pleb1 #bbq +t
+] and the fd = 18
+[12:07:43][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:46][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:46][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:46][DEBUG::] checking the message from que before send [:localhost 352 pleb1 #bbq anon localhost localhost pleb1 H @ :0 anonthedon
+] and the fd = 18
+[12:07:46][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:46][DEBUG::] checking the message from que before send [:localhost 315 pleb1#bbq:End of WHO list
+] and the fd = 18
+[12:07:46][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:46][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:46][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[12:07:46][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:50][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:07:50][DEBUG::] checking the message from que before send [:pleb1!anon@localhost MODE #bbq +i  
+] and the fd = 18
+[12:07:50][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost 322  #bbq 1 :topic for channel = not set
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[12:07:58][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[12:07:58][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:pleb1!@localhost NICK anon_the_lucky_83
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:07:58][DEBUG::] checking the message from que before send [:localhost 001 anon_the_lucky_83 :Welcome to the IRC server anon_the_lucky_83!
+:localhost 002 anon_the_lucky_83 :Your host is localhost, running version 1.0
+:localhost 003 anon_the_lucky_83 :This server was created today
+:localhost 004 anon_the_lucky_83 localhost 1.0 o o
+:localhost 375 anon_the_lucky_83 :- ~ Meowdy, traveler! ~
+:localhost 372 anon_the_lucky_83 :- Here's your good-luck cat butt:
+:localhost 372 anon_the_lucky_83 :-     /\_/\
+:localhost 372 anon_the_lucky_83 :-    ( o.o )
+:localhost 372 anon_the_lucky_83 :-     > ^ <    🍑
+:localhost 372 anon_the_lucky_83 :-     Cat butt initialized.
+:localhost 376 anon_the_lucky_83 :End of /MOTD
+] and the fd = 20
+[12:07:58][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:00][DEBUG::] checking the message from que before send [:**:anon_the_lucky_83 MODE anon_the_lucky_83 :+i
+**] and the fd = 20
+[12:08:00][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:03][DEBUG::] getClientByNickname: Looking up FD for nickname: pleb1 (case-sensitive) in _nickname_to_fd map
+[12:08:03][DEBUG::] checking the message from que before send [: 311 anon_the_lucky_83 pleb1 anon  * :anonthedon
+] and the fd = 20
+[12:08:03][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:03][DEBUG::] checking the message from que before send [: 312 anon_the_lucky_83 pleb1  :A & J IRC server
+] and the fd = 20
+[12:08:03][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:03][DEBUG::] checking the message from que before send [: 317 anon_the_lucky_83 pleb1 34 1751274449 :seconds idle, signon time
+] and the fd = 20
+[12:08:03][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:03][DEBUG::] checking the message from que before send [: 319 anon_the_lucky_83 pleb1 :@#bbq
+] and the fd = 20
+[12:08:03][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:03][DEBUG::] checking the message from que before send [: 318 anon_the_lucky_83 pleb1 :End of WHOIS list
+] and the fd = 20
+[12:08:03][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:09][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[12:08:09][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 20
+[12:08:09][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:30][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:30][DEBUG::] checking the message from que before send [:anon_the_lucky_83!anon@localhost NICK ggg
+] and the fd = 20
+[12:08:30][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:33][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:33][DEBUG::] checking the message from que before send [:localhost 473 ggg #bbq :Cannot join channel (+i)
+] and the fd = 20
+[12:08:33][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:43][NOTICE::] handleInviteCommand :entered for pleb1
+[12:08:43][DEBUG::] getClientByNickname: Looking up FD for nickname: ggg (case-sensitive) in _nickname_to_fd map
+[12:08:43][DEBUG::] validateIsClientInChannel checking nickname = pleb1
+[12:08:44][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:08:44][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:44][DEBUG::] checking the message from que before send [:localhost 341 pleb1 ggg :#bbq
+] and the fd = 18
+[12:08:44][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:08:44][DEBUG::] checking the message from que before send [:pleb1!anon@localhost INVITE ggg :#bbq
+] and the fd = 20
+[12:08:44][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:47][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:08:47][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[12:08:47][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:08:48][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:48][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:08:48][DEBUG::] checking the message from que before send [:ggg!anon@localhost JOIN #bbq
+:localhost 332 ggg #bbq :Welcome to #bbq!
+:localhost 353 ggg = #bbq :pleb1!pleb1@localhost ggg!ggg@localhost 
+:localhost 366 ggg #bbq :End of /NAMES list
+] and the fd = 20
+[12:08:48][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:48][DEBUG::] checking the message from que before send [:ggg!anon@localhost JOIN #bbq
+] and the fd = 18
+[12:08:48][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:08:50][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:08:50][DEBUG::] checking the message from que before send [::ggg!anon@localhost PRIVMSG #bbq helooo
+] and the fd = 18
+[12:08:50][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:08:52][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:52][DEBUG::] checking the message from que before send [:localhost 324 ggg #bbq +it
+] and the fd = 20
+[12:08:52][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:54][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:54][DEBUG::] handleQuit:: Client pleb1 marked for disconnection, epollout will trigger removal
+[12:08:54][DEBUG::] checking the message from que before send [:pleb1!anon@localhost QUIT :Client disconnected
+] and the fd = 20
+[12:08:54][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:55][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:55][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:08:55][DEBUG::] checking the message from que before send [:localhost 352 ggg #bbq anon localhost localhost ggg H  :0 anonthedon
+] and the fd = 20
+[12:08:55][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:08:55][DEBUG::] checking the message from que before send [:localhost 315 ggg#bbq:End of WHO list
+] and the fd = 20
+[12:08:55][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:09:04][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:09:04][DEBUG::] checking the message from que before send [:localhost 482 ggg #bbq :You're not channel operator
+] and the fd = 20
+[12:09:04][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:09:07][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[12:09:07][DEBUG::] handleQuit:: Client ggg marked for disconnection, epollout will trigger removal
+[12:09:07][DEBUG::] checking the message from que before send [:ggg!anon@localhost QUIT :Client disconnected
+] and the fd = 18
+[12:09:07][DEBUG::] Full message sent for FD 18. Moving to next message.
+[12:09:07][DEBUG::] promoteFallbackoperator operator count = 0 clientmode size = 2
+[12:09:07][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[12:09:07][NOTICE::] Notifying and removing client pleb1 from channel #bbq due to disconnect.
+
+[12:09:07][NOTICE::] removeClientByNickname: pleb1 Removed from channel #bbq
+[12:09:07][DEBUG::] checking the message from que before send [:pleb1!anon@localhost MODE #bbq +o ggg
+] and the fd = 20
+[12:09:07][DEBUG::] Full message sent for FD 20. Moving to next message.
+[12:09:07][DEBUG::] promoteFallbackoperator operator count = 0 clientmode size = 1
+[12:09:07][DEBUG::] promoteFallbackoperator-------- returned NONE :: client size
+[12:09:07][NOTICE::] Notifying and removing client ggg from channel #bbq due to disconnect.
+
+[12:09:07][NOTICE::] removeClientByNickname: ggg Removed from channel #bbq
+[13:22:12][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:12][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:12][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:12][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:12][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[13:22:12][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:12][DEBUG::] checking the message from que before send [:localhost 001 pleb1 :Welcome to the IRC server pleb1!
+:localhost 002 pleb1 :Your host is localhost, running version 1.0
+:localhost 003 pleb1 :This server was created today
+:localhost 004 pleb1 localhost 1.0 o o
+:localhost 375 pleb1 :- ~ Meowdy, traveler! ~
+:localhost 372 pleb1 :- Here's your good-luck cat butt:
+:localhost 372 pleb1 :-     /\_/\
+:localhost 372 pleb1 :-    ( o.o )
+:localhost 372 pleb1 :-     > ^ <    🍑
+:localhost 372 pleb1 :-     Cat butt initialized.
+:localhost 376 pleb1 :End of /MOTD
+] and the fd = 18
+[13:22:12][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:15][DEBUG::] checking the message from que before send [:**:pleb1 MODE pleb1 :+i
+**] and the fd = 18
+[13:22:15][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:17][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 20
+[13:22:17][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:17][DEBUG::] checking the message from que before send [:localhost CAP * ACK :multi-prefix
+] and the fd = 20
+[13:22:17][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:17][DEBUG::] checking the message from que before send [:localhost CAP * ACK :END
+] and the fd = 20
+[13:22:17][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:17][DEBUG::] checking the message from que before send [:localhost 323  :End of channel list
+] and the fd = 20
+[13:22:17][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:18][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[13:22:18][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[13:22:18][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 20
+[13:22:18][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:18][DEBUG::] checking the message from que before send [:pleb1!@localhost NICK anon_the_lucky_83
+] and the fd = 20
+[13:22:18][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:18][DEBUG::] checking the message from que before send [:localhost 001 anon_the_lucky_83 :Welcome to the IRC server anon_the_lucky_83!
+:localhost 002 anon_the_lucky_83 :Your host is localhost, running version 1.0
+:localhost 003 anon_the_lucky_83 :This server was created today
+:localhost 004 anon_the_lucky_83 localhost 1.0 o o
+:localhost 375 anon_the_lucky_83 :- ~ Meowdy, traveler! ~
+:localhost 372 anon_the_lucky_83 :- Here's your good-luck cat butt:
+:localhost 372 anon_the_lucky_83 :-     /\_/\
+:localhost 372 anon_the_lucky_83 :-    ( o.o )
+:localhost 372 anon_the_lucky_83 :-     > ^ <    🍑
+:localhost 372 anon_the_lucky_83 :-     Cat butt initialized.
+:localhost 376 anon_the_lucky_83 :End of /MOTD
+] and the fd = 20
+[13:22:18][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:20][DEBUG::] checking the message from que before send [:**:anon_the_lucky_83 MODE anon_the_lucky_83 :+i
+**] and the fd = 20
+[13:22:20][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:20][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[13:22:20][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 18
+[13:22:20][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:22][DEBUG::] getClientByNickname: Looking up FD for nickname: pleb1 (case-sensitive) in _nickname_to_fd map
+[13:22:23][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[13:22:23][DEBUG::] checking the message from que before send [:localhost 311 anon_the_lucky_83 pleb1 anon @localhost * :anonthedon
+:localhost 312 anon_the_lucky_83 pleb1 localhost :A & J IRC server
+:localhost 317 anon_the_lucky_83 pleb1 11 1751278932 :seconds idle, signon time
+:localhost 318 anon_the_lucky_83 pleb1 :End of WHOIS list
+] and the fd = 20
+[13:22:23][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:28][DEBUG::]  SERVER:: Message queued for FD 20 (anon_the_lucky_83)
+[13:22:28][DEBUG::] checking the message from que before send [PONG :localhost
+] and the fd = 20
+[13:22:28][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:30][DEBUG::]  SERVER:: Message queued for FD 20 (ggg)
+[13:22:30][DEBUG::] checking the message from que before send [:anon_the_lucky_83!anon@localhost NICK ggg
+] and the fd = 20
+[13:22:30][DEBUG::] Full message sent for FD 20. Moving to next message.
+[13:22:36][DEBUG::] getClientByNickname: Looking up FD for nickname: ggg (case-sensitive) in _nickname_to_fd map
+[13:22:36][DEBUG::]  SERVER:: Message queued for FD 18 (pleb1)
+[13:22:36][DEBUG::] checking the message from que before send [:localhost 311 pleb1 ggg anon @localhost * :anonthedon
+:localhost 312 pleb1 ggg localhost :A & J IRC server
+:localhost 317 pleb1 ggg 18 1751278938 :seconds idle, signon time
+:localhost 318 pleb1 ggg :End of WHOIS list
+] and the fd = 18
+[13:22:36][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:22:46][DEBUG::] handleQuit:: Client pleb1 marked for disconnection, epollout will trigger removal
+[13:22:50][DEBUG::] handleQuit:: Client ggg marked for disconnection, epollout will trigger removal

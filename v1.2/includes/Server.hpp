@@ -120,7 +120,7 @@ class Server {
 	
 		
 		void removeQueueMessage() { _server_broadcasts.pop_front();};
-		
+		void removeFdFromEpoll(int fd);
 		// epoll stuff
 		int setup_epoll(int epoll_fd, int fd, uint32_t events);
 		int setup_epoll_timer(int epoll_fd, int timeout_seconds);

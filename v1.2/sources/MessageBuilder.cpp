@@ -130,7 +130,7 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     // Helper for common server prefix (you can make this a constant or pass it)
     const std::string SERVER = "localhost";
 	const std::string SERVER_PREFIX = ":" + SERVER; // Or ":localhost" as used in some of your macros
-	const std::string SERVER_AT = "@" + SERVER;
+	const std::string SERVER_AT = "@localhost";
 	const std::string QUIT_MSG = "Client disconnected";
 	
 	std::string generateInitMsg() {
@@ -351,6 +351,41 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	std::string buildPrivMessage(const std::string& clientNickname, const std::string& username, const std::string& where, const std::string& msg){
 		return ":" + prefix(clientNickname, username)+ " PRIVMSG " + where + " " + msg +"\r\n";  
 	}
+
+	std::string buildWhois(const std::vector<std::string>& p) {
+    // Expected indices:
+    // [0] = requester nickname
+    // [1] = target nickname
+    // [2] = target username
+    // [3] = target full name
+    // [4] = idle seconds (as string)
+    // [5] = signon time (as string)
+    // [6] = channels string (may be empty)
+
+    std::string msg;
+
+    // WHOISUSER (311)
+    msg += SERVER_PREFIX + " 311 " + p[0] + " " + p[1] + " " + p[2] + " " + SERVER_AT +
+           " * :" + p[3] + "\r\n";
+
+    // WHOISSERVER (312)
+    msg += SERVER_PREFIX + " 312 " + p[0] + " " + p[1] + " " + SERVER +
+           " :A & J IRC server\r\n";
+
+    // WHOISIDLE (317)
+    msg += SERVER_PREFIX + " 317 " + p[0] + " " + p[1] + " " + p[4] + " " + p[5] +
+           " :seconds idle, signon time\r\n";
+
+    // WHOISCHANNELS (319) — optional if [6] is not empty
+    if (p.size() > 6 && !p[6].empty()) {
+        msg += SERVER_PREFIX + " 319 " + p[0] + " " + p[1] + " :" + p[6] + "\r\n";
+    }
+
+    // ENDOFWHOIS (318)
+    msg += SERVER_PREFIX + " 318 " + p[0] + " " + p[1] + " :End of WHOIS list\r\n";
+
+    return msg;
+}
 
  //":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
 	/*std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {

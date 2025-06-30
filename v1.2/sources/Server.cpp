@@ -142,6 +142,13 @@ bool Server::validateClientNotEmpty(std::shared_ptr<Client> client){
 	return true;
 }
 
+void Server::removeFdFromEpoll(int fd) {
+	if (_epollEventMap.count(fd)) {
+    	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+    	_epollEventMap.erase(fd);
+    	close(fd);
+	}
+}
 /**
  * @brief Here a client is accepted , error checked , socket is adusted for non-blocking
  * the client fd is added to the epoll and then added to the Client map. a welcome message
@@ -168,7 +175,6 @@ void Server::create_Client(int epollfd) {
 	std::shared_ptr<Client> client = _Clients[client_fd];
 	_timer_map[timer_fd] = client_fd;
 	set_current_client_in_progress(client_fd);
-	//client->setDefaults();
 	if (!client->get_acknowledged()){			
 		client->getMsg().queueMessage(MessageBuilder::generateInitMsg());
 		set_client_count(1);		
@@ -236,21 +242,22 @@ void Server::remove_Client(int client_fd) {
     _nickname_to_fd.erase(client_to_remove->getNickname());
     _fd_to_nickname.erase(client_fd);
 
-
-    // Remove timer FD from epoll and close it.
+	removeFdFromEpoll(client_to_remove->get_timer_fd());
+	removeFdFromEpoll(client_fd);
+	// Remove timer FD from epoll and close it.
 	//copy for all epoll situations
-	if (_epollEventMap.count(client_to_remove->get_timer_fd())) {
+	/*if (_epollEventMap.count(client_to_remove->get_timer_fd())) {
     	epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), nullptr);
     	_epollEventMap.erase(client_to_remove->get_timer_fd());
     	close(client_to_remove->get_timer_fd());
-	}
+	}*/
 
 //   epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_to_remove->get_timer_fd(), 0);
 //    close(client_to_remove->get_timer_fd());
 
     // Remove client FD from epoll and close it.
-    epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-    close(client_fd);
+    /*epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
+    close(client_fd);*/
     
     // Remove the client's shared_ptr from the server's main client map.
     // Assuming `_Clients` (capital C) is the correct member variable name for your map of shared_ptrs.
@@ -557,13 +564,6 @@ bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<std::string, int>& nick_to_fd, const std::string& param) {
 	// new function here , can use it all kinds of ways, this will help prevent segv on early attemps to chnage things before registartion
 	if (!validateRegistrationTime(client)) {return ;}
-	//auto now = std::chrono::steady_clock::now();
-	/*if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		    client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before changing nick\r\n");
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		    return;
-	}*/
-	// willl be seperated
 	MsgType type= client->getMsg().check_nickname(param, client->getFd(), nick_to_fd); 
 	if ( type == MsgType::RPL_NICK_CHANGE) {
 		const std::string& oldnick = client->getNickname();
@@ -744,116 +744,32 @@ std::string generateUniqueNickname(const std::map<std::string, int>& nickname_to
     } while (nickname_to_fd.count(toLower(nickname)) > 0); // case-insensitive nick collision check
     return nickname;
 }
-	// while produced name is not in nick name to fd map
-    //std::string newNick = "anon" + adjectives[rand() % adjectives.size()] + static_cast<char>('a' + rand() % 26);
-	
-   /* std::ofstream configFile("config");  // ✅ Opens the file for writing
-    if (configFile.is_open()) {
-        configFile << "servers = (\n";
-        configFile << "  {\n";
-        configFile << "    address = \"localhost\";\n";
-        configFile << "    port = 6669;\n";
-        configFile << "    nick = \"" << newNick << "\";\n";  // ✅ Ensures Irssi uses generated nickname
-        configFile << "    user = \"user_" << newNick << "\";\n";  // ✅ Explicit user field
-        configFile << "    realname = \"real_" << newNick << "\";\n";
-        configFile << "  }\n";
-        configFile << ");\n\n";
-
-        // ✅ Adding explicit settings to override machine defaults
-        configFile << "settings = {\n";
-        configFile << "  core = {\n";
-        configFile << "    real_name = \"real_" << newNick << "\";\n";
-        configFile << "    user_name = \"user_" << newNick << "\";\n";
-        configFile << "    nick = \"" << newNick << "\";\n";
-        configFile << "  };\n";
-        configFile << "};\n\n";
-
-        // ✅ Define a placeholder channel entry to force correct config parsing
-        configFile << "channels = (\n";
-        configFile << "  {\n";
-        configFile << "    name = \"#test_channel\";\n";
-        configFile << "    chatnet = \"LocalNet\";\n";
-        configFile << "    autojoin = \"No\";\n";
-        configFile << "  }\n";
-        configFile << ");\n\n";
-
-        // ✅ Keep structured elements for proper config interpretation
-        configFile << "IRCSource = {\n";
-        configFile << "  type = \"IRC\";\n";
-        configFile << "  max_kicks = \"1\";\n";
-        configFile << "  max_msgs = \"4\";\n";
-        configFile << "  max_whois = \"1\";\n";
-        configFile << "};\n";
-
-        configFile.close();
-        std::cout << "Config updated! Generated nickname: " << newNick << std::endl;
-    } else {
-        std::cerr << "Error: Unable to write to config file." << std::endl;
-    }
-
-    return newNick;
-}*/
 
 void Server::handleWhoIs(std::shared_ptr<Client> requester_client, std::string target_nick) {
     std::shared_ptr<Client> target_client = getClientByNickname(target_nick); // tolower?
     if (!validateTargetExists(requester_client, target_client, requester_client->getNickname() , target_nick)) {return ;}
+	std::vector<std::string> whois_params;
+	whois_params.push_back(requester_client->getNickname());
+	whois_params.push_back(target_client->getNickname());
+	whois_params.push_back(target_client->getClientUname());
+	whois_params.push_back(target_client->getfullName());
+	whois_params.push_back(std::to_string(target_client->getIdleTime()));
+	whois_params.push_back(std::to_string(target_client->getSignonTime()));
 
-    // RPL_WHOISUSER (311)
-// add this to messageBuilder
-	std::string user_info_msg = ":" + _server_name + " 311 " + requester_client->getNickname() + " "
-                                + target_client->getNickname() + " "
-                                + target_client->getClientUname() + " "
-                                + target_client->getHostname() + " * :" // Make sure getHostname is implemented
-                                + target_client->getfullName() + "\r\n";
-    requester_client->getMsg().queueMessage(user_info_msg);
+	std::string channel_list;
+	const std::map<std::string, std::weak_ptr<Channel> >& joined = target_client->getJoinedChannels();
 
-   // RPL_WHOISSERVER (312)
-    std::string server_info_msg = ":" + _server_name + " 312 " + requester_client->getNickname() + " "
-                                + target_client->getNickname() + " "
-                                + _server_name + " :A & J IRC server\r\n";
-    requester_client->getMsg().queueMessage(server_info_msg);
-
-	// RPL_WHOISOPERATOR (313)
-    // Check if target_client is an operator
-    if (target_client->isOperator()) { // Requires isOperator() in Client
-        std::string oper_msg = ":" + _server_name + " 313 " + requester_client->getNickname() + " "
-                            + target_client->getNickname() + " :is an IRC operator\r\n";
-        requester_client->getMsg().queueMessage(oper_msg);
-    }
-
-
-	// RPL_WHOISIDLE (317)
-    // Requires getIdleTime() and getSignonTime() in Client
-    long idle_seconds = target_client->getIdleTime(); // Implement this
-    time_t signon_time = target_client->getSignonTime(); // Implement this
-    std::string idle_msg = ":" + _server_name + " 317 " + requester_client->getNickname() + " "
-                        + target_client->getNickname() + " " + std::to_string(idle_seconds) + " "
-                        + std::to_string(signon_time) + " :seconds idle, signon time\r\n";
-    requester_client->getMsg().queueMessage(idle_msg);
-
-	// RPL_WHOISCHANNELS (319)
-    std::string channels_str = "";
-    const auto& joined_channels_map = target_client->getJoinedChannels(); // Get the map of joined channels
-    for (const auto& pair : joined_channels_map) {
-        if (auto channel_ptr = pair.second.lock()) { // Safely get shared_ptr from weak_ptr
-            channels_str += channel_ptr->getClientModePrefix(target_client) + channel_ptr->getName() + " "; // Implement getClientModePrefix in Channel
-        }
-    }
-    if (!channels_str.empty()) {
-        // Remove trailing space if any
-        channels_str.pop_back(); // Remove last space
-        std::string channels_msg = ":" + _server_name + " 319 " + requester_client->getNickname() + " "
-                                + target_client->getNickname() + " :" + channels_str + "\r\n";
-        requester_client->getMsg().queueMessage(channels_msg);
-    }
-
-    // RPL_ENDOFWHOIS (318)
-    std::string end_msg = ":" + _server_name + " 318 " + requester_client->getNickname() + " "
-                        + target_client->getNickname() + " :End of WHOIS list\r\n";
-    requester_client->getMsg().queueMessage(end_msg);
-
-    // 4. Update Epoll Events to send queued messages
-    updateEpollEvents(requester_client->getFd(), EPOLLOUT, true);
+	for (const auto& pair : joined) {
+	    if (auto chan = pair.second.lock()) {
+	        // Use the key (pair.first) for the channel name
+	        channel_list += chan->getClientModePrefix(target_client) + pair.first + " ";
+	    }
+	}
+	if (!channel_list.empty())
+	    channel_list.pop_back(); // remove trailing space
+	whois_params.push_back(channel_list); 
+	
+	broadcastMessage(MessageBuilder::buildWhois(whois_params), nullptr, nullptr, false, requester_client);
 }
 
 void Server::handlePartCommand(std::shared_ptr<Client> client, const std::vector<std::string>& params) {

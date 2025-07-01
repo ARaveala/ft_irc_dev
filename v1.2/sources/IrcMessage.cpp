@@ -167,32 +167,39 @@ void IrcMessage::remove_fd(int fd, std::map<int, std::string>& fd_to_nick) {
 
 bool IrcMessage::parse(const std::string& rawMessage)
 {
-    // 1. Clear previous state
+    // Clear previous state
     _prefix.clear();
     _command.clear();
     _paramsList.clear();
 
+	// Hold rawMessage
     std::string message_content = rawMessage;
-	std::cout<<"¤¤¤¤¤¤¤ showing raw message= "<<rawMessage<<" showing message_content = "
-	<< message_content<<"\n";
-    // Remove any trailing \r or \n characters
-    // This makes the parsing more robust to different newline styles.
+
+	// Printer
+	// std::cout	<< "IrcMessage::parse - Raw message= "
+	// 			<< rawMessage
+	// 			<< " message_content = "
+	// 			<< message_content
+	// 			<< std::endl;
+
+				
+	// Remove any trailing \r or \n characters
     while (!message_content.empty() &&
            (message_content.back() == '\r' || message_content.back() == '\n')) {
         message_content.pop_back();
     }
 
+	// Only newlines or empty message received
     if (message_content.empty()) {
-        // Only newlines or empty message received
-        // std::cerr << "Debug: Received empty line or only newlines." << std::endl;
+        std::cerr << "IrcMessage::parse: Received empty line or only newlines." << std::endl;
         return false;
     }
 
-    std::stringstream ss(message_content);
+	// Initialise
+    std::stringstream	ss(message_content);
+    std::string 		current_token;
 
-    std::string current_token;
-
-    // 3. Check for prefix (starts with ':')
+    //Check for prefix (starts with ':')
     // Read the first token (will skip leading spaces, which is fine)
     ss >> current_token;
 
@@ -201,15 +208,16 @@ bool IrcMessage::parse(const std::string& rawMessage)
         return false;
     }
 
-    if (current_token[0] == ':') {
-        _prefix = current_token.substr(1); // Store prefix (without the leading ':')
+	// Store prefix without the leading ':'
+	if (current_token[0] == ':') {
+		_prefix = current_token.substr(1);
 
-        // Attempt to read the command - must exist after a prefix
-        if (!(ss >> _command) || _command.empty()) {
-             // std::cerr << "Error: Prefix present but no command found after it." << std::endl;
-             _prefix.clear(); // Clear prefix if command is missing
-             return false;
-        }
+	// Attempt to read the command - must exist after a prefix
+	if (!(ss >> _command) || _command.empty()) {
+			// std::cerr << "Error: Prefix present but no command found after it." << std::endl;
+			_prefix.clear(); // Clear prefix if command is missing
+			return false;
+	}
     } else {
         // No prefix, the first token is the command
         _command = current_token;
@@ -226,7 +234,7 @@ bool IrcMessage::parse(const std::string& rawMessage)
     // We need to get the rest of the line, including any leading spaces that follow the command
     // and any internal spaces within a trailing parameter.
 
-    std::string remainder_of_line;
+    std::string	remainder_of_line;
     std::getline(ss, remainder_of_line); // Read all remaining characters on the line
 
     // Trim leading whitespace from remainder_of_line

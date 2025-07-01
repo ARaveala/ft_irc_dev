@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 	if (!parse_and_validate_arguments(argc, argv, port_number, password)) {
         return EXIT_FAILURE;
     }
-	LOG_NOTICE("Welcome to the ft_irc./:\n  Port: " + std::to_string(port_number)+  "\n  Password: " + password);
+	LOG_NOTICE("The requested values are:\n  Port: " + std::to_string(port_number)+  "\n  Password: " + password);
 	Server server(port_number, password);
 	if (setupServerSocket(server) == errVal::FAILURE) { return 0;}
 	try { loop(server); }

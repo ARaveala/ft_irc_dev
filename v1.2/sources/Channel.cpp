@@ -87,7 +87,7 @@ std::bitset<config::CLIENT_NUM_MODES>& Channel::getClientModes(const std::string
 
 bool Channel::isClientInChannel(const std::string& nickname) const {
 	for (const auto& entry : _ClientModes) {
-		if (auto clientPtr = entry.first.lock(); clientPtr && clientPtr->getNickname() == nickname) {
+		if (auto clientPtr = entry.first.lock(); clientPtr && toLower(clientPtr->getNickname()) == nickname) {
 			return true;
 		}
 	}

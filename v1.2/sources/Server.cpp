@@ -437,7 +437,7 @@ std::pair<MsgType, std::vector<std::string>> Server::validateChannelName(const s
 }
 void Server::handleJoinChannel(const std::shared_ptr<Client>& client, std::vector<std::string> params){
 	if (!client || params.empty()){return;}
-	const std::string& nickname = client->getNickname();
+	const std::string& nickname = toLower(client->getNickname());
 	
 	std::vector<std::string> channels = splitCommaList(params[0]);
 	std::vector<std::string> keys = (params.size() > 1) ? splitCommaList(params[1]) : std::vector<std::string>{};

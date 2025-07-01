@@ -71,8 +71,8 @@ void CommandDispatcher::dispatchCommand(std::shared_ptr<Client> client, const st
 		return;
 	}
 	if (command == "MODE") {
-		return;
 		_server->handleModeCommand(client, params);
+		return;
 	}
 	if (command == "PRIVMSG")  {
 		_server->handlePrivMsg(params, client);

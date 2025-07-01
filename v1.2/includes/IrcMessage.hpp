@@ -43,9 +43,6 @@ class IrcMessage {
 		std::vector<std::string> _params;
 		std::bitset<config::MSG_TYPE_NUM> _msgState;
 
-		MsgType _activeMsg = MsgType::NONE;
-
-
 	public:
     	IrcMessage();
     	~IrcMessage();
@@ -59,13 +56,11 @@ class IrcMessage {
 		const std::string getParam(unsigned long index) const ;
 		void printMessage(const IrcMessage& msg);
 
-		void queueMessage(const std::string& msg) { std::cout<< "[QUEUE] To: \n"; _messageQue.push_back(msg);};
+		void queueMessage(const std::string& msg) { _messageQue.push_back(msg);};
 		void queueMessageFront(const std::string& msg) { _messageQue.push_front(msg);};
 		void removeQueueMessage() { _messageQue.pop_front(); _bytesSentForCurrentMessage = 0;};
 		std::deque<std::string>& getQue() { return _messageQue; };
-		std::string& getQueueMessage() { return _messageQue.front();}; //return _messageQue.empty() ? "" : _messageQue.front();
-		//void prep_join_channel(std::string channleName, std::string nickname, std::deque<std::string>& messageQue, std::string& clientList);
-		//void prep_nickname(const std::string& username, std::string& nickname, int client_fd, std::map<int, std::string>& fd_to_nick, std::map<std::string, int>& nick_to_fd);
+		std::string& getQueueMessage() { return _messageQue.front();};
 		
 		void clearQue() {_messageQue.clear();};
 
@@ -74,26 +69,13 @@ class IrcMessage {
 		const std::vector<std::string>& getMsgParams() { return _params; };
 		
 		bool isValidNickname(const std::string& nick);
-		MsgType check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd);//, std::string& nickref);  // ai
+		MsgType check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd);//, std::string& nickref); 
 		std::map<int, std::string>& get_fd_to_nickname();
-		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick); // ai // we have remove client function , this could be called in there, to remove all new maps
-		std::string get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const;  // ai
-		int get_fd(const std::string& nickname) const;
+		void remove_fd(int fd, std::map<int, std::string>& fd_to_nick);
 
-		void setType(MsgType msg, std::vector<std::string> sendParams); // using bitsets to switch on enum message definer
-		
-		void clearAllMsg() {
-			_nickname_to_fd.clear();
-			_fd_to_nickname.clear();
-			nickname_to_fd.clear();
-			fd_to_nickname.clear();
-			//_illegal_nicknames.clear()
-		};
 
 		void advanceCurrentMessageOffset(ssize_t bytes_sent);
 		size_t getRemainingBytesInCurrentMessage() const;
 		const char* getCurrentMessageCstrOffset() const;
 
-		bool isActive(MsgType type);
-		MsgType getActiveMessageType() const;
 };

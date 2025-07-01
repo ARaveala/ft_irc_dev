@@ -4,22 +4,19 @@
 #include <cstddef>
 #include <stdexcept>
 #include <algorithm> // Required for std::find
-//#include "epoll_utils.hpp"
 
 #include "IrcResources.hpp"
 #include <unistd.h>
 #include <string.h>
 
 // my added libs
-//#include "config.h"
-#include <sys/socket.h>
-#include "ServerError.hpp" // incase you want to use the exception class
+//#include <sys/socket.h>
+//#include "ServerError.hpp" // incase you want to use the exception class
 #include "Server.hpp"
-#include "SendException.hpp"
+//#include "SendException.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
 #include <regex>
-//#include "ChannelManager.hpp"
 // --- Constructor ---
 IrcMessage::IrcMessage() {}
 // --- Destructor ---
@@ -47,13 +44,13 @@ std::set<std::string> const IrcMessage::_illegal_nicknames = {
     "null", "undefined", "localhost", "irc", "help", "whois"
 };
 
-void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
+/*void IrcMessage::setType(MsgType msg, std::vector<std::string> sendParams) {
     _msgState.reset();  // empty all messages before setting a new one
     _msgState.set(static_cast<size_t>(msg));  //activate only one msg
 	_activeMsg = msg;
 	_params.clear();
 	_params = sendParams;
-}
+}*/
 
 void IrcMessage::advanceCurrentMessageOffset(ssize_t bytes_sent) {
         _bytesSentForCurrentMessage += std::min(_bytesSentForCurrentMessage + bytes_sent, _messageQue.front().length());//bytes_sent;
@@ -70,8 +67,8 @@ const char* IrcMessage::getCurrentMessageCstrOffset() const {
 	    return _messageQue.front().c_str() + safe_offset;
 }
 
-bool IrcMessage::isActive(MsgType type) {  return _msgState.test(static_cast<size_t>(type));}
-MsgType IrcMessage::getActiveMessageType() const {	return _activeMsg; }  // Returns the currently active message type
+/*bool IrcMessage::isActive(MsgType type) {  return _msgState.test(static_cast<size_t>(type));}
+MsgType IrcMessage::getActiveMessageType() const {	return _activeMsg; }  // Returns the currently active message type*/
 
 
 bool IrcMessage::isValidNickname(const std::string& nick) {
@@ -92,8 +89,6 @@ bool IrcMessage::isValidNickname(const std::string& nick) {
     return true;
 }
 
-// we should enum values or alike or we can just send the correct error message straight from here ?
-// check_nickname definition, std::string& nickref
 MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<std::string, int>& nick_to_fd) {
     auto toLower = [](const std::string& input) -> std::string {
         std::string lower;
@@ -123,19 +118,15 @@ MsgType IrcMessage::check_nickname(std::string nickname, int fd, const std::map<
     return MsgType::RPL_NICK_CHANGE;
 }
 
-std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {
+/*std::string IrcMessage::get_nickname(int fd, std::map<int, std::string>& fd_to_nick) const {
      auto it = fd_to_nick.find(fd);
      if (it != fd_to_nick.end()) {
          return it->second; // Return the nickname
      }
      return ""; //todo this looks odd - it returns nothing, but not eg null?
-}
-
-/*std::map<int, std::string>& IrcMessage::get_fd_to_nickname() {
-	return _fd_to_nickname;
 }*/
 
-int IrcMessage::get_fd(const std::string& nickname) const {
+/*int IrcMessage::get_fd(const std::string& nickname) const {
      std::string processed_nickname = to_lowercase(nickname);
 
      auto it = _nickname_to_fd.find(processed_nickname);
@@ -143,7 +134,7 @@ int IrcMessage::get_fd(const std::string& nickname) const {
          return it->second;
      }
      return -1; // nickname not found
-}
+}*/
 
 
 /**
@@ -298,7 +289,7 @@ std::string IrcMessage::toRawString() const
     // 2. Add command (command is mandatory according to structure)
     ss << _command;
 
-// 3. Add parameters
+	// 3. Add parameters
     for (size_t i = 0; i < _paramsList.size(); ++i) {
         ss << " "; // All parameters are space-separated
 

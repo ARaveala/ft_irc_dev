@@ -483,7 +483,7 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
 bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
 	auto now = std::chrono::steady_clock::now();
 	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		   // client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing innput, server loading......\r\n");
+		   	client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing input, server loading......\r\n");
 			updateEpollEvents(client->getFd(), EPOLLOUT, true);
 		    return false;
 	}

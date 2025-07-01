@@ -32,13 +32,10 @@ int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 	event.events = events; // Monitor for read events
 	event.data.fd = fd; // File descriptor to monitor
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == errVal::FAILURE) {
-		//close(fd);
 		throw ServerException(ErrorType::EPOLL_FAILURE_1, "could not add fd to epoll");
 	}
 	_epollEventMap.emplace(fd, event);
-	
 	std::cout << "✅ FD " << fd << " successfully added to epoll!" << std::endl;
-
 	return 0;
 }
 
@@ -72,7 +69,6 @@ int Server::setup_epoll_timer(int epoll_fd, int timeout_seconds) {
  */
 int Server::make_socket_unblocking(int fd)
 {
-	
 	int flags = fcntl(fd, F_GETFL, 0);
     if (flags == errVal::FAILURE) {
 		throw ServerException(ErrorType::SOCKET_FAILURE, "fcntl failed to get flags");

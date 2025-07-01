@@ -5,55 +5,51 @@
 #include <string>
 #include <iostream>
 #include <limits>   // For std::numeric_limits
-//#include <vector>
-//#include <unordered_set>
-/**
- * both functions must accept char * as main() does not accept std string
- * i have left them open as we could provide some extra checks. 
- */
 
 
-// https://modern.ircdocs.horse/#connection-setup
-// The standard ports for client-server connections are TCP/6667 for plaintext, and TCP/6697 for TLS connections
 
-// int validate_port(char* port_char)
-// {
-// 	std::string port(port_char);
-// 	if (! std::all_of(port.begin(), port.end(), ::isdigit))
-// 	{
-// 		std::cerr<<"not all characters in port provided are digits"<<std::endl;
-// 		return errVal::FAILURE;
-// 	}	
-
-
-// 	//Ports in the range 49152–65535 can also be used for 
-// 	// custom or private IRC setups, as these are reserved for dynamic or private use.
-// 	// 6660–6669: These are the most commonly used ports for standard, unencrypted IRC connections.
-// 	// 6697: This is the standard port for IRC connections secured with SSL/TLS encryption.
-// 	int test = stoi(port);
-// 	if (test < 6659 || test > 6670)
-// 	{
-// 		std::cerr<<"ERROR:port number provided is out of range (6660-6669)"<<std::endl;	
-// 		return errVal::FAILURE;
-// 	}
-
-// 	// if (!port in use) checked in genereal utilities. 
-// 	return test;
-// }
-
-int validate_port(const char* port_char) {
-// int validate_port(char* port_char) {
-    // 1. Convert to std::string for easier manipulation
-    std::string port_str(port_char);
-
-    // 2. Check if all characters are digits
-    // This is crucial to prevent std::stoi from throwing std::invalid_argument for non-numeric input.
-    if (port_str.empty() || !std::all_of(port_str.begin(), port_str.end(), ::isdigit)) {
-        std::cerr << "Error: Port '" << port_str << "' contains non-digit characters or is empty." << std::endl;
-        return errVal::FAILURE; // Use your defined error value
+bool parse_and_validate_arguments(int argc, char** argv, int& port_out, std::string& password_out) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+        return false;
     }
 
-    // 3. Convert to integer with range check during conversion
+    int port_number;
+    try {
+        port_number = std::stoi(argv[1]);
+    } catch (const std::out_of_range&) {
+        std::cerr << "Error: Port number '" << argv[1] << "' is out of integer range." << std::endl;
+        return false;
+    } catch (const std::invalid_argument&) {
+        std::cerr << "Error: Port '" << argv[1] << "' is not a valid number." << std::endl;
+        return false;
+    }
+
+    int validated_port = validate_port(argv[1]);
+    if (validated_port == -1 || validated_port != port_number) {
+        std::cerr << "Error: Invalid port number provided: " << argv[1] << std::endl;
+        return false;
+    }
+
+    std::string password = validate_password(argv[2]);
+    if (password.empty()) {
+        std::cerr << "Error: Password requirements not met or invalid password provided." << std::endl;
+        return false;
+    }
+
+    port_out = validated_port;
+    password_out = password;
+    return true;
+}
+
+int validate_port(const char* port_char) {
+    std::string port_str(port_char);
+
+    if (port_str.empty() || !std::all_of(port_str.begin(), port_str.end(), ::isdigit)) {
+        std::cerr << "Error: Port '" << port_str << "' contains non-digit characters or is empty." << std::endl;
+        return errVal::FAILURE;
+    }
+
     int port_num;
     try {
         // std::stoi can throw std::out_of_range if the number is too large for an int
@@ -74,40 +70,13 @@ int validate_port(const char* port_char) {
     return port_num;
 }
 
-// std::string validate_password(char* password_char)
-// {
-// 	// printf("%s", password_char);
-// 	std::string password(password_char);
-// 	// check that password is not empty
-// 	if (password.empty())
-// 	{
-// 		std::cerr<<"ERROR::password provided is empty"<<std::endl;
-// 		return "";
-// 	}
-
-// 	// we could give limits to password here
-// 	// only chars and numbers
-// 		// invisables
-// 		// special characters
-// 	// length
-// 	return password;
-// }
-
 std::string validate_password(const char* password_char) {
-    // 1. Convert to std::string for easier manipulation and const correctness
     std::string password(password_char);
 
-    // --- BASIC CHECKS ---
-
-    // 2. Check that password is not empty
     if (password.empty()) {
         std::cerr << "ERROR: Password provided is empty." << std::endl;
-        return ""; // Indicate failure by returning an empty string  todo check this is handled in main
+        return "";
     }
-
-    // 3. Trim leading/trailing whitespace and check if it becomes empty
-    // If the password is just spaces, trimming will make it empty.
-    // This uses a common idiom to find first/last non-whitespace char.
     size_t first_non_space = password.find_first_not_of(" \t\n\r\f\v");
     size_t last_non_space = password.find_last_not_of(" \t\n\r\f\v");
 
@@ -115,19 +84,14 @@ std::string validate_password(const char* password_char) {
         std::cerr << "ERROR: Password provided contains only whitespace." << std::endl;
         return "";
     }
-    // Apply trimming
     std::string trimmed_password = password.substr(first_non_space, (last_non_space - first_non_space + 1));
-
-
-    // 4. Check for minimum length
-    const int MIN_PASSWORD_LENGTH = 4; // min length definition
+    const int MIN_PASSWORD_LENGTH = 4;// move to config
     if (trimmed_password.length() < MIN_PASSWORD_LENGTH) {
         std::cerr << "ERROR: Password must be at least " << MIN_PASSWORD_LENGTH << " characters long." << std::endl;
         return "";
     }
 
-    // 5. Check for maximum length (optional, but good practice)
-    const int MAX_PASSWORD_LENGTH = 12; // max length definition
+    const int MAX_PASSWORD_LENGTH = 12; //move to onfig
     if (trimmed_password.length() > MAX_PASSWORD_LENGTH) {
         std::cerr << "ERROR: Password must not exceed " << MAX_PASSWORD_LENGTH << " characters." << std::endl;
         return "";

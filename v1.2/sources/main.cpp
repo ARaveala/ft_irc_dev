@@ -1,14 +1,10 @@
-#include <chrono>
+//#include <chrono>
 #include <iostream>
-//#include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
 #include <string>
-#include <string.h>
-#include <sys/signalfd.h>
-//#include <signal.h>
-//#include <unistd.h> // close()
 //#include <string.h>
+#include <sys/signalfd.h>
 
 #include "Server.hpp"
 #include "serverUtilities.hpp"
@@ -18,30 +14,6 @@
 #include "ServerError.hpp"
 #include "signal_handler.h"
 #include "IrcMessage.hpp"
-
-//#include "SendException.hpp"
-
-// irssi commands
-// / WINDOW LOG ON
-// this can be opend in new terminal tail -f ~/ircTAB
-// /help
-// /raw open `/file of choice
-// open fileofchoice
-
-void debug_helper_print_events(struct epoll_event* events){
-	std::cout << "EPOLL event for FD " << events->data.fd << ": "
-              << ((events->events & EPOLLIN) ? " READ " : "")
-              << ((events->events & EPOLLOUT) ? " WRITE " : "")
-              << ((events->events & EPOLLHUP) ? " HUP " : "")
-              << ((events->events & EPOLLERR) ? " ERROR " : "")
-              << std::endl;
-	/*std::cout << "EPOLL event for FD " << events[i].data.fd << ": "
-    << ((events[i].events & EPOLLIN) ? " READ " : "")
-    << ((events[i].events & EPOLLOUT) ? " WRITE " : "")
-    << ((events[i].events & EPOLLHUP) ? " HUP " : "")
-    << ((events[i].events & EPOLLERR) ? " ERROR " : "")
-    << std::endl;*/
-}
 
 /**
  * @brief This loop functions job is to keep the server running and accepting connections.
@@ -73,20 +45,15 @@ int loop(Server &server)
 		    std::cerr << "epoll interrupted by signal" << std::endl;
 			if (manage_signal_events(server.get_signal_fd()) == -1) {
 				server.shutDown();
-				//should_exit = 1;
 				break;
 			}
     		continue;
 		}
 		for (int i = 0; i < nfds; i++) {
-			//debug_helper_print_events(&events[i]);
-		  //if ((events[i].events & EPOLLIN) &&  (events[i].events & EPOLLOUT))
-		//		std::cout<<"IF YOU SEE THIS EVERYTIME THERE IS SOMETHING NOT WORKING , WE FOUND THE SPOT  \n";
 			if (events[i].events & EPOLLIN) {
                 int fd = events[i].data.fd;
 
 				if (fd == server.get_signal_fd()) {
-					// must test signals properly still
 					if (manage_signal_events(server.get_signal_fd()) == 2)
 						break;
 					server.shutDown();
@@ -94,7 +61,6 @@ int loop(Server &server)
 				if (fd == server.getFd()) {
 					try {
 						server.create_Client(epollfd);
-						std::cout<<server.get_client_count()<<'\n'; // debugging
 					} catch(const ServerException& e)	{
 						server.handle_client_connection_error(e.getType());
 					}
@@ -108,11 +74,9 @@ int loop(Server &server)
 					} catch(const ServerException& e) {
 						if (e.getType() == ErrorType::CLIENT_DISCONNECTED) {
 							server.remove_Client(fd);
-							std::cout<<server.get_client_count()<<"debuggin :: this is the new client count <<<<\n"; // debugging
 						}
 						if (e.getType() == ErrorType::NO_Client_INMAP)
 							continue ;
-						// here you can catch an error of your choosing if you dont want to catch it in the message handling
 					}
 				}
 			}
@@ -147,112 +111,40 @@ int loop(Server &server)
  * @return int
  */
 int main(int argc, char** argv) {
-    // --- 1. Enforce mandatory arguments ---
-    // We expect program name (argv[0]), port (argv[1]), and password (argv[2]).
-    // So, argc must be exactly 3.
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-	// --- 2. Parse and validate port number ---
+    
     int port_number;
-    try {
-        port_number = std::stoi(argv[1]); // Convert port string to int
-    } catch (const std::out_of_range& oor) {
-        std::cerr << "Error: Port number '" << argv[1] << "' is out of integer range." << std::endl;
-        return EXIT_FAILURE;
-    } catch (const std::invalid_argument& ia) {
-        std::cerr << "Error: Port '" << argv[1] << "' is not a valid number." << std::endl;
+	std::string password;
+	if (!parse_and_validate_arguments(argc, argv, port_number, password)) {
         return EXIT_FAILURE;
     }
-
-    // Now, call your more specific validate_port function.
-    // If validate_port handles all parsing and returns -1 for error,
-    // you might not need the try-catch above. But this way, `main`
-    // has direct control over basic string-to-int conversion errors.
-    // Let's assume validate_port does *additional* range/validity checks.
-    int validated_port = validate_port(argv[1]); // Pass original argv[1] to it
-    if (validated_port == -1 || validated_port != port_number) { // Example: if -1 means error or if validate_port changed the value
-        std::cerr << "Error: Invalid port number provided: " << argv[1] << std::endl;
-        // Your validate_port should ideally print a more specific error.
-        return EXIT_FAILURE;
-    }
-    // Update port_number with the validated value from your function
-    port_number = validated_port;
-
-
-    // --- 3. Validate password ---
-    std::string password = validate_password(argv[2]); // Call your validation function
-    if (password.empty()) {
-        std::cerr << "Error: Password requirements not met or invalid password provided." << std::endl;
-        // Your validate_password function should ideally output specific
-        // reasons for failure before returning an empty string.
-        return EXIT_FAILURE;
-    }
-    // If validation passes, the `password` variable now holds the
-    // potentially sanitized/validated password string.
-
-    std::cout << "Welcome to the ft_irc./:" << std::endl;
-    std::cout << "  Port: " << port_number << std::endl;
-    std::cout << "  Password: " << password << std::endl;
-
-
-	// instantiate server object with assumed port and password
+	LOG_NOTICE("Welcome to the ft_irc./:\n  Port: " + std::to_string(port_number)+  "\n  Password: " + password);
 	Server server(port_number, password);
-	if (setupServerSocket(server) == errVal::FAILURE)
-	{
-		std::cout<<"server socket setup failure"<<std::endl;
-		return 0;
-	}
-	try {
-		loop(server); //begin server loop
-	}
-
+	if (setupServerSocket(server) == errVal::FAILURE) { return 0;}
+	try { loop(server); }
 	catch(const ServerException& e)
 	{
 		switch (e.getType())
 		{
-			case ErrorType::CLIENT_DISCONNECTED:
-			{
-
-				std::cout<<" caught in main \n";
+			case ErrorType::CLIENT_DISCONNECTED: {
 				std::cerr << e.what() << " caught in main \n";
 				break;
-
 			}
-			/*case ErrorType::SERVER_shutDown:
-			{
-
-				std::cerr << e.what() << '\n';
-				break;
-
-			}*/
 			case ErrorType::EPOLL_FAILURE_0:
-			// set a flag so we dont close server socket as it  is not open
 				std::cerr << e.what() << '\n';
 				break;
-			case ErrorType::EPOLL_FAILURE_1:
-			{
+			case ErrorType::EPOLL_FAILURE_1: {
 				close (server.get_event_pollfd());
 				std::cerr << e.what() << '\n';
 				break;
-
 			}
-			case ErrorType::SOCKET_FAILURE:
-			{
+			case ErrorType::SOCKET_FAILURE: {
 				close (server.get_event_pollfd());
-				std::cout<<"testing failure"<<std::endl;
 				close(server.getFd());
 				std::cerr << e.what() << '\n';
 				break;
-
 			}
-			default:
-			{
-				std::cerr << e.what() << " caught in main \n";
+			default: {
 				std::cerr << "main Unknown error occurred" << '\n';
-
 			}
 		}
 

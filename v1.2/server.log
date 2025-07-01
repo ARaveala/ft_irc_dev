@@ -304,3 +304,69 @@
 [12:36:51][ERROR::] removeClientByNickname: Could not find client oOo to remove from #bbq
 [12:36:51][DEBUG::] Server::Removeclient, client ooo being removed from nickname to fd map
 [12:36:51][DEBUG::] Server::remove_Client - Client has been completely removed. Total clients: 0
+[13:14:34][NOTICE::] Welcome to the ft_irc./:
+  Port: 6667
+  Password: Hell1
+[13:14:52][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[13:14:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:14:52][DEBUG::]  SERVER:: Message queued for FD 18 ()
+[13:14:52][DEBUG::]  SERVER:: Message queued for FD 18 (pleb)
+[13:14:52][DEBUG::] checking the message from que before send [:localhost CAP  * ACK :multi-prefix
+:localhost CAP * ACK :END
+] and the fd = 18
+[13:14:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:14:52][DEBUG::] checking the message from que before send [:localhost NOTICE * :Password accepted. Continuing registration.
+] and the fd = 18
+[13:14:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:14:52][DEBUG::] checking the message from que before send [:localhost 001 pleb :Welcome to the IRC server pleb!
+:localhost 002 pleb :Your host is localhost, running version 1.0
+:localhost 003 pleb :This server was created today
+:localhost 004 pleb localhost 1.0 o o
+:localhost 375 pleb :- ~ Meowdy, traveler! ~
+:localhost 372 pleb :- Here's your good-luck cat butt:
+:localhost 372 pleb :-     /\_/\
+:localhost 372 pleb :-    ( o.o )
+:localhost 372 pleb :-     > ^ <    🍑
+:localhost 372 pleb :-     Cat butt initialized.
+:localhost 376 pleb :End of /MOTD
+] and the fd = 18
+[13:14:52][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:14:59][DEBUG::] Client FD 18 disconnected gracefully (recv returned 0)
+[13:14:59][DEBUG::] Server::Removeclient, client pleb being removed from nickname to fd map
+[13:14:59][DEBUG::] Server::remove_Client - Client has been completely removed. Total clients: 0
+[13:15:01][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[13:15:01][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:01][DEBUG::]  SERVER:: Message queued for FD 18 ()
+[13:15:01][DEBUG::] checking the message from que before send [:localhost CAP  * ACK :multi-prefix
+:localhost CAP * ACK :END
+] and the fd = 18
+[13:15:01][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:01][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[13:15:01][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:01][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[13:15:01][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:01][DEBUG::] Server::Removeclient, client pleb being removed from nickname to fd map
+[13:15:01][DEBUG::] Server::remove_Client - Client has been completely removed. Total clients: 0
+[13:15:18][NOTICE::] Welcome to the ft_irc./:
+  Port: 6667
+  Password: Hell1
+[13:15:20][DEBUG::] checking the message from que before send [:localhost NOTICE * :initilization has begun.......
+] and the fd = 18
+[13:15:20][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:20][DEBUG::]  SERVER:: Message queued for FD 18 ()
+[13:15:20][DEBUG::] checking the message from que before send [:localhost CAP  * ACK :multi-prefix
+:localhost CAP * ACK :END
+] and the fd = 18
+[13:15:20][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:20][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[13:15:20][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:20][DEBUG::] checking the message from que before send [:localhost 464 * :Password incorrect
+] and the fd = 18
+[13:15:20][DEBUG::] Full message sent for FD 18. Moving to next message.
+[13:15:20][DEBUG::] Server::Removeclient, client pleb being removed from nickname to fd map
+[13:15:20][DEBUG::] Server::remove_Client - Client has been completely removed. Total clients: 0

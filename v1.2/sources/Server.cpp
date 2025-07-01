@@ -2,10 +2,7 @@
 #include <ctime>
 #include <cctype>    // Required for std::tolower (character conversion)
 #include <iostream> // testing with cout
-//#include <sys/types.h>
 #include <unistd.h>
-//#include <string.h> //strlen
-//#include <sstream>  // for passing parameters
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <map>
@@ -127,7 +124,6 @@ bool Server::validateModes(const std::shared_ptr<Channel> channel, const std::sh
 	return true;
 }
 
-//add command
 bool Server::validateParams(const std::shared_ptr<Client>& client, const std::string& sender_nickname, size_t paramSize, size_t comparison, const std::string& command){
     if (paramSize == 0 || paramSize < comparison) {
         broadcastMessage(MessageBuilder::generateMessage(MsgType::NEED_MORE_PARAMS, {sender_nickname, command}), client, nullptr, false, client);

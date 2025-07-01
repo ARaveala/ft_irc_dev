@@ -26,15 +26,11 @@ namespace MessageBuilder {
 	std::string buildCapResponse();
 
     // Channel related messages
-    //std::string buildJoinChannel(const std::string& nickname_prefix, const std::string& channelName);
     std::string buildJoinChannel(const std::string& nickname, const std::string& username, const std::string& channelName, const std::string& clientList, const std::string& topic);
 	std::string buildNamesList(const std::string& nickname, const std::string& channelName, const std::string& clientList);
     std::string buildEndNamesList(const std::string& nickname, const std::string& channelName);
-    // Note: CHANNEL_TOPIC macro is missing a 'topic' parameter. This will be added correctly.
-    //std::string buildChannelTopic(const std::string& nickname, const std::string& channelName, const std::string& topic);
 	std::string buildTopicChange(const std::string& clientNickname, const std::string& username, const std::string& channelName, const std::string& topic);
     // Client related messages
-	//std::string buildNickChange2(const std::string& oldnick, const std::string& newnick);
     std::string buildNickChange(const std::string& oldnick, const std::string& username, const std::string& newnick);
     std::string buildClientQuit(const std::string& nickname, const std::string& username);
 
@@ -69,6 +65,4 @@ namespace MessageBuilder {
 	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name);
 	std::string bildPing();
 	std::string bildPong();
-	// We can add more specific builders as needed, like:
-    // std::string buildPrivMsg(const std::string& sender_prefix, const std::string& target, const std::string& message);
 } // namespace MessageBuilder

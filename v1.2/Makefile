@@ -11,7 +11,7 @@ CPPFILES =	${SOURCES}main.cpp \
 			${SOURCES}Channel.cpp \
 			${SOURCES}CommandDispatcher.cpp \
 			${SOURCES}MessageBuilder.cpp \
-			${SOURCES}test.cpp \
+			${SOURCES}broadcast.cpp \
 			${SOURCES}passwordHandler.cpp
 
 INCLUDES = -I ./includes

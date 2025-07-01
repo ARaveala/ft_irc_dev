@@ -27,21 +27,9 @@
 
 struct WeakPtrCompare {
     bool operator()(const std::weak_ptr<Client>& lhs, const std::weak_ptr<Client>& rhs) const {
-        // This provides a strict weak ordering for weak_ptrs (and shared_ptrs),
-        // based on the address of their internal control block.
-        // It correctly handles expired and null weak_ptrs consistently.
         return lhs.owner_before(rhs);
     }
 };
-
-/**
- * @brief std::string getNicknameFromWeakPtr(const std::weak_ptr<Client>& weakClient) {
-    if (auto clientPtr = weakClient.lock()) {  // ✅ Convert weak_ptr to shared_ptr safely
-        return clientPtr->getNickname();  // ✅ Get the current nickname live
-    }
-    return "";  // 🔥 Return empty string if the Client no longer exists
-}
- */
 
  class Channel {
     private:
@@ -51,7 +39,6 @@ struct WeakPtrCompare {
         std::string _password;
         std::string _topicSetter;     // Stores the nickname of the user who last set the topic
         //std::time_t _topicSetTime;    // Stores the Unix timestamp (from <ctime>) when the topic was last set
-        //int _ClientLimit = 0;
         unsigned long _ulimit;
         unsigned long _clientCount = 0;
         int _operatorCount = 0;
@@ -72,11 +59,11 @@ struct WeakPtrCompare {
         // -- Basic Channel Information --
         const std::string& getName() const;
         const std::string& getTopic() const;
-        const unsigned long& getClientCount() {return _clientCount;}; //const
+        const unsigned long& getClientCount() const {return _clientCount;};
 		std::string getCurrentModes() const;
-        int getOperatorCount() {return _operatorCount;};
+        int getOperatorCount() const {return _operatorCount;};
         bool isEmpty() const;
-        bool getwasOpRemoved() {return _wasOpRemoved;};
+        bool getwasOpRemoved() const {return _wasOpRemoved;};
         bool CheckChannelMode(Modes::ChannelMode comp) const {return _ChannelModes.test(static_cast<std::size_t>(comp));}; //ref
 
         // -- Client/Member Information --
@@ -88,13 +75,7 @@ struct WeakPtrCompare {
 
         // Setters / Modifiers
         void setwasOpRemoved() {_wasOpRemoved = false;};
-        void setOperatorCount(int value) {
-            if (_operatorCount == 0){
-                return;
-            }
-            _operatorCount += value;
-            if (_operatorCount < 0) _operatorCount = 0; // extra safeguard
-        };
+        void setOperatorCount(int value);
         void setTopic(const std::string& newTopic);
 
 

@@ -101,11 +101,18 @@ bool Client::extractAndParseNextCommand() {
  */
 
 
-bool Client::change_nickname(std::string nickname){
+/*bool Client::change_nickname(std::string nickname){
 	_nickName.clear();
 	_nickName = nickname;
 	return true;
-}
+}*/
+
+bool Client::isMsgEmpty() {
+	if (_msg.getQue().empty()) {
+		return true;
+	}
+	return false;
+};
 
 std::string Client::getChannel(std::string channelName){
 	auto it = _joinedChannels.find(channelName);

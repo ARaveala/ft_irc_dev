@@ -215,6 +215,7 @@ void Server::remove_Client(int client_fd) {
         }
     }
     client_to_remove->clearJoinedChannels();
+	LOG_DEBUG("Server::Removeclient, client " + toLower(client_to_remove->getNickname())+ " being removed from nickname to fd map");
     _nickname_to_fd.erase(client_to_remove->getNickname());
     _fd_to_nickname.erase(client_fd);
 	removeFdFromEpoll(client_to_remove->get_timer_fd());
@@ -242,7 +243,7 @@ std::shared_ptr<Client> Server::get_Client(int fd) {
 }
 
 std::map<int, std::shared_ptr<Client>>& Server::get_map() {	return _Clients;}
-std::map<int, std::string>& Server::get_fd_to_nickname() {return _fd_to_nickname;}
+//NEWNEWstd::map<int, std::string>& Server::get_fd_to_nickname() {return _fd_to_nickname;}
 std::map<std::string, int>& Server::get_nickname_to_fd() {return _nickname_to_fd;}
 std::string Server::get_password() const {return _password;}
 
@@ -518,7 +519,7 @@ void Server::handleNickCommand(const std::shared_ptr<Client>& client, std::map<s
 void Server::handleQuit(std::shared_ptr<Client> client) {
 	if (!validateClientNotEmpty(client)) {return;}
 	std::string quit_message =  MessageBuilder::generateMessage(MsgType::CLIENT_QUIT, {client->getNickname(), client->getClientUname()});//client_prefix + " QUIT :Client disconnected\r\n"; // Default reason
-	broadcastMessage(quit_message, client, nullptr, true, nullptr);
+	broadcastMessage(quit_message, client, nullptr, false, nullptr);
 	client->setQuit();
 	LOG_DEBUG("handleQuit:: Client " + client->getNickname() + " marked for disconnection, epollout will trigger removal");
 }

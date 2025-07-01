@@ -31,13 +31,11 @@ int Server::setup_epoll(int epoll_fd, int fd, uint32_t events)
 
 	event.events = events; // Monitor for read events
 	event.data.fd = fd; // File descriptor to monitor
-
-	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == errVal::FAILURE)
-	{
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == errVal::FAILURE) {
 		//close(fd);
 		throw ServerException(ErrorType::EPOLL_FAILURE_1, "could not add fd to epoll");
 	}
-	_epollEventMap.emplace(fd, event);//[fd] = event;
+	_epollEventMap.emplace(fd, event);
 	
 	std::cout << "✅ FD " << fd << " successfully added to epoll!" << std::endl;
 

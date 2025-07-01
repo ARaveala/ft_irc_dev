@@ -25,63 +25,41 @@ namespace MessageBuilder {
 
 std::string generateMessage(MsgType type, const std::vector<std::string>& params) {
 	std::cout << "MsgType numeric value: " << static_cast<int>(type) << std::endl;
-
 		switch (type) {
 	        case MsgType::NICKNAME_IN_USE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNicknameInUse), params);
-
 	        case MsgType::RPL_NICK_CHANGE:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNickChange), params);
-
 			case MsgType::RPL_INVITING: 
-			// This assumes buildInviting takes (sender_nickname, target_nickname, channel_name)
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInviting), params);
 			case MsgType::GET_INVITE:
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildGetInvite), params);
 			case MsgType::ERR_USERONCHANNEL:
-				// This assumes buildUserOnChannel takes (inviter_nickname, target_nickname, channel_name)
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildUserOnChannel), params);
-
 	        case MsgType::WELCOME:
 	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::generatewelcome), params);
 			case MsgType::JOIN:
 				return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildJoinChannel), params);
-
-		/* case MsgType::HOST_INFO:
-	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildHostInfo), params);
-
-	        case MsgType::SERVER_CREATION:
-	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildServerCreation), params);
-
-	        case MsgType::SERVER_INFO:
-	            return callBuilder(std::function<std::string(const std::string&)>(MessageBuilder::buildServerInfo), params);
-	*/
 	        case MsgType::NEED_MORE_PARAMS:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNeedMoreParams), params);
-
 	        case MsgType::NO_SUCH_CHANNEL:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchChannel), params);
 	        case MsgType::ERR_NOSUCHNICK:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNoSuchNick), params);
 			case MsgType::ERR_ERRONEUSNICKNAME:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildErroneousNickname), params);	        
-			case MsgType::NOT_ON_CHANNEL: //changed from NOT_IN_CHANNEL
+			case MsgType::NOT_ON_CHANNEL:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotInChannel), params);
-
 	        case MsgType::NOT_OPERATOR:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildNotOperator), params);
-
 	        case MsgType::INVALID_TARGET:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInvalidTarget), params);
-
 	        case MsgType::INVALID_CHANNEL_NAME:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildInvalidChannelName), params);
 	        case MsgType::RPL_CHANNELMODEIS:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelModeIs), params);
-
 	        case MsgType::RPL_UMODEIS:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildUModeIs), params);
-
 	        case MsgType::CHANNEL_MODE_CHANGED:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildChannelModeChange), params);
 	        case MsgType::UPDATE_CHAN:
@@ -92,22 +70,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildClientQuit), params);
 	        case MsgType::RPL_TOPIC:
 	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildTopicChange), params);
-			
-			/*case MsgType::SERVER_NOTICE:
-	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildServerNoticeNickChange), params);
-	        
-			case MsgType::RPL_NAMES_LIST:
-	            return callBuilder(std::function<std::string(const std::string&, const std::string&, const std::string&)>(MessageBuilder::buildNamesList), params);
-
-	        case MsgType::RPL_END_NAMES_LIST:
-	            return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildEndNamesList), params);
-*/
-
-	        //case MsgType::CAP_RESPONSE:
-	        //    return callBuilder(MessageBuilder::buildCapResponse);
 			case MsgType::INVITE_ONLY:
-			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInviteOnlyChannel), params);
-					
+			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildInviteOnlyChannel), params);					
 			case MsgType::INVALID_PASSWORD:
 			    return callBuilder(std::function<std::string(const std::string&, const std::string&)>(MessageBuilder::buildIncorrectPasswordMessage), params);
 	        case MsgType::PART:
@@ -263,8 +227,8 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
    	std::string buildChanUpdate(const std::string& clientNickname, const std::string& username, const std::string& channelName) {
         return prefix(clientNickname, username) + " JOIN " +  channelName + "\r\n";
     }
-	//std::string quicki = ":" + client->getNickname() + "!" +client->getUsername()+ "@localhost JOIN " + currentChannel->getName() + "\r\n"; 
-    std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString) {
+
+	std::string buildUModeIs(const std::string& clientNickname, const std::string& modeString) {
         return  SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::RPL_UMODEIS)) + " " + clientNickname + " " + modeString + "\r\n";
     }
 
@@ -291,22 +255,10 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
 	}
 
 	std::string buildGetInvite(const std::string& nickname, const std::string& username, const std::string& target, const std::string& channel_name) {
-		//td::string sender_prefix = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname();
-    	//std::string invite_message = sender_prefix + " INVITE " + target_nickname + " :" + channel_name + "\r\n";
 		return prefix(nickname, username) +  " INVITE " + target + " :" + channel_name + "\r\n";
 	}
 
-	 // namespace MessageBuilder
-	
-	 // New function for ERR_USERONCHANNEL (443)
-	// params: { inviter_nickname, target_nickname, channel_name }
 	std::string buildUserOnChannel(const std::string& inviter_nickname, const std::string& target_nickname, const std::string& channel_name) {
-		// According to RFC 2812, 443 format is:
-		// :<server> 443 <nick> <channel> :is already on channel
-		// However, common clients/servers often include the target nick for clarity.
-		// Let's use the RFC-compliant format which is slightly simpler for parameters
-		// If your current params are {inviter, target, channel}, you might pass target_nickname as params[0]
-		// and channel_name as params[1] to this function when calling from handleInviteCommand.
 		return SERVER_PREFIX + " 443 " + inviter_nickname + " " + target_nickname + " " + channel_name + " :is already on channel\r\n";
 	}
 	
@@ -370,10 +322,5 @@ std::string generateMessage(MsgType type, const std::vector<std::string>& params
     return msg;
 }
 
- //":" + client->getNickname()  + " PRIVMSG " + params[0] + " " + params[1] +"\r\n";
-	/*std::string buildBannedFromChannel(const std::string& clientNickname, const std::string& channelName) {
-	    return SERVER_PREFIX + std::to_string(static_cast<int>(MsgType::ERR_BANNEDFROMCHAN)) +
-	           " " + clientNickname + " " + channelName + " :Cannot join channel (+b)\r\n";
-	}*/
 }
  // namespace MessageBuilder

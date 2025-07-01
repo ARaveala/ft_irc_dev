@@ -24,6 +24,14 @@ Channel::~Channel() {
 	std::cout << "Channel '" << _name << "' destroyed." << std::endl;
 }
 
+void Channel::setOperatorCount(int value) {
+    if (_operatorCount == 0){
+        return;
+    }
+    _operatorCount += value;
+    if (_operatorCount < 0) _operatorCount = 0; // extra safeguard
+};
+
 const std::string& Channel::getName() const {return _name;}
 const std::string& Channel::getTopic() const {return _topic;}
 void Channel::setTopic(const std::string& newTopic) {_topic = newTopic;}

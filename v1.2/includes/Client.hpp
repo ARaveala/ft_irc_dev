@@ -51,8 +51,8 @@ class Client {
 		IrcMessage& getMsg() {return _msg;};
 		void set_failed_response_counter(int count);
 		void setQuit() {_quit = true;};
-		void set_nickName(const std::string newname) {_nickName.clear(); _nickName = newname; };
-		void setRealname(const std::string newname) { _fullName = newname;};
+		void set_nickName(const std::string& newname) {_nickName.clear(); _nickName = newname; };
+		void setRealname(const std::string& newname) { _fullName = newname;};
 		void setMode(clientPrivModes::mode mode) { _ClientPrivModes.set(mode);  };
 		void unsetMode(clientPrivModes::mode mode) { _ClientPrivModes.reset(mode);}
 		bool hasMode(clientPrivModes::mode mode) { return _ClientPrivModes.test(mode);};
@@ -65,34 +65,31 @@ class Client {
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUser = true;};
 
-		void setPasswordValid() {_passwordValid = true;}; //PASSWORD araveala
+		void setPasswordValid() {_passwordValid = true;};
 
 		void setHasRegistered();
 
 		// clear out all the data 
-		void setNickname(const std::string& nickname) { 
-			_nickName.clear();
-			_nickName = nickname;
-		};
+		void setNickname(const std::string& nickname) { _nickName.clear();_nickName = nickname;};
 		//void setUsername(const std::string& username);
 
-		void setOldNick(std::string oldnick) {_oldNick = oldnick; }
+		void setOldNick(const std::string& oldnick) {_oldNick = oldnick; }
 		
 		const std::string& getOldNick() {  return _oldNick; };
 
 		bool& getHasSentCap() {return _hasSentCap;};
-		bool getHasSentNick() {return _hasSentNick;};
-		bool getHasSentUser() {return _hasSentUser;};
-		bool getHasRegistered() {return _registered;};
+		bool getHasSentNick() const {return _hasSentNick;};
+		bool getHasSentUser() const {return _hasSentUser;};
+		bool getHasRegistered() const {return _registered;};
 
-		bool getPasswordValid() {return _passwordValid;}; // PASSWORD araveala
+		bool getPasswordValid() const {return _passwordValid;}; // PASSWORD araveala
 
 		std::string getPrivateModeString(); // const and all that 
-		bool getQuit() {return _quit;};
+		bool getQuit() const {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();
 		const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;
-		//void set_pendingAcknowledged(bool onoff);
+	
 		void set_acknowledged();
 		void setChannelCreator(bool onoff) { _channelCreator = onoff;};
 		void clearJoinedChannels() {_joinedChannels.clear();};
@@ -100,7 +97,7 @@ class Client {
 		long getIdleTime() const;
 		time_t getSignonTime() const;
 		
-		bool getChannelCreator() {return _channelCreator;};
+		bool getChannelCreator() const {return _channelCreator;};
 
 		std::string getNickname() const;
 		std::string& getNicknameRef();
@@ -112,8 +109,7 @@ class Client {
 		const std::string& getHostname() const;
 		bool isOperator() const;
 
-		void setDefaults();
-		void setClientUname(std::string uname) {_username = uname;};
+		void setClientUname(const std::string& uname) {_username = uname;};
 
 		void setHostname(const std::string& hostname);
 		void setOperator(bool status);
@@ -121,31 +117,19 @@ class Client {
 		bool addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel);
 		std::string getChannel(std::string channelName);
 		void sendPing();
-		void sendPong();
+		//void sendPong();
 
-		bool change_nickname(std::string nickname);
+		//bool change_nickname(std::string nickname);
 
-		bool isMsgEmpty() {
-			if (_msg.getQue().empty())
-			{
-				return true;
-			}
-			return false;
-		};
-		int prepareQuit(std::deque<std::shared_ptr<Channel>>& channelsToNotify);
-		void executeCommand(const std::string& command);
-		void setCommandMap(Server &server); // come back to this
-		
+		bool isMsgEmpty();
 		void appendIncomingData(const char* buffer, size_t bytes_read);
 		bool extractAndParseNextCommand();
 
-    // Removes a channel from the client's internal list of joined channels.
-    // Assumes channel_name is already lowercase.
-    void removeJoinedChannel(const std::string& channel_name);
+		void removeJoinedChannel(const std::string& channel_name);
 
     // You'll also need a way to add channels to this map (e.g., in Server::handleJoinCommand)
     // Assumes channel_name is already lowercase.
-    void addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr);
+    //void addJoinedChannel(const std::string& channel_name, std::shared_ptr<Channel> channel_ptr);
 
     // For QUITTING, you might need a getter for all joined channels
     // const std::map<std::string, std::weak_ptr<Channel>>& getJoinedChannels() const;

@@ -19,10 +19,6 @@ int setupServerSocket(Server &server)
 		std::cout<<"something went wrong"<<std::endl;
 		return errVal::FAILURE;
 	}
-	// int fd1 = fcntl(server.getFd(), F_GETFL); // get what flags are set now. 
-	// error check  
-	// fcntl(server.getFd(), F_SETFL, fd1 | O_NONBLOCK);
-	// switching both flag values 
 	if (fcntl(server.getFd(), F_SETFL, O_NONBLOCK) == errVal::FAILURE) {
 		std::cerr << "Failed to set socket to non-blocking mode" << std::endl;
 		close(server.getFd());

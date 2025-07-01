@@ -5,7 +5,9 @@
 #include <functional> // for short cuts
 #include <deque> // for short cuts
 #include <memory>
-// oof i dont know if we should seperate a bunch of these into their own .h files ??
+#include <fstream>     // for std::ofstream (log file writing)
+#include <ctime>       // for std::time_t, std::localtime, std::strftime
+
 /**
  * @brief 
  * this is a header file that contains global variables and constants
@@ -29,10 +31,6 @@
  * this file could be seperated into config and error config, if we want to lower
  * inclusion ammounts in files, lets see
  */
-#include <iostream>    // for std::cerr or std::cout
-#include <fstream>     // for std::ofstream (log file writing)
-#include <string>      // for std::string
-#include <ctime>       // for std::time_t, std::localtime, std::strftime
 
 #define LOG_DEBUG(msg) log_inline("DEBUG::", msg)
 #define LOG_ERROR(msg) log_inline("ERROR::", msg)
@@ -78,7 +76,6 @@ enum class ErrorType {
 };
 
 //HANDLE HERE seperate modes client and channel are seperate u twat
-// reconsider bitset to bool ??? 
 namespace Modes {
 	enum ClientMode {
    		OPERATOR,		// 0
@@ -107,7 +104,6 @@ namespace clientPrivModes{
 namespace IRCillegals {
     inline constexpr const char* ForbiddenChannelChars = "!:@,";
 }
-// Function to determine mode type
 
 /**
  * @brief Timeout for client shouyld be 3000 as irssi sends pings every 5 minutes 

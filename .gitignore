@@ -1,1 +1,6 @@
 .vscode
+# Ignore test outputs
+irc_tester/outputs/*
+
+# Ignore server log
+irc_tester/server.log

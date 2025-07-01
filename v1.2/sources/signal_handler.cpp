@@ -51,8 +51,6 @@ void setup_signal_handler(){
 
 	sigaction(SIGINT, &sa, nullptr);
 	sigaction(SIGTERM, &sa, nullptr);
-	//sigaction(SIGQUIT, &sa, nullptr)
-	//_epollEventMap[]
 }
 
 int manage_signal_events(int signal_fd) {
@@ -69,7 +67,6 @@ int manage_signal_events(int signal_fd) {
         case SIGUSR1:
             std::cout << "Custom SIGUSR1 received\n";
             return 2;
-
         case SIGTSTP:
             std::cout << "Caught Ctrl+Z (SIGTSTP), handling as no-op\n";
             return -2;

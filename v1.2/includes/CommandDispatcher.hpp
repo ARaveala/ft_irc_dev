@@ -11,7 +11,6 @@ class Server;
 class CommandDispatcher {
 	private:
 		Server* _server;
-		//std::deque<std::shared_ptr<Channel>> _channelsToNotify;
 	public:
 		CommandDispatcher(Server* server_ptr);
 		~CommandDispatcher();

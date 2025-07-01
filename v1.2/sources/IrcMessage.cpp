@@ -233,6 +233,9 @@ bool IrcMessage::parse(const std::string& rawMessage)
     size_t first_non_space = remainder_of_line.find_first_not_of(" ");
     if (first_non_space == std::string::npos) {
         // No parameters or only whitespace after the command
+		if (_paramsList.empty()) {
+    		_paramsList.push_back("");  // Ensure at least one param exists
+		}
         return true; // Parsing successful, no parameters
     }
     remainder_of_line = remainder_of_line.substr(first_non_space);
@@ -269,6 +272,9 @@ bool IrcMessage::parse(const std::string& rawMessage)
             _paramsList.push_back(param_token);
         }
     }
+	if (_paramsList.empty()) {
+    	_paramsList.push_back("");  // Ensure at least one param exists
+	}
     return true; // Parsing successful
 }
 

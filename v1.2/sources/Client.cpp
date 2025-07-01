@@ -100,13 +100,6 @@ bool Client::extractAndParseNextCommand() {
  * SUCCESS the char buffer converted to std::string
  */
 
-
-/*bool Client::change_nickname(std::string nickname){
-	_nickName.clear();
-	_nickName = nickname;
-	return true;
-}*/
-
 bool Client::isMsgEmpty() {
 	if (_msg.getQue().empty()) {
 		return true;

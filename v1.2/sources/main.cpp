@@ -42,7 +42,7 @@ int loop(Server &server)
 	{
 		int nfds = epoll_pwait(epollfd, events, config::MAX_CLIENTS, config::TIMEOUT_EPOLL, &sigmask);
 		if (nfds == -1 && errno == EINTR) {
-		    std::cerr << "epoll interrupted by signal" << std::endl;
+		    LOG_DEBUG("epoll interrupted by signal");
 			if (manage_signal_events(server.get_signal_fd()) == -1) {
 				server.shutDown();
 				break;
@@ -151,6 +151,15 @@ int main(int argc, char** argv) {
 	} // this is a fail safe catch forf any exception we have forgotten to handle or thrownfrom unknown
 	 catch (const std::exception& e) {
 		std::cout<<"an exception has been caught in main:: "<<e.what()<<std::endl;
+	}
+	if(should_exit)
+	{
+		LOG_NOTICE("Server shutting down gracefully.");
+		server.shutDown();
+	}
+	else
+	{
+		LOG_NOTICE("Server loop exited without shutdown signal.");
 	}
 	return 0;
 }

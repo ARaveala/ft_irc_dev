@@ -25,7 +25,8 @@ class Client {
 		bool _hasSentNick = false;
 		bool _hasSentUser = false;
 		bool _registered = false;
-		bool _passwordValid = false; //PASWORD araveala
+		bool _passwordValid = false;
+		bool _clientReadyForInput = false; // used to check if client is ready for input, if not we send a message to wait
 		std::string _read_buff;
 		std::string _send_buff;
 		std::string _oldNick;
@@ -64,14 +65,13 @@ class Client {
 		void setHasSentCap() {_hasSentCap = true;};
 		void setHasSentNick() {_hasSentNick = true;};
 		void setHasSentUser() {_hasSentUser = true;};
+		void setClientReadyForInput() {_clientReadyForInput = true;};
 
 		void setPasswordValid() {_passwordValid = true;};
 
 		void setHasRegistered();
 
-		// clear out all the data 
 		void setNickname(const std::string& nickname) { _nickName.clear();_nickName = nickname;};
-		//void setUsername(const std::string& username);
 
 		void setOldNick(const std::string& oldnick) {_oldNick = oldnick; }
 		
@@ -81,10 +81,10 @@ class Client {
 		bool getHasSentNick() const {return _hasSentNick;};
 		bool getHasSentUser() const {return _hasSentUser;};
 		bool getHasRegistered() const {return _registered;};
+		bool getClientReadyForInput() const {return _clientReadyForInput;};
+		bool getPasswordValid() const {return _passwordValid;};
 
-		bool getPasswordValid() const {return _passwordValid;}; // PASSWORD araveala
-
-		std::string getPrivateModeString(); // const and all that 
+		std::string getPrivateModeString(); 
 		bool getQuit() const {return _quit;};
 		bool get_acknowledged();
 		bool get_pendingAcknowledged();
@@ -116,10 +116,6 @@ class Client {
 
 		bool addChannel(const std::string& channelName, const std::shared_ptr<Channel>& channel);
 		std::string getChannel(std::string channelName);
-		void sendPing();
-		//void sendPong();
-
-		//bool change_nickname(std::string nickname);
 
 		bool isMsgEmpty();
 		void appendIncomingData(const char* buffer, size_t bytes_read);

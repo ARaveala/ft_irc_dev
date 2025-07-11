@@ -219,6 +219,8 @@ void Server::remove_Client(int client_fd) {
     _Clients.erase(client_fd);
     _epollEventMap.erase(client_fd);    
     _client_count--;
+	shutdown(client_fd, SHUT_RDWR);
+	close(client_fd);
 	LOG_DEBUG("Server::remove_Client - Client has been completely removed. Total clients: " + std::to_string(_client_count));
 }
 
@@ -477,11 +479,19 @@ void Server::updateNickname(const std::shared_ptr<Client>& client, const std::st
 }
 
 bool Server::validateRegistrationTime(const std::shared_ptr<Client>& client) {
+	if (client->getClientReadyForInput())
+		return true;
 	auto now = std::chrono::steady_clock::now();
 	if (now - client->getRegisteredAt() < std::chrono::seconds(10)) {
-		   	client->getMsg().queueMessage(":localhost 439 "+client->getNickname()+" :Please wait a moment before providing input, server loading......\r\n");
-			updateEpollEvents(client->getFd(), EPOLLOUT, true);
-		    return false;
+		//client->getMsg().queueMessage(":localhost NOTICE "+client->getNickname()+" :Please wait a moment before providing input, server loading......\r\n");
+		//updateEpollEvents(client->getFd(), EPOLLOUT, true);
+		return false;
+	}
+	if (client->getHasRegistered()){
+		client->setClientReadyForInput();
+		LOG_DEBUG("Client " + client->getNickname() + " client side is ready for input.");
+		client->getMsg().queueMessage(":localhost NOTICE "+client->getNickname()+" :Server ready, you may give input.\r\n");
+		updateEpollEvents(client->getFd(), EPOLLOUT, true);
 	}
 	return true;
 }

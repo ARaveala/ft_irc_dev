@@ -309,16 +309,28 @@ std::string IrcMessage::toRawString() const
 
 void IrcMessage::printMessage(const IrcMessage& msg)
 {
-    std::cout << BOLDCYAN << "  Prefix: " << RESET << "'" << YELLOW << msg.getPrefix() << RESET << "'" << std::endl;
-    std::cout << BOLDGREEN << "  Command: " << RESET << "'" << MAGENTA << msg.getCommand() << RESET << "'" << std::endl;
-    std::cout << BOLDBLUE << "  Parameters:" << RESET << std::endl;
+	bool useColor = isatty(fileno(stdout)); // detetrmine if stdout is a terminal
+	// Define color codes
+	std::string boldCyan = useColor ? BOLDCYAN : "";
+	std::string boldGreen = useColor ? BOLDGREEN : "";
+	std::string boldBlue = useColor ? BOLDBLUE : "";
+	std::string boldBlack = useColor ? BOLDBLACK : "";
+	std::string boldWhite = useColor ? BOLDWHITE : "";
+	std::string magenta = useColor ? MAGENTA : "";
+	std::string yellow = useColor ? YELLOW : "";
+	std::string red = useColor ? RED : "";
+	std::string cyan = useColor ? CYAN : "";
+	std::string reset = useColor ? RESET : "";
+    std::cout << boldCyan << "  Prefix: " << reset  << "'" << yellow << msg.getPrefix() << reset  << "'" << std::endl;
+    std::cout << boldGreen << "  Command: " << reset  << "'" << magenta << msg.getCommand() << reset << "'" << std::endl;
+    std::cout << boldBlue << "  Parameters:" << reset  << std::endl;
     const std::vector<std::string>& params = msg.getParams();
     if (params.empty()) {
-        std::cout << "    " << RED << "(No parameters)" << RESET << std::endl;
+        std::cout << "    " << red << "(No parameters)" << reset  << std::endl;
     } else {
         for (size_t i = 0; i < params.size(); ++i) {
-            std::cout << "    [" << BOLDWHITE << i << RESET << "]: '" << CYAN << params[i] << RESET << "'" << std::endl;
+            std::cout << "    [" << boldWhite << i << reset  << "]: '" << cyan << params[i] << reset  << "'" << std::endl;
         }
     }
-    std::cout << BOLDBLACK << "---" << RESET << std::endl; // Separator for messages
+    std::cout << boldBlack << "---" << reset  << std::endl; // Separator for messages
 }
